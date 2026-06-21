@@ -614,6 +614,13 @@ function submitGuess() {
 
   const guess = currentGuess;
 
+  // Перевірка, що це слово ще не вводилось в цій партії
+  if (attempts.includes(guess)) {
+    showToast('Це слово вже використано');
+    shakeCurrentRow();
+    return;
+  }
+
   // Перевірка, що введене слово реально існує (загадане слово завжди приймається,
   // навіть якщо рідкісна форма не потрапила у словник)
   if (guess !== WORD && !DICTIONARY.has(guess)) {
