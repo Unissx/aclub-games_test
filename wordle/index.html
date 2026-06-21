@@ -23,16 +23,26 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
 .title{font-family:'Press Start 2P',monospace;font-size:clamp(13px,4vw,18px);
   color:#00e676;letter-spacing:1px;text-shadow:0 0 18px rgba(0,230,118,.45);}
 .subtitle{margin-top:6px;font-size:11px;color:#5b7090;letter-spacing:.5px;}
-.coin-badge{display:inline-flex;align-items:center;gap:4px;margin-top:8px;
+.badges-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.coin-badge{display:inline-flex;align-items:center;gap:4px;
   background:rgba(255,215,64,.1);border:1px solid rgba(255,215,64,.3);
   border-radius:20px;padding:4px 12px;font-weight:800;font-size:12px;color:#ffd740;}
-.timer-badge{display:inline-flex;align-items:center;gap:4px;margin-top:6px;margin-left:6px;
+.timer-badge{display:inline-flex;align-items:center;gap:4px;
   background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);
   border-radius:20px;padding:4px 12px;font-weight:800;font-size:12px;color:#00e676;
   font-variant-numeric:tabular-nums;}
 .timer-badge.warning{background:rgba(255,96,144,.12);border-color:rgba(255,96,144,.4);color:#ff6090;
   animation:pulseWarn 1s ease infinite;}
 @keyframes pulseWarn{0%,100%{opacity:1;}50%{opacity:.5;}}
+.bonus-badge{display:inline-flex;align-items:center;gap:4px;margin-top:6px;
+  background:rgba(127,119,221,.12);border:1px solid rgba(127,119,221,.4);
+  border-radius:20px;padding:4px 12px;font-weight:800;font-size:11px;color:#a89bff;}
+.hint-badge{display:inline-flex;align-items:center;gap:4px;margin-top:6px;
+  background:rgba(255,215,64,.08);border:1px solid rgba(255,215,64,.35);
+  border-radius:20px;padding:5px 14px;font-weight:800;font-size:12px;color:#ffd740;
+  font-family:'Nunito',sans-serif;cursor:pointer;}
+.hint-badge:active{transform:scale(.95);}
+.hint-badge:disabled{opacity:.4;cursor:default;}
 
 /* ── BOARD ────────────────────────────────────────── */
 .board-wrap{flex:1;display:flex;align-items:center;justify-content:center;width:100%;min-height:0;}
@@ -125,8 +135,12 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   <div class="head">
     <div class="title">áCLUB<br>ВГАДАЙ СЛОВО</div>
     <div class="subtitle" id="lengthLabel">слово з 5 літер · 6 спроб</div>
-    <div class="coin-badge" id="rewardHint">🪙 1 спроба = 8 á-coin</div>
-    <div class="timer-badge" id="timerBadge">⏱ 3:00</div>
+    <div class="badges-row">
+      <div class="coin-badge" id="rewardHint">🪙 1 спроба = 8 á-coin</div>
+      <div class="timer-badge" id="timerBadge">⏱ 3:00</div>
+    </div>
+    <div class="bonus-badge hide" id="bonusBadge">🎯 Бонусна спроба · нагорода +1 á</div>
+    <button class="hint-badge hide" id="hintBtn">💡 Підказка: <span id="hintCount">0</span></button>
   </div>
 
   <div class="board-wrap">
@@ -253,9 +267,11 @@ let attempts = [];      // масив рядків-спроб
 let currentGuess = '';
 let gameOver = false;
 let keyStates = {};     // letter -> 'correct'|'present'|'absent'
-const GAME_TIME_LIMIT = 3 * 60 * 1000; // 3 хвилини на всю партію
+let GAME_TIME_LIMIT = 3 * 60 * 1000; // динамічний — приходить з сервера (timeLimitSec), 3 хв за замовчуванням
 let gameStartedAt = 0;  // timestamp (мс) реального старту партії на СЕРВЕРІ (чесний відлік навіть після reload)
 let timerInterval = null;
+let isBonusAttempt = false;
+let hintsAvailable = 0;
 
 function $(id){ return document.getElementById(id); }
 
@@ -310,14 +326,16 @@ function restoreGame(data) {
   REWARD_MULT = data.multiplier || 1;
   SESSION_ID = data.sessionId || '';
   gameStartedAt = data.startedAt || Date.now();
+  GAME_TIME_LIMIT = (data.timeLimitSec || 180) * 1000;
+  isBonusAttempt = !!data.isBonusSlotAttempt;
+  hintsAvailable = data.hintsAvailable || 0;
   attempts = [];
   currentGuess = '';
   gameOver = false;
   keyStates = {};
 
   $('lengthLabel').textContent = `слово з ${WORD_LEN} літер · ${MAX_ATTEMPTS} спроб`;
-  const maxReward = Math.ceil(REWARD_BY_ATTEMPT[1] * REWARD_MULT);
-  $('rewardHint').textContent = `🪙 1 спроба = ${maxReward} á-coin`;
+  updateGameBadges();
   calcKeySize();
   buildBoard();
   buildKeyboard();
@@ -365,6 +383,9 @@ async function requestWord(uid, length, multiplier) {
       WORD_LEN = WORD.length;
       SESSION_ID = data.sessionId || '';
       gameStartedAt = data.startedAt || Date.now();
+      GAME_TIME_LIMIT = (data.timeLimitSec || 180) * 1000;
+      isBonusAttempt = !!data.isBonusSlotAttempt;
+      hintsAvailable = data.hintsAvailable || 0;
       startGame();
     } else if (data.error === 'cooldown') {
       startCooldownTimer(data.nextAt);
@@ -412,13 +433,31 @@ function startGame() {
   keyStates = {};
 
   $('lengthLabel').textContent = `слово з ${WORD_LEN} літер · ${MAX_ATTEMPTS} спроб`;
-  const maxReward = Math.ceil(REWARD_BY_ATTEMPT[1] * REWARD_MULT);
-  $('rewardHint').textContent = `🪙 1 спроба = ${maxReward} á-coin`;
+  updateGameBadges();
   calcKeySize();
   buildBoard();
   buildKeyboard();
   startTimer();
   showOverlay(null);
+}
+
+// Оновлює бейджі нагороди, бонусної спроби та підказки відповідно до поточного стану
+function updateGameBadges() {
+  const maxReward = isBonusAttempt ? 1 : Math.ceil(REWARD_BY_ATTEMPT[1] * REWARD_MULT);
+  $('rewardHint').textContent = isBonusAttempt ? `🪙 фіксована нагорода = 1 á-coin` : `🪙 1 спроба = ${maxReward} á-coin`;
+
+  const bonusBadge = $('bonusBadge');
+  if (isBonusAttempt) bonusBadge.classList.remove('hide');
+  else bonusBadge.classList.add('hide');
+
+  const hintBtn = $('hintBtn');
+  if (hintsAvailable > 0) {
+    hintBtn.classList.remove('hide');
+    $('hintCount').textContent = hintsAvailable;
+    hintBtn.disabled = false;
+  } else {
+    hintBtn.classList.add('hide');
+  }
 }
 
 // Запускає таймер партії на основі РЕАЛЬНОГО часу старту з сервера (gameStartedAt) —
@@ -644,6 +683,53 @@ function updateKeyState(letter, state) {
   }
 }
 
+// Використовує підказку: запитує сервер (списує 1 використання), якщо успіх — прибирає
+// 2 випадкові літери, яких немає у загаданому слові і які ще не позначені на клавіатурі.
+async function useHint() {
+  if (gameOver || hintsAvailable <= 0) return;
+  const { uid } = getTg();
+  if (!uid) return;
+
+  const hintBtn = $('hintBtn');
+  hintBtn.disabled = true;
+
+  try {
+    const url = `${GAS}?type=wordle_use_hint&userId=${uid}&sessionId=${encodeURIComponent(SESSION_ID)}&secret=${SECRET}&_t=${Date.now()}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.ok) {
+      showToast(data.error === 'no_hints_left' ? 'Підказки закінчились' : 'Не вдалось використати підказку');
+      hintBtn.disabled = false;
+      return;
+    }
+  } catch (e) {
+    showToast('Немає з\'єднання з сервером');
+    hintBtn.disabled = false;
+    return;
+  }
+
+  // Знаходимо літери, яких немає у слові і які ще не позначені на клавіатурі
+  const allLetters = [...new Set(KB_LAYOUT.flat().filter(k => k !== 'ENTER' && k !== 'BACK'))];
+  const wordLetters = new Set(WORD.split(''));
+  const candidates = allLetters.filter(l => !wordLetters.has(l) && !keyStates[l]);
+
+  if (candidates.length === 0) {
+    showToast('Усі зайві літери вже відмічені!');
+  } else {
+    // Перемішуємо і беремо до 2 випадкових
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+    const toRemove = candidates.slice(0, 2);
+    toRemove.forEach(l => updateKeyState(l, 'absent'));
+    showToast(`Прибрано: ${toRemove.join(', ')}`);
+  }
+
+  hintsAvailable--;
+  updateGameBadges();
+}
+
 // ── Завершення гри ────────────────────────────────────────
 async function endGame(won, isTimeout) {
   gameOver = true;
@@ -737,8 +823,13 @@ if (finishBtnLose) finishBtnLose.addEventListener('click', finishGame);
 
 const retryBtn = $('retryBtn');
 if (retryBtn) retryBtn.addEventListener('click', () => {
+  $('bonusBadge').classList.add('hide');
+  $('hintBtn').classList.add('hide');
   showOverlay('ovDifficulty');
 });
+
+const hintBtn = $('hintBtn');
+if (hintBtn) hintBtn.addEventListener('click', useHint);
 
 init();
 </script>
