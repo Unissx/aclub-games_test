@@ -87,6 +87,24 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
 .btn:active{transform:scale(.96);}
 .btn.secondary{background:transparent;border:1px solid #2c3e5c;color:#90a4ae;box-shadow:none;}
 
+/* ── DIFFICULTY SELECT ────────────────────────────────── */
+.diff-options{display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px;}
+.diff-btn{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:16px 20px;border-radius:14px;border:2px solid;cursor:pointer;
+  font-family:'Nunito',sans-serif;background:rgba(255,255,255,.02);
+  transition:transform .12s ease,background .2s ease;
+}
+.diff-btn:active{transform:scale(.96);}
+.diff-name{font-weight:900;font-size:15px;}
+.diff-meta{font-weight:700;font-size:11px;opacity:.7;}
+.diff-easy{border-color:#00e676;color:#00e676;}
+.diff-easy:active{background:rgba(0,230,118,.12);}
+.diff-medium{border-color:#ffd740;color:#ffd740;}
+.diff-medium:active{background:rgba(255,215,64,.12);}
+.diff-hard{border-color:#ff6090;color:#ff6090;}
+.diff-hard:active{background:rgba(255,96,144,.12);}
+
 .toast{position:fixed;top:18%;left:50%;transform:translateX(-50%);
   background:#1a2438;color:#fff;padding:10px 20px;border-radius:10px;font-weight:800;font-size:13px;
   z-index:60;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;}
@@ -112,7 +130,26 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   </div>
 </div>
 
-<div class="ov" id="ovLoading">
+<div class="ov" id="ovDifficulty">
+  <div class="ov-emoji">🎯</div>
+  <div class="ov-title">ОБЕРИ СКЛАДНІСТЬ</div>
+  <div class="diff-options" id="diffOptions">
+    <button class="diff-btn diff-easy" data-len="5" data-mult="1">
+      <span class="diff-name">🟢 Легка</span>
+      <span class="diff-meta">5 літер · нагорода ×1</span>
+    </button>
+    <button class="diff-btn diff-medium" data-len="6" data-mult="1.3">
+      <span class="diff-name">🟡 Середня</span>
+      <span class="diff-meta">6 літер · нагорода ×1.3</span>
+    </button>
+    <button class="diff-btn diff-hard" data-len="7" data-mult="1.6">
+      <span class="diff-name">🔴 Складна</span>
+      <span class="diff-meta">7 літер · нагорода ×1.6</span>
+    </button>
+  </div>
+</div>
+
+<div class="ov hide" id="ovLoading">
   <div class="ov-emoji">🪙</div>
   <div class="ov-title">ЗАВАНТАЖЕННЯ...</div>
 </div>
@@ -136,7 +173,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   <div class="ov-title">ВГАДАВ!</div>
   <div class="ov-word" id="winWord"></div>
   <div class="ov-reward" id="winReward">+8 á</div>
-  <div class="ov-text">Результат збережено. Наступне слово — через 4 години.</div>
+  <div class="ov-text">Результат збережено! 🪙</div>
 </div>
 
 <div class="ov hide" id="ovLose">
@@ -144,7 +181,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   <div class="ov-title lose">НЕ ЦЬОГО РАЗУ</div>
   <div class="ov-text">Загадане слово було:</div>
   <div class="ov-word" id="loseWord"></div>
-  <div class="ov-text">Спробуй ще раз через 4 години — нове слово вже чекає! 🪙</div>
+  <div class="ov-text">Наступне слово вже чекає на тебе! 🪙</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -187,6 +224,7 @@ function getTg() {
 // ── State ─────────────────────────────────────────────────
 let WORD = '';
 let WORD_LEN = 5;
+let REWARD_MULT = 1;
 let attempts = [];      // масив рядків-спроб
 let currentGuess = '';
 let gameOver = false;
@@ -195,7 +233,7 @@ let keyStates = {};     // letter -> 'correct'|'present'|'absent'
 function $(id){ return document.getElementById(id); }
 
 function showOverlay(id) {
-  ['ovLoading','ovCooldown','ovError','ovWin','ovLose'].forEach(o => $(o).classList.add('hide'));
+  ['ovDifficulty','ovLoading','ovCooldown','ovError','ovWin','ovLose'].forEach(o => $(o).classList.add('hide'));
   if (id) $(id).classList.remove('hide');
 }
 
@@ -206,9 +244,8 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 1400);
 }
 
-// ── Завантаження слова з сервера ─────────────────────────
-async function init() {
-  showOverlay('ovLoading');
+// ── Старт: показуємо вибір складності ─────────────────────
+function init() {
   const { uid } = getTg();
   if (!uid) {
     $('errorText').textContent = 'Не вдалось визначити користувача. Відкрий гру через кнопку в боті.';
@@ -216,9 +253,22 @@ async function init() {
     return;
   }
 
-  // Довжину слова обираємо випадково на клієнті (5 або 6) і передаємо на сервер —
-  // сервер сам підбере слово потрібної довжини з таблиці
-  WORD_LEN = Math.random() < 0.5 ? 5 : 6;
+  document.querySelectorAll('.diff-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const len = parseInt(btn.dataset.len);
+      const mult = parseFloat(btn.dataset.mult);
+      requestWord(uid, len, mult);
+    });
+  });
+
+  showOverlay('ovDifficulty');
+}
+
+// ── Завантаження слова обраної складності з сервера ───────
+async function requestWord(uid, length, multiplier) {
+  showOverlay('ovLoading');
+  WORD_LEN = length;
+  REWARD_MULT = multiplier;
 
   try {
     const url = `${GAS}?type=wordle_request&userId=${uid}&length=${WORD_LEN}&secret=${SECRET}&_t=${Date.now()}`;
@@ -266,6 +316,8 @@ function startGame() {
   keyStates = {};
 
   $('lengthLabel').textContent = `слово з ${WORD_LEN} літер · ${MAX_ATTEMPTS} спроб`;
+  const maxReward = Math.ceil(REWARD_BY_ATTEMPT[1] * REWARD_MULT);
+  $('rewardHint').textContent = `🪙 1 спроба = ${maxReward} á-coin`;
   buildBoard();
   buildKeyboard();
   showOverlay(null);
@@ -440,7 +492,8 @@ function endGame(won) {
   const attemptCount = attempts.length;
 
   if (won) {
-    const reward = REWARD_BY_ATTEMPT[attemptCount] || 3;
+    const baseReward = REWARD_BY_ATTEMPT[attemptCount] || 3;
+    const reward = Math.ceil(baseReward * REWARD_MULT);
     $('winWord').textContent = WORD;
     $('winReward').textContent = `+${reward} á`;
     showOverlay('ovWin');
@@ -456,7 +509,7 @@ async function sendResult(won, attemptCount) {
   const { uid } = getTg();
   if (!uid) return;
   try {
-    const url = `${GAS}?type=wordle_result&userId=${uid}&attempts=${attemptCount}&won=${won ? '1' : '0'}&secret=${SECRET}&_t=${Date.now()}`;
+    const url = `${GAS}?type=wordle_result&userId=${uid}&attempts=${attemptCount}&length=${WORD_LEN}&won=${won ? '1' : '0'}&secret=${SECRET}&_t=${Date.now()}`;
     await fetch(url);
   } catch (e) { /* мовчки ігноруємо — результат не критичний для UX тут */ }
 }
