@@ -136,7 +136,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
     <div class="title">áCLUB<br>ВГАДАЙ СЛОВО</div>
     <div class="subtitle" id="lengthLabel">слово з 5 літер · 6 спроб</div>
     <div class="badges-row">
-      <div class="coin-badge" id="rewardHint">🪙 1 спроба = 8 á-coin</div>
+      <div class="coin-badge" id="rewardHint">🪙 завантаження...</div>
       <div class="timer-badge" id="timerBadge">⏱ 3:00</div>
     </div>
     <div class="bonus-badge hide" id="bonusBadge">🎯 Бонусна спроба · нагорода +1 á</div>
@@ -335,7 +335,6 @@ function restoreGame(data) {
   keyStates = {};
 
   $('lengthLabel').textContent = `слово з ${WORD_LEN} літер · ${MAX_ATTEMPTS} спроб`;
-  updateGameBadges();
   calcKeySize();
   buildBoard();
   buildKeyboard();
@@ -354,6 +353,7 @@ function restoreGame(data) {
     }
     attempts.push(guess);
   });
+  updateGameBadges(); // викликаємо ПІСЛЯ відновлення спроб — бейдж покаже суму за наступну спробу
 
   showOverlay(null);
   showToast('Гру відновлено');
@@ -443,8 +443,11 @@ function startGame() {
 
 // Оновлює бейджі нагороди, бонусної спроби та підказки відповідно до поточного стану
 function updateGameBadges() {
-  const maxReward = isBonusAttempt ? 1 : Math.ceil(REWARD_BY_ATTEMPT[1] * REWARD_MULT);
-  $('rewardHint').textContent = isBonusAttempt ? `🪙 фіксована нагорода = 1 á-coin` : `🪙 1 спроба = ${maxReward} á-coin`;
+  const nextAttemptNum = Math.min(MAX_ATTEMPTS, attempts.length + 1);
+  const maxReward = isBonusAttempt ? 1 : Math.ceil((REWARD_BY_ATTEMPT[nextAttemptNum] || 1) * REWARD_MULT);
+  $('rewardHint').textContent = isBonusAttempt
+    ? `🪙 фіксована нагорода = 1 á-coin`
+    : `🪙 спроба ${nextAttemptNum} = ${maxReward} á-coin`;
 
   const bonusBadge = $('bonusBadge');
   if (isBonusAttempt) bonusBadge.classList.remove('hide');
@@ -622,6 +625,7 @@ function submitGuess() {
 
   attempts.push(guess);
   submitGuessToServer(guess); // зберігаємо спробу на сервері одразу — не чекаємо кінця гри
+  updateGameBadges(); // оновлюємо бейдж нагороди — показуємо суму за НАСТУПНУ спробу
   const isWin = guess === WORD;
   const isLastAttempt = attempts.length >= MAX_ATTEMPTS;
 
