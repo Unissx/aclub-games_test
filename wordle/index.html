@@ -170,6 +170,13 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   <div class="ov-text" id="errorText">Не вдалось завантажити слово. Спробуй відкрити гру ще раз через бота.</div>
 </div>
 
+<div class="ov hide" id="ovSessionActive">
+  <div class="ov-emoji">📱</div>
+  <div class="ov-title lose">ВЖЕ ГРАЄШ В ІНШОМУ МІСЦІ</div>
+  <div class="ov-text">У тебе вже відкрита активна гра на іншому пристрої.</div>
+  <div class="ov-text">Заверши її там, перш ніж починати нову тут.</div>
+</div>
+
 <div class="ov hide" id="ovWin">
   <div class="ov-emoji">🎉</div>
   <div class="ov-title">ВГАДАВ!</div>
@@ -227,6 +234,7 @@ function getTg() {
 let WORD = '';
 let WORD_LEN = 5;
 let REWARD_MULT = 1;
+let SESSION_ID = '';
 let attempts = [];      // масив рядків-спроб
 let currentGuess = '';
 let gameOver = false;
@@ -235,7 +243,7 @@ let keyStates = {};     // letter -> 'correct'|'present'|'absent'
 function $(id){ return document.getElementById(id); }
 
 function showOverlay(id) {
-  ['ovDifficulty','ovLoading','ovCooldown','ovError','ovWin','ovLose'].forEach(o => $(o).classList.add('hide'));
+  ['ovDifficulty','ovLoading','ovCooldown','ovError','ovWin','ovLose','ovSessionActive'].forEach(o => $(o).classList.add('hide'));
   if (id) $(id).classList.remove('hide');
 }
 
@@ -280,10 +288,13 @@ async function requestWord(uid, length, multiplier) {
     if (data.ok) {
       WORD = data.word.toUpperCase();
       WORD_LEN = WORD.length;
+      SESSION_ID = data.sessionId || '';
       startGame();
     } else if (data.error === 'cooldown') {
       startCooldownTimer(data.nextAt);
       showOverlay('ovCooldown');
+    } else if (data.error === 'session_active') {
+      showOverlay('ovSessionActive');
     } else {
       $('errorText').textContent = 'Слова закінчились. Спробуй пізніше.';
       showOverlay('ovError');
@@ -528,7 +539,7 @@ async function sendResult(won, attemptCount) {
   const { uid } = getTg();
   if (!uid) return;
   try {
-    const url = `${GAS}?type=wordle_result&userId=${uid}&attempts=${attemptCount}&length=${WORD_LEN}&won=${won ? '1' : '0'}&secret=${SECRET}&_t=${Date.now()}`;
+    const url = `${GAS}?type=wordle_result&userId=${uid}&attempts=${attemptCount}&length=${WORD_LEN}&won=${won ? '1' : '0'}&sessionId=${encodeURIComponent(SESSION_ID)}&secret=${SECRET}&_t=${Date.now()}`;
     await fetch(url);
   } catch (e) { /* мовчки ігноруємо — результат не критичний для UX тут */ }
 }
