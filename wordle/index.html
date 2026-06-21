@@ -259,8 +259,8 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 1400);
 }
 
-// ── Старт: показуємо вибір складності ─────────────────────
-function init() {
+// ── Старт: перевіряємо чи є активна гра, інакше показуємо вибір складності ─
+async function init() {
   const { uid } = getTg();
   if (!uid) {
     $('errorText').textContent = 'Не вдалось визначити користувача. Відкрий гру через кнопку в боті.';
@@ -276,7 +276,63 @@ function init() {
     });
   });
 
+  showOverlay('ovLoading');
+  try {
+    const url = `${GAS}?type=wordle_check_active&userId=${uid}&secret=${SECRET}&_t=${Date.now()}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.ok && data.active && data.word) {
+      restoreGame(data);
+      return;
+    }
+  } catch (e) {
+    // якщо перевірка не вдалась — просто йдемо до звичайного вибору складності
+  }
   showOverlay('ovDifficulty');
+}
+
+// Відновлює гру з даних що повернув сервер (після перезавантаження сторінки)
+function restoreGame(data) {
+  WORD = data.word.toUpperCase();
+  WORD_LEN = WORD.length;
+  REWARD_MULT = data.multiplier || 1;
+  SESSION_ID = data.sessionId || '';
+  attempts = [];
+  currentGuess = '';
+  gameOver = false;
+  keyStates = {};
+
+  $('lengthLabel').textContent = `слово з ${WORD_LEN} літер · ${MAX_ATTEMPTS} спроб`;
+  const maxReward = Math.ceil(REWARD_BY_ATTEMPT[1] * REWARD_MULT);
+  $('rewardHint').textContent = `🪙 1 спроба = ${maxReward} á-coin`;
+  calcKeySize();
+  buildBoard();
+  buildKeyboard();
+
+  // Відтворюємо вже зроблені спроби без анімації (одразу у фінальному стані)
+  const savedAttempts = data.attempts || [];
+  savedAttempts.forEach((guess, r) => {
+    const result = evaluateGuess(guess, WORD);
+    for (let c = 0; c < guess.length; c++) {
+      const tile = $(`tile-${r}-${c}`);
+      if (!tile) continue;
+      tile.textContent = guess[c];
+      tile.classList.add('filled', result[c]);
+      updateKeyState(guess[c], result[c]);
+    }
+    attempts.push(guess);
+  });
+
+  showOverlay(null);
+  showToast('Гру відновлено');
+
+  // Якщо остання спроба вже була перемогою — одразу показуємо екран результату
+  const lastGuess = savedAttempts[savedAttempts.length - 1];
+  if (lastGuess === WORD) {
+    endGame(true);
+  } else if (savedAttempts.length >= MAX_ATTEMPTS) {
+    endGame(false);
+  }
 }
 
 // ── Завантаження слова обраної складності з сервера ───────
@@ -286,7 +342,7 @@ async function requestWord(uid, length, multiplier) {
   REWARD_MULT = multiplier;
 
   try {
-    const url = `${GAS}?type=wordle_request&userId=${uid}&length=${WORD_LEN}&secret=${SECRET}&_t=${Date.now()}`;
+    const url = `${GAS}?type=wordle_request&userId=${uid}&length=${WORD_LEN}&multiplier=${multiplier}&secret=${SECRET}&_t=${Date.now()}`;
     const res = await fetch(url);
     const data = await res.json();
 
@@ -480,6 +536,7 @@ function submitGuess() {
   });
 
   attempts.push(guess);
+  submitGuessToServer(guess); // зберігаємо спробу на сервері одразу — не чекаємо кінця гри
   const isWin = guess === WORD;
   const isLastAttempt = attempts.length >= MAX_ATTEMPTS;
 
@@ -492,6 +549,14 @@ function submitGuess() {
   }, WORD_LEN * 180 + 550);
 
   currentGuess = '';
+}
+
+// Зберігає спробу на сервері (best-effort, не блокує гру якщо не вдалось)
+function submitGuessToServer(guess) {
+  const { uid } = getTg();
+  if (!uid || !SESSION_ID) return;
+  const url = `${GAS}?type=wordle_submit_guess&userId=${uid}&sessionId=${encodeURIComponent(SESSION_ID)}&guess=${encodeURIComponent(guess)}&secret=${SECRET}&_t=${Date.now()}`;
+  fetch(url).catch(() => {}); // не чекаємо відповіді, не блокуємо UI
 }
 
 function evaluateGuess(guess, word) {
