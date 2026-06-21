@@ -61,7 +61,10 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   cursor:pointer;transition:transform .08s ease,background .2s ease;
 }
 .key:active{transform:scale(.92);}
-.key.wide{flex:1.6 1 0;font-size:clamp(9px,2.6vw,11px);}
+.key.wide{flex:1 1 0;font-size:clamp(11px,3.2vw,13px);font-weight:900;letter-spacing:1px;}
+.kb-row:last-child{max-width:280px;margin:0 auto 6px;}
+.kb-row:last-child .key{height:50px;}
+.kb-row:last-child .key:first-child{background:linear-gradient(135deg,#00c853,#00a152);color:#001a0a;}
 .key.absent{background:#0a1120;color:#3a4a68;}
 .key.present{background:#5a4a1a;color:#ffd740;}
 .key.correct{background:#0a5234;color:#00e676;}
@@ -127,6 +130,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
     <div class="kb-row" id="kbRow1"></div>
     <div class="kb-row" id="kbRow2"></div>
     <div class="kb-row" id="kbRow3"></div>
+    <div class="kb-row" id="kbRow4"></div>
   </div>
 </div>
 
@@ -196,9 +200,10 @@ const MAX_ATTEMPTS = 6;
 const REWARD_BY_ATTEMPT = {1:8,2:7,3:6,4:5,5:4,6:3};
 
 const KB_LAYOUT = [
-  ['Й','Ц','У','К','Е','Н','Г','Ш','Щ','З','Х','Ї'],
-  ['Ф','І','В','А','П','Р','О','Л','Д','Ж','Є'],
-  ['ENTER','Я','Ч','С','М','И','Т','Ь','Б','Ю','BACK']
+  ['Й','Ц','У','К','Е','Н','Г','Ш','Щ','З','Х'],
+  ['Ф','І','Ї','В','А','П','Р','О','Л','Д'],
+  ['Ж','Є','Я','Ч','С','М','И','Т','Ь','Б','Ю'],
+  ['ENTER','BACK']
 ];
 
 // ── Telegram WebApp ──────────────────────────────────────
@@ -352,7 +357,7 @@ function buildBoard() {
 }
 
 function buildKeyboard() {
-  ['kbRow1','kbRow2','kbRow3'].forEach((id, i) => {
+  ['kbRow1','kbRow2','kbRow3','kbRow4'].forEach((id, i) => {
     const row = $(id);
     row.innerHTML = '';
     KB_LAYOUT[i].forEach(k => {
