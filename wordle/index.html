@@ -51,20 +51,19 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
 @keyframes flipTile{0%{transform:rotateX(0);}50%{transform:rotateX(-90deg);}100%{transform:rotateX(0);}}
 
 /* ── KEYBOARD ─────────────────────────────────────── */
-.kb-wrap{width:100%;max-width:480px;flex-shrink:0;padding:8px 6px calc(10px + env(safe-area-inset-bottom));}
-.kb-row{display:flex;justify-content:center;gap:clamp(3px,1vw,5px);margin-bottom:6px;width:100%;padding:0 2px;}
+.kb-wrap{width:100%;max-width:480px;flex-shrink:0;padding:8px 4px calc(10px + env(safe-area-inset-bottom));}
+.kb-row{display:flex;justify-content:center;gap:clamp(2px,0.8vw,5px);margin-bottom:6px;width:100%;}
 .key{
-  min-width:0;height:46px;flex:1 1 0;
+  min-width:0;height:44px;flex:1 1 0;
   display:flex;align-items:center;justify-content:center;
-  background:#16223d;border:none;border-radius:6px;color:#e8edf5;
-  font-family:'Nunito',sans-serif;font-weight:800;font-size:clamp(10px,3.4vw,14px);text-transform:uppercase;
+  background:#16223d;border:none;border-radius:5px;color:#e8edf5;
+  font-family:'Nunito',sans-serif;font-weight:800;font-size:var(--key-font-size,13px);text-transform:uppercase;
   cursor:pointer;transition:transform .08s ease,background .2s ease;
 }
 .key:active{transform:scale(.92);}
-.key.wide{flex:1 1 0;font-size:clamp(11px,3.2vw,13px);font-weight:900;letter-spacing:1px;}
-.kb-row:last-child{max-width:280px;margin:0 auto 6px;}
-.kb-row:last-child .key{height:50px;}
-.kb-row:last-child .key:first-child{background:linear-gradient(135deg,#00c853,#00a152);color:#001a0a;}
+.key.wide{flex:1.3 1 0;}
+.key.enter{background:linear-gradient(135deg,#00c853,#00a152);color:#001a0a;font-weight:900;letter-spacing:.3px;}
+.key.backspace{font-size:calc(var(--key-font-size,13px) + 9px);}
 .key.absent{background:#0a1120;color:#3a4a68;}
 .key.present{background:#5a4a1a;color:#ffd740;}
 .key.correct{background:#0a5234;color:#00e676;}
@@ -130,7 +129,6 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
     <div class="kb-row" id="kbRow1"></div>
     <div class="kb-row" id="kbRow2"></div>
     <div class="kb-row" id="kbRow3"></div>
-    <div class="kb-row" id="kbRow4"></div>
   </div>
 </div>
 
@@ -202,8 +200,7 @@ const REWARD_BY_ATTEMPT = {1:8,2:7,3:6,4:5,5:4,6:3};
 const KB_LAYOUT = [
   ['Й','Ц','У','К','Е','Н','Г','Ш','Щ','З','Х'],
   ['Ф','І','В','А','П','Р','О','Л','Д','Ж','Є'],
-  ['Я','Ч','С','М','И','Т','Ь','Б','Ю','Ї'],
-  ['ENTER','BACK']
+  ['ENTER','Я','Ч','С','М','И','Т','Ь','Б','Ю','Ї','BACK']
 ];
 
 // ── Telegram WebApp ──────────────────────────────────────
@@ -215,7 +212,7 @@ if (window.Telegram && window.Telegram.WebApp) {
   if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
   // Пересчитуємо розмір дошки коли міняється висота вьюпорту (розгортання, клавіатура тощо)
   tg.onEvent('viewportChanged', () => {
-    if (WORD_LEN) calcTileSize();
+    if (WORD_LEN) { calcTileSize(); calcKeySize(); }
   });
 }
 
@@ -323,6 +320,7 @@ function startGame() {
   $('lengthLabel').textContent = `слово з ${WORD_LEN} літер · ${MAX_ATTEMPTS} спроб`;
   const maxReward = Math.ceil(REWARD_BY_ATTEMPT[1] * REWARD_MULT);
   $('rewardHint').textContent = `🪙 1 спроба = ${maxReward} á-coin`;
+  calcKeySize();
   buildBoard();
   buildKeyboard();
   showOverlay(null);
@@ -336,6 +334,19 @@ function calcTileSize() {
   const tileSize = Math.max(34, Math.min(54, maxTileW, maxTileH));
   document.documentElement.style.setProperty('--tile-size', tileSize + 'px');
   return tileSize;
+}
+
+// Розраховує реальний доступний розмір клавіші по ширині вікна (а не на основі vw-евристик,
+// які можуть давати збій у вузьких desktop-вьюпортах Telegram)
+function calcKeySize() {
+  const vw = Math.min(window.innerWidth, 480);
+  const wrapPadding = 8;       // padding зліва+справа .kb-wrap (4px*2)
+  const maxCols = Math.max(...KB_LAYOUT.map(row => row.length)); // найдовший ряд (12)
+  const gap = 2;
+  const available = vw - wrapPadding - (maxCols - 1) * gap;
+  const keyWidth = Math.floor(available / maxCols);
+  const fontSize = Math.max(8, Math.min(14, Math.floor(keyWidth * 0.42)));
+  document.documentElement.style.setProperty('--key-font-size', fontSize + 'px');
 }
 
 function buildBoard() {
@@ -357,12 +368,15 @@ function buildBoard() {
 }
 
 function buildKeyboard() {
-  ['kbRow1','kbRow2','kbRow3','kbRow4'].forEach((id, i) => {
+  ['kbRow1','kbRow2','kbRow3'].forEach((id, i) => {
     const row = $(id);
     row.innerHTML = '';
     KB_LAYOUT[i].forEach(k => {
       const btn = document.createElement('button');
-      btn.className = 'key' + (k === 'ENTER' || k === 'BACK' ? ' wide' : '');
+      let cls = 'key';
+      if (k === 'ENTER') cls += ' wide enter';
+      else if (k === 'BACK') cls += ' wide backspace';
+      btn.className = cls;
       btn.textContent = k === 'ENTER' ? 'OK' : (k === 'BACK' ? '⌫' : k);
       btn.dataset.key = k;
       btn.addEventListener('click', () => handleKey(k));
