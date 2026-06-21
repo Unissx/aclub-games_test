@@ -295,8 +295,11 @@ async function requestWord(uid, length, multiplier) {
       showOverlay('ovCooldown');
     } else if (data.error === 'session_active') {
       showOverlay('ovSessionActive');
+    } else if (data.error === 'no_words') {
+      $('errorText').textContent = `Слів довжиною ${length} літер ще немає в таблиці. Звернись до адміна.`;
+      showOverlay('ovError');
     } else {
-      $('errorText').textContent = 'Слова закінчились. Спробуй пізніше.';
+      $('errorText').textContent = `Помилка сервера: ${data.error || 'невідома'}. Спробуй пізніше або звернись до адміна.`;
       showOverlay('ovError');
     }
   } catch (e) {
