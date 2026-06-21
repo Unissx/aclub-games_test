@@ -134,6 +134,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
 <div id="app">
   <div class="head">
     <div class="title">áCLUB<br>ВГАДАЙ СЛОВО</div>
+    <div style="font-size:9px;color:#3a4a68;margin-top:2px;">build v10</div>
     <div class="subtitle" id="lengthLabel">слово з 5 літер · 6 спроб</div>
     <div class="badges-row">
       <div class="coin-badge" id="rewardHint">🪙 завантаження...</div>
@@ -461,6 +462,11 @@ function updateGameBadges() {
   const bonusBadge = $('bonusBadge');
   if (realIsBonusAttempt) {
     bonusBadge.textContent = `🎯 Бонус (рівень ${slotsLevel}) · +1 á`;
+    bonusBadge.classList.remove('hide');
+  } else if (isBonusAttempt && slotsLevel === 0) {
+    // ДІАГНОСТИКА: сервер сказав isBonusSlotAttempt=true, але slotsLevel=0 — показуємо це явно,
+    // щоб зрозуміти що саме приходить з сервера (тимчасовий маркер для пошуку причини багу)
+    bonusBadge.textContent = `⚠️ DEBUG: isBonus=true slotsLevel=0`;
     bonusBadge.classList.remove('hide');
   } else {
     bonusBadge.classList.add('hide');
