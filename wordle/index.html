@@ -1,1 +1,455 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>áClub — Вгадай слово</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action:none;
+  font-family:'Nunito',sans-serif;color:#e8edf5;}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(0,230,118,.08), transparent 55%),
+    #050d1a;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
 
+/* ── HEADER ───────────────────────────────────────── */
+.head{width:100%;max-width:480px;padding:14px 16px 8px;text-align:center;flex-shrink:0;}
+.title{font-family:'Press Start 2P',monospace;font-size:clamp(13px,4vw,18px);
+  color:#00e676;letter-spacing:1px;text-shadow:0 0 18px rgba(0,230,118,.45);}
+.subtitle{margin-top:6px;font-size:11px;color:#5b7090;letter-spacing:.5px;}
+.coin-badge{display:inline-flex;align-items:center;gap:4px;margin-top:8px;
+  background:rgba(255,215,64,.1);border:1px solid rgba(255,215,64,.3);
+  border-radius:20px;padding:4px 12px;font-weight:800;font-size:12px;color:#ffd740;}
+
+/* ── BOARD ────────────────────────────────────────── */
+.board-wrap{flex:1;display:flex;align-items:center;justify-content:center;width:100%;min-height:0;}
+.board{display:grid;gap:7px;padding:10px;}
+.tile{
+  width:var(--tile-size,52px);height:var(--tile-size,52px);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Nunito',sans-serif;font-weight:900;font-size:calc(var(--tile-size,52px) * 0.42);
+  background:#0d1830;border:2px solid #1a2438;border-radius:8px;color:#e8edf5;
+  transform-style:preserve-3d;transition:transform .15s ease;
+  text-transform:uppercase;
+}
+.tile.filled{border-color:#2c3e5c;animation:pop .12s ease;}
+.tile.flip{animation:flipTile .55s ease forwards;}
+.tile.shake{animation:shake .4s ease;}
+.tile.absent{background:#141d33;border-color:#141d33;color:#5b7090;}
+.tile.present{background:#3d3214;border-color:#ffd740;color:#ffd740;}
+.tile.correct{background:#063d24;border-color:#00e676;color:#00e676;box-shadow:0 0 14px rgba(0,230,118,.25);}
+
+@keyframes pop{0%{transform:scale(.9);}50%{transform:scale(1.05);}100%{transform:scale(1);}}
+@keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-8px);}40%{transform:translateX(8px);}
+  60%{transform:translateX(-6px);}80%{transform:translateX(6px);}}
+@keyframes flipTile{0%{transform:rotateX(0);}50%{transform:rotateX(-90deg);}100%{transform:rotateX(0);}}
+
+/* ── KEYBOARD ─────────────────────────────────────── */
+.kb-wrap{width:100%;max-width:480px;flex-shrink:0;padding:8px 6px calc(10px + env(safe-area-inset-bottom));}
+.kb-row{display:flex;justify-content:center;gap:5px;margin-bottom:6px;}
+.key{
+  min-width:30px;height:46px;flex:1;max-width:38px;
+  display:flex;align-items:center;justify-content:center;
+  background:#16223d;border:none;border-radius:6px;color:#e8edf5;
+  font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;text-transform:uppercase;
+  cursor:pointer;transition:transform .08s ease,background .2s ease;
+}
+.key:active{transform:scale(.92);}
+.key.wide{flex:1.7;max-width:62px;font-size:11px;}
+.key.absent{background:#0a1120;color:#3a4a68;}
+.key.present{background:#5a4a1a;color:#ffd740;}
+.key.correct{background:#0a5234;color:#00e676;}
+
+/* ── OVERLAYS ─────────────────────────────────────── */
+.ov{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(4,10,22,.96);z-index:50;padding:24px;gap:14px;text-align:center;}
+.ov.hide{display:none;}
+.ov-emoji{font-size:48px;}
+.ov-title{font-family:'Press Start 2P',monospace;font-size:clamp(14px,4.5vw,20px);
+  color:#00e676;line-height:1.5;letter-spacing:1px;}
+.ov-title.lose{color:#ff6090;}
+.ov-word{font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;letter-spacing:4px;color:#ffd740;}
+.ov-reward{font-family:'Press Start 2P',monospace;font-size:16px;color:#ffd740;
+  background:rgba(255,215,64,.1);border:1px solid rgba(255,215,64,.3);border-radius:12px;padding:10px 18px;}
+.ov-text{font-size:13px;color:#90a4ae;max-width:320px;line-height:1.6;}
+.ov-timer{font-size:13px;color:#5b7090;margin-top:4px;}
+.ov-timer b{color:#00e676;font-variant-numeric:tabular-nums;}
+.btn{font-family:'Press Start 2P',monospace;font-size:clamp(9px,2.8vw,12px);
+  padding:14px 26px;border:none;border-radius:10px;cursor:pointer;color:#001a0a;
+  background:linear-gradient(135deg,#00c853,#00a152);
+  box-shadow:0 4px 20px rgba(0,200,83,.4);margin-top:6px;}
+.btn:active{transform:scale(.96);}
+.btn.secondary{background:transparent;border:1px solid #2c3e5c;color:#90a4ae;box-shadow:none;}
+
+.toast{position:fixed;top:18%;left:50%;transform:translateX(-50%);
+  background:#1a2438;color:#fff;padding:10px 20px;border-radius:10px;font-weight:800;font-size:13px;
+  z-index:60;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(8px);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="head">
+    <div class="title">áCLUB<br>ВГАДАЙ СЛОВО</div>
+    <div class="subtitle" id="lengthLabel">слово з 5 літер · 6 спроб</div>
+    <div class="coin-badge" id="rewardHint">🪙 1 спроба = 8 á-coin</div>
+  </div>
+
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="kb-wrap">
+    <div class="kb-row" id="kbRow1"></div>
+    <div class="kb-row" id="kbRow2"></div>
+    <div class="kb-row" id="kbRow3"></div>
+  </div>
+</div>
+
+<div class="ov" id="ovLoading">
+  <div class="ov-emoji">🪙</div>
+  <div class="ov-title">ЗАВАНТАЖЕННЯ...</div>
+</div>
+
+<div class="ov hide" id="ovCooldown">
+  <div class="ov-emoji">⏳</div>
+  <div class="ov-title">СЛОВО ВЖЕ БУЛО</div>
+  <div class="ov-text">Нове слово відкриється через:</div>
+  <div class="ov-timer"><b id="cooldownTimer">--:--:--</b></div>
+  <div class="ov-text">Заходь пізніше — кожні 4 години нова спроба зібрати á-coin! 🪙</div>
+</div>
+
+<div class="ov hide" id="ovError">
+  <div class="ov-emoji">⚠️</div>
+  <div class="ov-title lose">ЩОСЬ ПІШЛО НЕ ТАК</div>
+  <div class="ov-text" id="errorText">Не вдалось завантажити слово. Спробуй відкрити гру ще раз через бота.</div>
+</div>
+
+<div class="ov hide" id="ovWin">
+  <div class="ov-emoji">🎉</div>
+  <div class="ov-title">ВГАДАВ!</div>
+  <div class="ov-word" id="winWord"></div>
+  <div class="ov-reward" id="winReward">+8 á</div>
+  <div class="ov-text">Результат збережено. Наступне слово — через 4 години.</div>
+</div>
+
+<div class="ov hide" id="ovLose">
+  <div class="ov-emoji">😔</div>
+  <div class="ov-title lose">НЕ ЦЬОГО РАЗУ</div>
+  <div class="ov-text">Загадане слово було:</div>
+  <div class="ov-word" id="loseWord"></div>
+  <div class="ov-text">Спробуй ще раз через 4 години — нове слово вже чекає! 🪙</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── Конфіг (синхронізовано з GAS) ──────────────────────────
+const GAS = 'https://script.google.com/macros/s/AKfycbzH8qt2_fUmnrLEw0Z56fsyMEH-D3uOgBSeTxwzUMCDTFDDoNBAowLTZqEGwSFo26ie9A/exec';
+const SECRET = 'aclub2026runnertest';
+const MAX_ATTEMPTS = 6;
+const REWARD_BY_ATTEMPT = {1:8,2:7,3:6,4:5,5:4,6:3};
+
+const KB_LAYOUT = [
+  ['Й','Ц','У','К','Е','Н','Г','Ш','Щ','З','Х','Ї'],
+  ['Ф','І','В','А','П','Р','О','Л','Д','Ж','Є'],
+  ['ENTER','Я','Ч','С','М','И','Т','Ь','Б','Ю','BACK']
+];
+
+// ── Telegram WebApp ──────────────────────────────────────
+if (window.Telegram && window.Telegram.WebApp) {
+  window.Telegram.WebApp.ready();
+  window.Telegram.WebApp.expand();
+}
+
+function getTg() {
+  const fromHash = new URLSearchParams(window.location.hash.substring(1));
+  const fromQuery = new URLSearchParams(window.location.search);
+  const get = (k) => fromQuery.get(k) || fromHash.get(k);
+  return { uid: get('tgid') || (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user ? String(window.Telegram.WebApp.initDataUnsafe.user.id) : null) };
+}
+
+// ── State ─────────────────────────────────────────────────
+let WORD = '';
+let WORD_LEN = 5;
+let attempts = [];      // масив рядків-спроб
+let currentGuess = '';
+let gameOver = false;
+let keyStates = {};     // letter -> 'correct'|'present'|'absent'
+
+function $(id){ return document.getElementById(id); }
+
+function showOverlay(id) {
+  ['ovLoading','ovCooldown','ovError','ovWin','ovLose'].forEach(o => $(o).classList.add('hide'));
+  if (id) $(id).classList.remove('hide');
+}
+
+function showToast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1400);
+}
+
+// ── Завантаження слова з сервера ─────────────────────────
+async function init() {
+  showOverlay('ovLoading');
+  const { uid } = getTg();
+  if (!uid) {
+    $('errorText').textContent = 'Не вдалось визначити користувача. Відкрий гру через кнопку в боті.';
+    showOverlay('ovError');
+    return;
+  }
+
+  // Довжину слова обираємо випадково на клієнті (5 або 6) і передаємо на сервер —
+  // сервер сам підбере слово потрібної довжини з таблиці
+  WORD_LEN = Math.random() < 0.5 ? 5 : 6;
+
+  try {
+    const url = `${GAS}?type=wordle_request&userId=${uid}&length=${WORD_LEN}&secret=${SECRET}&_t=${Date.now()}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.ok) {
+      WORD = data.word.toUpperCase();
+      WORD_LEN = WORD.length;
+      startGame();
+    } else if (data.error === 'cooldown') {
+      startCooldownTimer(data.nextAt);
+      showOverlay('ovCooldown');
+    } else {
+      $('errorText').textContent = 'Слова закінчились. Спробуй пізніше.';
+      showOverlay('ovError');
+    }
+  } catch (e) {
+    $('errorText').textContent = 'Немає з\'єднання з сервером. Перевір інтернет і спробуй ще раз.';
+    showOverlay('ovError');
+  }
+}
+
+function startCooldownTimer(nextAt) {
+  function tick() {
+    const diff = nextAt - Date.now();
+    if (diff <= 0) {
+      $('cooldownTimer').textContent = '00:00:00';
+      return;
+    }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    $('cooldownTimer').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    setTimeout(tick, 1000);
+  }
+  tick();
+}
+
+// ── Ініціалізація гри ─────────────────────────────────────
+function startGame() {
+  attempts = [];
+  currentGuess = '';
+  gameOver = false;
+  keyStates = {};
+
+  $('lengthLabel').textContent = `слово з ${WORD_LEN} літер · ${MAX_ATTEMPTS} спроб`;
+  buildBoard();
+  buildKeyboard();
+  showOverlay(null);
+}
+
+function buildBoard() {
+  const board = $('board');
+  board.innerHTML = '';
+  const vw = Math.min(window.innerWidth, 480);
+  const vh = window.innerHeight;
+  const maxTileW = Math.floor((vw - 40 - (WORD_LEN - 1) * 7) / WORD_LEN);
+  const maxTileH = Math.floor((vh * 0.5 - 20 - (MAX_ATTEMPTS - 1) * 7) / MAX_ATTEMPTS);
+  const tileSize = Math.max(34, Math.min(54, maxTileW, maxTileH));
+  document.documentElement.style.setProperty('--tile-size', tileSize + 'px');
+
+  board.style.gridTemplateColumns = `repeat(${WORD_LEN}, var(--tile-size))`;
+  board.style.gridTemplateRows = `repeat(${MAX_ATTEMPTS}, var(--tile-size))`;
+
+  for (let r = 0; r < MAX_ATTEMPTS; r++) {
+    for (let c = 0; c < WORD_LEN; c++) {
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.id = `tile-${r}-${c}`;
+      board.appendChild(tile);
+    }
+  }
+}
+
+function buildKeyboard() {
+  ['kbRow1','kbRow2','kbRow3'].forEach((id, i) => {
+    const row = $(id);
+    row.innerHTML = '';
+    KB_LAYOUT[i].forEach(k => {
+      const btn = document.createElement('button');
+      btn.className = 'key' + (k === 'ENTER' || k === 'BACK' ? ' wide' : '');
+      btn.textContent = k === 'ENTER' ? 'OK' : (k === 'BACK' ? '⌫' : k);
+      btn.dataset.key = k;
+      btn.addEventListener('click', () => handleKey(k));
+      row.appendChild(btn);
+    });
+  });
+}
+
+// ── Логіка вводу ──────────────────────────────────────────
+function handleKey(k) {
+  if (gameOver) return;
+  if (k === 'ENTER') {
+    submitGuess();
+  } else if (k === 'BACK') {
+    currentGuess = currentGuess.slice(0, -1);
+    renderCurrentRow();
+  } else {
+    if (currentGuess.length < WORD_LEN) {
+      currentGuess += k;
+      renderCurrentRow();
+    }
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (gameOver) return;
+  const k = e.key.toUpperCase();
+  if (k === 'ENTER') handleKey('ENTER');
+  else if (k === 'BACKSPACE') handleKey('BACK');
+  else if (/^[А-ЯІЇЄҐ]$/.test(k)) handleKey(k);
+});
+
+function renderCurrentRow() {
+  const r = attempts.length;
+  for (let c = 0; c < WORD_LEN; c++) {
+    const tile = $(`tile-${r}-${c}`);
+    if (!tile) continue;
+    const letter = currentGuess[c] || '';
+    tile.textContent = letter;
+    tile.classList.toggle('filled', !!letter);
+  }
+}
+
+function shakeCurrentRow() {
+  const r = attempts.length;
+  for (let c = 0; c < WORD_LEN; c++) {
+    const tile = $(`tile-${r}-${c}`);
+    if (tile) { tile.classList.add('shake'); setTimeout(() => tile.classList.remove('shake'), 400); }
+  }
+}
+
+function submitGuess() {
+  if (currentGuess.length !== WORD_LEN) {
+    showToast(`Потрібно ${WORD_LEN} літер`);
+    shakeCurrentRow();
+    return;
+  }
+
+  const guess = currentGuess;
+  const result = evaluateGuess(guess, WORD);
+  const r = attempts.length;
+
+  // Анімація фліп по черзі
+  result.forEach((state, c) => {
+    setTimeout(() => {
+      const tile = $(`tile-${r}-${c}`);
+      tile.classList.add('flip');
+      setTimeout(() => {
+        tile.classList.add(state);
+        updateKeyState(guess[c], state);
+      }, 275);
+    }, c * 180);
+  });
+
+  attempts.push(guess);
+  const isWin = guess === WORD;
+  const isLastAttempt = attempts.length >= MAX_ATTEMPTS;
+
+  setTimeout(() => {
+    if (isWin) {
+      endGame(true);
+    } else if (isLastAttempt) {
+      endGame(false);
+    }
+  }, WORD_LEN * 180 + 550);
+
+  currentGuess = '';
+}
+
+function evaluateGuess(guess, word) {
+  const result = new Array(guess.length).fill('absent');
+  const wordArr = word.split('');
+  const guessArr = guess.split('');
+  const used = new Array(word.length).fill(false);
+
+  // Перший прохід — точні збіги
+  for (let i = 0; i < guessArr.length; i++) {
+    if (guessArr[i] === wordArr[i]) {
+      result[i] = 'correct';
+      used[i] = true;
+      guessArr[i] = null;
+    }
+  }
+  // Другий прохід — літера є, але не на місці
+  for (let i = 0; i < guessArr.length; i++) {
+    if (guessArr[i] === null) continue;
+    const idx = wordArr.findIndex((ch, j) => ch === guessArr[i] && !used[j]);
+    if (idx !== -1) {
+      result[i] = 'present';
+      used[idx] = true;
+    }
+  }
+  return result;
+}
+
+function updateKeyState(letter, state) {
+  const priority = { absent: 0, present: 1, correct: 2 };
+  const cur = keyStates[letter];
+  if (!cur || priority[state] > priority[cur]) {
+    keyStates[letter] = state;
+    const btn = document.querySelector(`.key[data-key="${letter}"]`);
+    if (btn) {
+      btn.classList.remove('absent', 'present', 'correct');
+      btn.classList.add(state);
+    }
+  }
+}
+
+// ── Завершення гри ────────────────────────────────────────
+function endGame(won) {
+  gameOver = true;
+  const attemptCount = attempts.length;
+
+  if (won) {
+    const reward = REWARD_BY_ATTEMPT[attemptCount] || 3;
+    $('winWord').textContent = WORD;
+    $('winReward').textContent = `+${reward} á`;
+    showOverlay('ovWin');
+  } else {
+    $('loseWord').textContent = WORD;
+    showOverlay('ovLose');
+  }
+
+  sendResult(won, attemptCount);
+}
+
+async function sendResult(won, attemptCount) {
+  const { uid } = getTg();
+  if (!uid) return;
+  try {
+    const url = `${GAS}?type=wordle_result&userId=${uid}&attempts=${attemptCount}&won=${won ? '1' : '0'}&secret=${SECRET}&_t=${Date.now()}`;
+    await fetch(url);
+  } catch (e) { /* мовчки ігноруємо — результат не критичний для UX тут */ }
+}
+
+init();
+</script>
+</body>
+</html>
