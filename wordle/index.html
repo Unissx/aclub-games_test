@@ -182,7 +182,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   <div class="ov-title">ВГАДАВ!</div>
   <div class="ov-word" id="winWord"></div>
   <div class="ov-reward" id="winReward">+8 á</div>
-  <div class="ov-text">Результат збережено! 🪙</div>
+  <div class="ov-text" id="winSaveStatus">⏳ Зберігаємо результат...</div>
 </div>
 
 <div class="ov hide" id="ovLose">
@@ -190,7 +190,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   <div class="ov-title lose">НЕ ЦЬОГО РАЗУ</div>
   <div class="ov-text">Загадане слово було:</div>
   <div class="ov-word" id="loseWord"></div>
-  <div class="ov-text">Наступне слово вже чекає на тебе! 🪙</div>
+  <div class="ov-text" id="loseSaveStatus">⏳ Зберігаємо результат...</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -532,7 +532,7 @@ function updateKeyState(letter, state) {
 }
 
 // ── Завершення гри ────────────────────────────────────────
-function endGame(won) {
+async function endGame(won) {
   gameOver = true;
   const attemptCount = attempts.length;
 
@@ -541,28 +541,40 @@ function endGame(won) {
     const reward = Math.ceil(baseReward * REWARD_MULT);
     $('winWord').textContent = WORD;
     $('winReward').textContent = `+${reward} á`;
+    $('winSaveStatus').textContent = '⏳ Зберігаємо результат...';
     showOverlay('ovWin');
   } else {
     $('loseWord').textContent = WORD;
+    $('loseSaveStatus').textContent = '⏳ Зберігаємо результат...';
     showOverlay('ovLose');
   }
 
-  sendResult(won, attemptCount);
+  const saved = await sendResult(won, attemptCount);
+  const statusEl = won ? $('winSaveStatus') : $('loseSaveStatus');
+  if (saved) {
+    statusEl.textContent = won ? '✅ Збережено! 🪙' : '✅ Збережено. Наступне слово вже чекає! 🪙';
+  } else {
+    statusEl.innerHTML = '⚠️ Не вдалось зберегти результат.<br>Напиши адміну, якщо монети не з\'явились.';
+  }
 }
 
+// Повертає true якщо сервер підтвердив збереження результату (ok:true), інакше false.
 async function sendResult(won, attemptCount) {
   const { uid } = getTg();
-  if (!uid) return;
+  if (!uid) return false;
   const url = `${GAS}?type=wordle_result&userId=${uid}&attempts=${attemptCount}&length=${WORD_LEN}&won=${won ? '1' : '0'}&sessionId=${encodeURIComponent(SESSION_ID)}&secret=${SECRET}&_t=${Date.now()}`;
-  // sendBeacon надійніше доставляє запит навіть якщо сторінка одразу після цього закривається
-  // (Telegram WebApp може миттєво прибити вкладку після показу екрану результату)
-  if (navigator.sendBeacon) {
-    try {
-      navigator.sendBeacon(url);
-      return;
-    } catch (e) { /* падаємо нижче на fetch */ }
+  try {
+    const res = await fetch(url, { method: 'POST', keepalive: true });
+    const data = await res.json();
+    return !!data.ok;
+  } catch (e) {
+    // fetch не вдався (наприклад сторінка вже закривається) — пробуємо sendBeacon як останній шанс
+    // (без підтвердження доставки, але краще ніж нічого)
+    if (navigator.sendBeacon) {
+      try { navigator.sendBeacon(url); } catch (e2) {}
+    }
+    return false;
   }
-  try { await fetch(url, { method: 'POST', keepalive: true }); } catch (e) { /* мовчки ігноруємо — результат не критичний для UX тут */ }
 }
 
 // Якщо гравець закриває гру ПОСЕРЕД партії (не дограв) — звільняємо сесію на сервері,
