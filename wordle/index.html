@@ -166,8 +166,15 @@ const KB_LAYOUT = [
 
 // ── Telegram WebApp ──────────────────────────────────────
 if (window.Telegram && window.Telegram.WebApp) {
-  window.Telegram.WebApp.ready();
-  window.Telegram.WebApp.expand();
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  tg.expand();
+  // Заборона свайпу для закриття гри по випадковому жесту вниз
+  if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
+  // Пересчитуємо розмір дошки коли міняється висота вьюпорту (розгортання, клавіатура тощо)
+  tg.onEvent('viewportChanged', () => {
+    if (WORD_LEN) calcTileSize();
+  });
 }
 
 function getTg() {
@@ -264,15 +271,20 @@ function startGame() {
   showOverlay(null);
 }
 
-function buildBoard() {
-  const board = $('board');
-  board.innerHTML = '';
+function calcTileSize() {
   const vw = Math.min(window.innerWidth, 480);
   const vh = window.innerHeight;
   const maxTileW = Math.floor((vw - 40 - (WORD_LEN - 1) * 7) / WORD_LEN);
   const maxTileH = Math.floor((vh * 0.5 - 20 - (MAX_ATTEMPTS - 1) * 7) / MAX_ATTEMPTS);
   const tileSize = Math.max(34, Math.min(54, maxTileW, maxTileH));
   document.documentElement.style.setProperty('--tile-size', tileSize + 'px');
+  return tileSize;
+}
+
+function buildBoard() {
+  const board = $('board');
+  board.innerHTML = '';
+  calcTileSize();
 
   board.style.gridTemplateColumns = `repeat(${WORD_LEN}, var(--tile-size))`;
   board.style.gridTemplateRows = `repeat(${MAX_ATTEMPTS}, var(--tile-size))`;
