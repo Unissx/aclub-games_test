@@ -553,11 +553,34 @@ function endGame(won) {
 async function sendResult(won, attemptCount) {
   const { uid } = getTg();
   if (!uid) return;
-  try {
-    const url = `${GAS}?type=wordle_result&userId=${uid}&attempts=${attemptCount}&length=${WORD_LEN}&won=${won ? '1' : '0'}&sessionId=${encodeURIComponent(SESSION_ID)}&secret=${SECRET}&_t=${Date.now()}`;
-    await fetch(url);
-  } catch (e) { /* мовчки ігноруємо — результат не критичний для UX тут */ }
+  const url = `${GAS}?type=wordle_result&userId=${uid}&attempts=${attemptCount}&length=${WORD_LEN}&won=${won ? '1' : '0'}&sessionId=${encodeURIComponent(SESSION_ID)}&secret=${SECRET}&_t=${Date.now()}`;
+  // sendBeacon надійніше доставляє запит навіть якщо сторінка одразу після цього закривається
+  // (Telegram WebApp може миттєво прибити вкладку після показу екрану результату)
+  if (navigator.sendBeacon) {
+    try {
+      navigator.sendBeacon(url);
+      return;
+    } catch (e) { /* падаємо нижче на fetch */ }
+  }
+  try { await fetch(url, { method: 'POST', keepalive: true }); } catch (e) { /* мовчки ігноруємо — результат не критичний для UX тут */ }
 }
+
+// Якщо гравець закриває гру ПОСЕРЕД партії (не дограв) — звільняємо сесію на сервері,
+// щоб наступний запуск не впирався у "вже граєш в іншому місці" без причини.
+function releaseSessionIfUnfinished() {
+  if (gameOver || !SESSION_ID) return;
+  const { uid } = getTg();
+  if (!uid) return;
+  const url = `${GAS}?type=wordle_release&userId=${uid}&sessionId=${encodeURIComponent(SESSION_ID)}&secret=${SECRET}`;
+  if (navigator.sendBeacon) {
+    try { navigator.sendBeacon(url); return; } catch (e) {}
+  }
+  try { fetch(url, { method: 'POST', keepalive: true }); } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') releaseSessionIfUnfinished();
+});
+window.addEventListener('pagehide', releaseSessionIfUnfinished);
 
 init();
 </script>
