@@ -783,6 +783,7 @@ async function endGame(won, isTimeout) {
   const saved = await sendResult(won, effectiveAttempts);
   const statusEl = won ? $('winSaveStatus') : $('loseSaveStatus');
   if (saved && saved.ok) {
+    resultSent = true;
     statusEl.textContent = won ? '✅ Збережено! 🪙' : '✅ Результат збережено.';
     if (!won && saved.attemptsLeft > 0) {
       $('retryBtn').classList.remove('hide');
@@ -795,47 +796,57 @@ async function endGame(won, isTimeout) {
   }
 }
 
-// Повертає true якщо сервер підтвердив збереження результату (ok:true), інакше false.
+// Повертає об'єкт відповіді сервера якщо збереження успішне, інакше { ok: false }.
+// При мережевій помилці робить до 3 спроб з паузою 2 сек між ними.
 async function sendResult(won, attemptCount) {
   const { uid } = getTg();
   if (!uid) return { ok: false };
   const url = `${GAS}?type=wordle_result&userId=${uid}&attempts=${attemptCount}&length=${WORD_LEN}&won=${won ? '1' : '0'}&sessionId=${encodeURIComponent(SESSION_ID)}&secret=${SECRET}&_t=${Date.now()}`;
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    return data;
-  } catch (e) {
-    return { ok: false };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.ok || data.error === 'already_processed') return { ok: true, attemptsLeft: data.attemptsLeft || 0 };
+      if (data.error && data.error !== 'invalid_session') return data; // інша серверна помилка — не повторюємо
+    } catch (e) {}
+    if (attempt < 2) await new Promise(r => setTimeout(r, 2000)); // пауза 2 сек перед повторною спробою
   }
+  return { ok: false };
 }
 
-// Якщо гравець закриває гру ПОСЕРЕД партії (не дограв) — звільняємо сесію на сервері,
-// щоб наступний запуск не впирався у "вже граєш в іншому місці" без причини.
+// Якщо гравець закриває гру ПОСЕРЕД партії (не дограв і результат ще не надіслано) —
+// звільняємо сесію на сервері щоб наступний запуск не впирався у "вже граєш в іншому місці".
+// ВАЖЛИВО: НЕ викликаємо при visibilitychange — Telegram WebView часто ховає сторінку
+// посеред гри (свайп вниз, сповіщення), і передчасне звільнення сесії ламає збереження монет.
+let resultSent = false; // true після успішного sendResult — захист від зайвого release
+
 function releaseSessionIfUnfinished() {
-  if (gameOver || !SESSION_ID) return;
-  const { uid } = getTg();
-  if (!uid) return;
-  const url = `${GAS}?type=wordle_release&userId=${uid}&sessionId=${encodeURIComponent(SESSION_ID)}&secret=${SECRET}`;
-  if (navigator.sendBeacon) {
-    try { navigator.sendBeacon(url); return; } catch (e) {}
+  if (resultSent || !SESSION_ID) return; // результат вже збережено — сесія вже видалена сервером
+  if (!gameOver) {
+    // Гравець пішов з незавершеної партії — звільняємо сесію
+    const { uid } = getTg();
+    if (!uid) return;
+    const url = `${GAS}?type=wordle_release&userId=${uid}&sessionId=${encodeURIComponent(SESSION_ID)}&secret=${SECRET}`;
+    if (navigator.sendBeacon) {
+      try { navigator.sendBeacon(url); return; } catch (e) {}
+    }
+    try { fetch(url, { method: 'POST', keepalive: true }); } catch (e) {}
   }
-  try { fetch(url, { method: 'POST', keepalive: true }); } catch (e) {}
 }
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') releaseSessionIfUnfinished();
-});
+// visibilitychange НЕ чіпаємо — тільки справжнє закриття вкладки/додатку
 window.addEventListener('pagehide', releaseSessionIfUnfinished);
 
-// Явне завершення гри по кнопці — надійніший спосіб звільнити сесію, ніж покладатись
-// на автоматичні події закриття сторінки (які не завжди спрацьовують у Telegram WebView).
-// Використовує звичайний GET (як wordle_result) замість sendBeacon — він довів свою надійність.
+// Явне завершення гри по кнопці
 async function finishGame() {
-  const { uid } = getTg();
-  if (uid && SESSION_ID) {
-    try {
-      const url = `${GAS}?type=wordle_release&userId=${uid}&sessionId=${encodeURIComponent(SESSION_ID)}&secret=${SECRET}&_t=${Date.now()}`;
-      await fetch(url);
-    } catch (e) { /* навіть якщо не вдалось — все одно закриваємо гру нижче */ }
+  if (!resultSent) {
+    // Результат ще не збережено (наприклад мережева помилка) — пробуємо ще раз
+    const { uid } = getTg();
+    if (uid && SESSION_ID) {
+      try {
+        const url = `${GAS}?type=wordle_release&userId=${uid}&sessionId=${encodeURIComponent(SESSION_ID)}&secret=${SECRET}&_t=${Date.now()}`;
+        await fetch(url);
+      } catch (e) {}
+    }
   }
   if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close) {
     window.Telegram.WebApp.close();
