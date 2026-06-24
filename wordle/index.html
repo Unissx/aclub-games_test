@@ -186,7 +186,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   <div class="ov-title">СПРОБИ ЗАКІНЧИЛИСЬ</div>
   <div class="ov-text">Нові спроби з'являться через:</div>
   <div class="ov-timer"><b id="cooldownTimer">--:--:--</b></div>
-  <div class="ov-text">Гра оновлюється раз на 2 дні о 00:00 за Києвом — заходь знову! 🪙</div>
+  <div class="ov-text">Гра оновлюється кожні 12 годин — заходь знову! 🪙</div>
 </div>
 
 <div class="ov hide" id="ovError">
@@ -788,7 +788,7 @@ async function endGame(won, isTimeout) {
       $('retryBtn').classList.remove('hide');
       statusEl.textContent += ' У тебе ще є спроба!';
     } else if (!won) {
-      statusEl.textContent += ' Наступна гра — через 2 дні.';
+      statusEl.textContent += ' Наступна гра — через 12 годин.';
     }
   } else {
     statusEl.innerHTML = '⚠️ Не вдалось зберегти результат.<br>Напиши адміну, якщо монети не з\'явились.';
