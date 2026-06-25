@@ -224,26 +224,21 @@ function generateLevel(){
     // Знаходимо слова
     const pos=shuffle(WORDS.filter(w=>w.length>=3&&w.length<=5&&canForm(w,pool)));
     if(pos.length<3)continue;
-    // Відбираємо 5 слів РІЗНОЇ довжини (мінімум 2 різні довжини)
+    // Відбираємо 5 слів — не більше 2 однакової довжини
     const byL={3:[],4:[],5:[]};
     for(const w of pos)if(byL[w.length])byL[w.length].push(w);
     const chosen=[];
-    // Беремо по 2 від кожної довжини (пріоритет 4 і 5)
+    // Беремо рівно по 1-2 від кожної довжини (макс 2)
     for(const l of [4,5,3]){
-      const take=l===3?1:2;
-      for(let i=0;i<Math.min(take,byL[l].length);i++){
-        if(!chosen.includes(byL[l][i]))chosen.push(byL[l][i]);
+      for(let i=0;i<Math.min(2,byL[l].length)&&chosen.length<5;i++){
+        chosen.push(byL[l][i]);
       }
     }
-    // Якщо менше 5 — добираємо
-    for(const l of [4,5,3]){
-      for(let i=0;i<byL[l].length&&chosen.length<5;i++){
-        if(!chosen.includes(byL[l][i]))chosen.push(byL[l][i]);
-      }
-    }
-    // Перевіряємо що є мінімум 2 різні довжини
-    const lens=new Set(chosen.map(w=>w.length));
-    if(chosen.length<5||lens.size<2)continue;
+    // Перевіряємо що є мінімум 2 різні довжини і жодна не повторюється більше 2 разів
+    const lenCount={};
+    for(const w of chosen)lenCount[w.length]=(lenCount[w.length]||0)+1;
+    const lens=Object.keys(lenCount);
+    if(chosen.length<5||lens.length<2||Object.values(lenCount).some(v=>v>2))continue;
     const grid=buildCrossword(chosen);
     if(!grid||grid.length<5)continue;
     return{letters:shuffle(pool.slice(0,8)),words:grid.slice(0,5)};
