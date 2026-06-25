@@ -591,9 +591,15 @@ async function saveHints(){
 }
 
 function showBuyHint(){
-  const left=hintNextTime-Date.now();
-  $i('hintTimerMsg').textContent=left>0?`Або зачекай ${left/3600000|0}г ${left%3600000/60000|0}хв`:'';
-  $i('buyHintBtn').disabled=coins<1;$i('buyHintBtn').style.opacity=coins<1?'0.4':'1';
+  // Синхронізуємо баланс перед показом (щоб показати актуальний)
+  syncBalance().then(()=>{
+    const left=hintNextTime-Date.now();
+    $i('hintTimerMsg').textContent=left>0?`Наступна безкоштовна через ${left/3600000|0}г ${left%3600000/60000|0}хв`:'';
+    const canBuy=coins>=1;
+    $i('buyHintBtn').disabled=!canBuy;
+    $i('buyHintBtn').style.opacity=canBuy?'1':'0.4';
+    $i('buyHintBtn').textContent=canBuy?'💰 КУПИТИ 1 🪙':'❌ Недостатньо монет';
+  });
   show('ovBuyHint');
 }
 
@@ -606,8 +612,8 @@ async function buyHint(){
     const res=await fetch(GAS+'?type=circle_buy_hint&userId='+u+'&secret='+SECRET+'&_t='+Date.now());
     const d=await res.json();
     if(d.ok){
-      coins=d.coins;hints=d.hints;hintNextTime=d.hintNextTime||0;
-      $i('coinCount').textContent=coins;updateHintUI();hide('ovBuyHint');toast('✅ Підказку куплено!');
+      await syncBalance();
+      updateHintUI();hide('ovBuyHint');toast('✅ Підказку куплено!');
     } else toast(d.error||'❌ Помилка');
   }catch(e){
     // Якщо GAS недоступний — купуємо локально (оновлення при наступній сесії)
@@ -635,10 +641,12 @@ function useHint(){
 
 // ── WIN ───────────────────────────────────────────────
 function showWin(){
-  coins++;$i('coinCount').textContent=coins;
-  $i('winCoins').textContent='+1 🪙 (всього: '+coins+')';
   $i('winWords').textContent='Знайдено '+curWords.length+' слів!';
-  show('ovWin');sendResult();
+  show('ovWin');
+  // Синхронізуємо баланс з сервером після нарахування монети
+  sendResult().then(()=>syncBalance().then(()=>{
+    $i('winCoins').textContent='+1 🪙 (всього: '+coins+')';
+  }));
 }
 function nextLevel(){level++;hide('ovWin');loadLevel();}
 function closeGame(){if(tg?.close)tg.close();else toast('Гру завершено!');}
@@ -656,6 +664,23 @@ async function sendResult(){
 }
 
 // ── INIT ──────────────────────────────────────────────
+// Синхронізує баланс з сервером (загальний баланс бота)
+async function syncBalance(){
+  const u=uid();if(!u)return;
+  try{
+    const r=await fetch(GAS+'?type=circle_init&userId='+u+'&secret='+SECRET+'&_t='+Date.now());
+    const d=await r.json();
+    if(d.coins!==undefined){
+      coins=d.coins;
+      $i('coinCount').textContent=coins;
+    }
+    if(d.hints!==undefined)hints=d.hints;
+    if(d.hintNextTime!==undefined)hintNextTime=d.hintNextTime;
+    if(hints===0&&hintNextTime===0)hints=3;
+    updateHintUI();
+  }catch(e){}
+}
+
 async function init(){
   // Завантажуємо словник з таблиці у фоні (для бонусних слів)
   fetch(GAS+'?type=circle_words&secret='+SECRET+'&_t='+Date.now())
@@ -667,18 +692,8 @@ async function init(){
       }
     }).catch(()=>{});
 
-  const u=uid();
-  if(u){
-    try{
-      const r=await fetch(GAS+'?type=circle_init&userId='+u+'&secret='+SECRET+'&_t='+Date.now());
-      const d=await r.json();
-      if(d.coins!==undefined)coins=d.coins;
-      if(d.hints!==undefined)hints=d.hints;
-      if(d.hintNextTime!==undefined)hintNextTime=d.hintNextTime;
-      if(hints===0&&hintNextTime===0){hints=3;}
-      $i('coinCount').textContent=coins;
-    }catch(e){}
-  }
+  // Завантажуємо баланс і підказки з сервера
+  await syncBalance();
 }
 init();
 </script>
