@@ -351,6 +351,7 @@ function calcPos(){
 
 function drawCircle(mx,my){
   if(!cirCtx)return;
+  calcPos(); // завжди оновлюємо позиції перед малюванням
   const ctx=cirCtx,cx=CS/2,cy=CS/2;
   ctx.clearRect(0,0,CS,CS);
   // bg
