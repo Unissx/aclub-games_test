@@ -301,12 +301,18 @@ function startGame(){
 
 function loadLevel(){
   $('ovNoWords').classList.add('hide');
+  // Дебаг
+  showToast(`Слів: ${WORDS.length}, генерую...`,3000);
   let levelData=null;
   for(let attempt=0;attempt<20;attempt++){
     levelData=generateLevel();
     if(levelData) break;
   }
-  if(!levelData){$('ovNoWords').classList.remove('hide');return;}
+  if(!levelData){
+    showToast(`❌ Не вдалось з ${WORDS.length} слів`,3000);
+    $('ovNoWords').classList.remove('hide');return;
+  }
+  showToast(`✅ Рівень: ${levelData.words.length} слів`,2000);
 
   currentLetters=shuffleArr([...levelData.letters]);
   currentWords=levelData.words;
