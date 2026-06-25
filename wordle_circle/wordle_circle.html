@@ -1,1 +1,642 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>áClub — Слова по колу</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action:none;font-family:'Nunito',sans-serif;color:#e8edf5;}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
+  background:radial-gradient(circle at 50% -10%,rgba(0,230,118,.07),transparent 55%),#050d1a;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+.ov{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;background:rgba(4,12,26,.96);z-index:99;padding:20px;gap:12px;}
+.ov.hide{display:none;}
+.ov-title{font-family:'Press Start 2P',monospace;font-size:clamp(12px,3.5vw,18px);
+  color:#00e676;letter-spacing:1px;text-shadow:0 0 18px rgba(0,230,118,.5);line-height:1.5;text-align:center;}
+.ov-sub{font-size:12px;color:#5b7090;text-align:center;line-height:1.7;max-width:300px;}
+.btn{font-family:'Press Start 2P',monospace;font-size:clamp(9px,2.5vw,12px);
+  background:linear-gradient(135deg,#00e676,#00b248);color:#050d1a;border:none;
+  border-radius:10px;padding:13px 30px;cursor:pointer;letter-spacing:.5px;
+  box-shadow:0 0 22px rgba(0,230,118,.4);transition:transform .1s;}
+.btn:active{transform:scale(.95);}
+.btn-sec{background:transparent;color:#00e676;border:2px solid rgba(0,230,118,.5);box-shadow:none;padding:10px 24px;}
+.win-coins{font-family:'Press Start 2P',monospace;font-size:clamp(22px,7vw,34px);
+  color:#ffd740;text-shadow:0 0 22px rgba(255,215,64,.6);}
+.head{width:100%;max-width:420px;padding:6px 14px 2px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.htitle{font-family:'Press Start 2P',monospace;font-size:clamp(8px,2.5vw,11px);color:#00e676;letter-spacing:1px;}
+.badges{display:flex;gap:5px;align-items:center;}
+.badge{display:inline-flex;align-items:center;gap:3px;border-radius:14px;padding:3px 9px;font-weight:800;font-size:10px;}
+.badge-coin{background:rgba(255,215,64,.1);border:1px solid rgba(255,215,64,.3);color:#ffd740;}
+.badge-lvl{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:#00e676;}
+.badge-hint{background:rgba(255,215,64,.08);border:1px solid rgba(255,215,64,.3);color:#ffd740;cursor:pointer;}
+.badge-hint:active{opacity:.6;}
+.badge-hint.off{opacity:.3;pointer-events:none;}
+.cw-wrap{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:100%;max-width:420px;padding:4px 10px;}
+#cwCanvas{display:block;}
+.cur-word{text-align:center;font-weight:900;font-size:clamp(18px,5vw,24px);
+  letter-spacing:4px;text-transform:uppercase;min-height:32px;flex-shrink:0;
+  color:#e8edf5;transition:color .15s;}
+.cur-word.ok{color:#00e676;text-shadow:0 0 12px rgba(0,230,118,.5);}
+.cur-word.bad{color:#ff6090;}
+.circle-wrap{flex-shrink:0;}
+#circleCanvas{display:block;touch-action:none;}
+.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(16px);
+  background:rgba(10,20,44,.97);border:1px solid rgba(0,230,118,.35);
+  border-radius:10px;padding:8px 20px;font-size:12px;font-weight:800;color:#00e676;
+  opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:300;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.loading{color:#5b7090;font-size:12px;text-align:center;padding:20px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="ov" id="ovStart">
+    <div class="ov-title">🔡 СЛОВА<br>ПО КОЛУ</div>
+    <div class="ov-sub">Проводь лінію між буквами — склади слова і заповни кросворд!<br><br>Кожен рівень — унікальний набір слів 🎲</div>
+    <button class="btn" onclick="startGame()">▶ ГРАТИ</button>
+  </div>
+  <div class="ov hide" id="ovWin">
+    <div class="ov-title">✅ РІВЕНЬ<br>ПРОЙДЕНО!</div>
+    <div class="win-coins" id="winCoins">+1 🪙</div>
+    <div style="font-size:11px;color:#5b7090;margin-top:4px;" id="winWords"></div>
+    <button class="btn" onclick="nextLevel()">▶ ДАЛІ</button>
+    <button class="btn btn-sec" onclick="closeGame()">✕ ВИЙТИ</button>
+  </div>
+  <div class="ov hide" id="ovNoWords">
+    <div class="ov-title" style="color:#ffd740">😅 УПСС...</div>
+    <div class="ov-sub">Не вдалось знайти достатньо слів.<br>Генеруємо новий рівень!</div>
+    <button class="btn" onclick="loadLevel()">🔄 НОВИЙ РІВЕНЬ</button>
+  </div>
+  <div class="head" id="gameHead" style="display:none">
+    <div class="htitle">🔡 СЛОВА ПО КОЛУ</div>
+    <div class="badges">
+      <span class="badge badge-coin">🪙 <span id="coinCount">0</span></span>
+      <span class="badge badge-lvl">⭐ <span id="lvlNum">1</span></span>
+      <span class="badge badge-hint" id="hintBtn" onclick="useHint()">💡 <span id="hintCount">3</span></span>
+    </div>
+  </div>
+  <div class="cw-wrap" id="cwWrap" style="display:none"><canvas id="cwCanvas"></canvas></div>
+  <div class="cur-word" id="curWord" style="display:none">・・・</div>
+  <div class="circle-wrap" id="circleWrap" style="display:none"><canvas id="circleCanvas"></canvas></div>
+</div>
+<div class="toast" id="toast"></div>
 
+<script>
+const GAS='https://script.google.com/macros/s/AKfycbzH8qt2_fUmnrLEw0Z56fsyMEH-D3uOgBSeTxwzUMCDTFDDoNBAowLTZqEGwSFo26ie9A/exec';
+const SECRET='aclub2026runnertest';
+const tg=window.Telegram?.WebApp;
+if(tg){tg.ready();tg.expand();}
+function getTgUid(){try{return String(tg?.initDataUnsafe?.user?.id||'');}catch(e){return '';}}
+function $(id){return document.getElementById(id);}
+function showToast(msg,dur=1800){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),dur);}
+
+// ══════════════════════════════════════════════════════
+// СЛОВНИК — 4-6 літерні українські слова
+// ══════════════════════════════════════════════════════
+const DICTIONARY = [
+  // А
+  "АВТО","АГЕНТ","АДРЕС","АЗОТ","АЇСТ","АКЦІЯ","АЛЕЯ","АЛМАЗ","АЛЬТ","АМБА",
+  "АНГЕЛ","АНОД","АНТИК","АОРТА","АРЕНА","АРКА","АРФА","АУРА","АФІША",
+  // Б
+  "БАЛЕТ","БАНАН","БАТІГ","БАТОН","БЕЗУМ","БЕРЕГ","БЕТОН","БІЛЕТ","БІЛЬШ",
+  "БІНГО","БІЧНА","БІЛКА","БЛАНК","БЛИСК","БЛОК","БЛЮДО","БОБЕР","БОГАТИР",
+  "БОЛОТО","БОРЕЦЬ","БОРТ","БОРЩ","БОЄЦЬ","БРАМА","БРАТ","БРИЗ","БРОВАР",
+  "БРОНЯ","БРУДНО","БУКВА","БУРАН","БУРУН","БУТОН","БУЧМА",
+  // В
+  "ВАЛЕТ","ВАЛІЗА","ВАЛЬС","ВАПНО","ВАРАН","ВАРТА","ВЕЛЕТ","ВЕРБА","ВЕЧІР",
+  "ВИМІР","ВИНО","ВІНОК","ВІСЬ","ВІТЕР","ВІТРАЖ","ВОВНА","ВОВК","ВОГОНЬ",
+  "ВОЛОС","ВОЯК","ВУЛИК","ВУЛИЦЯ","ВУСА",
+  // Г
+  "ГАМАН","ГАМІР","ГАРАЖ","ГАРНІР","ГЕРБ","ГІМН","ГІРКА","ГІСТЬ","ГОЛОС",
+  "ГОНЕЦЬ","ГОРА","ГОРІХ","ГОСТРА","ГРАФ","ГРИБ","ГРИВНЯ","ГРІМ","ГУДОК",
+  "ГУСАК","ГУСІНЬ",
+  // Д
+  "ДАВНЄ","ДАЛЕЧІНЬ","ДАМБА","ДВОРИК","ДИВАН","ДИМАР","ДІАМАНТ","ДІЙСНО",
+  "ДІЛО","ДІВЧА","ДОБРО","ДОГЛАД","ДОРОГА","ДОСВІД","ДОЩИК","ДРІМОТА",
+  "ДРОВА","ДРОЗД","ДУЕЛЬ","ДУМКА","ДУНЯ","ДУГА",
+  // Е
+  "ЕКРАН","ЕЛЕМЕНТ","ЕНЕРГІЯ","ЕСКІЗ","ЕТЮД",
+  // Є
+  "ЄНОТ","ЄРЕСЬ",
+  // Ж
+  "ЖАЙВОРОН","ЖАЛЬ","ЖАРТ","ЖАСМИН","ЖЕБРАК","ЖЕНЕЦЬ","ЖЕРДКА","ЖИВІТ",
+  "ЖИЛА","ЖИТО","ЖНИВА","ЖОВТЕНЬ","ЖОЛУДЬ","ЖУРА",
+  // З
+  "ЗАВОД","ЗАГІН","ЗАДУМ","ЗАЙВО","ЗАЙЦЯ","ЗАЛІЗО","ЗАМОК","ЗАПИТ","ЗАРЕВО",
+  "ЗБРОЯ","ЗЕФІР","ЗЕРНО","ЗИМА","ЗІРКА","ЗЛІТ","ЗМІЙ","ЗНАК","ЗОРЕПАД",
+  "ЗУБР","ЗУСТРІЧ",
+  // І
+  "ІГРАШКА","ІНІЙ","ІСКРА","ІНОДІ",
+  // К
+  "КАБАН","КАЗКА","КАКТУС","КАЛИНА","КАМІНЬ","КАНАЛ","КАПЛЯ","КАША","КЕДР",
+  "КИЛИМ","КІНЕЦЬ","КІГОТЬ","КІЛОК","КІМНАТА","КІНЬ","КІНЦЯ","КІРА","КІСКА",
+  "КЛІЩ","КЛОУН","КЛУБОК","КНИГА","КОБРА","КОЗАК","КОЗЕЛ","КОЛОС","КОЛІЯ",
+  "КОМАХА","КОПИЦЯ","КОРІННЯ","КОРІНЬ","КОРОП","КОРОТКИЙ","КОХАННЯ","КОЧАН",
+  "КРАН","КРАСА","КРЕМІНЬ","КРИГА","КРИЗА","КРИЛО","КРОВ","КРОПИВА","КУБИК",
+  "КУЛАК","КУЛІШ","КУПОЛ","КУРІНЬ",
+  // Л
+  "ЛАЗУР","ЛАМПА","ЛЕЛЕКА","ЛІЖКО","ЛІЛІТ","ЛІЛІЄ","ЛІМІТ","ЛІНЗА","ЛІСОК",
+  "ЛІТАК","ЛІТЕРА","ЛОБОДА","ЛОВЕЦЬ","ЛОГІКА","ЛОПАТА","ЛОСОСЬ","ЛОТОС",
+  "ЛУСКА","ЛУЧ","ЛУЧНИК","ЛЮТИЙ",
+  // М
+  "МАЄМО","МАЙОР","МАНДРИ","МАНІЯК","МАННА","МАРЕВО","МАСКА","МАСЛО","МАТІР",
+  "МАХОР","МЕДАЛЬ","МЕДИК","МЕЖА","МЕТАЛ","МЕТОД","МЕШТА","МИГДАЛЬ","МИРНИЙ",
+  "МИТЬ","МІСТО","МІСТ","МІШОК","МОВЧУН","МОГИЛА","МОРЯК","МУЛЯР","МУНДИР",
+  // Н
+  "НАБІР","НАВАЛ","НАГОДА","НАДІЯ","НАМЕТ","НАПИС","НАРОД","НАЩАДОК","НЕБО",
+  "НЕКТАР","НІКЕЛЬ","НИТКА","НОВИНА","НОРКА","НУДЬГА","НУРЕЦЬ",
+  // О
+  "ОБВАЛ","ОБГІН","ОБДАР","ОБЖИН","ОБЛІГ","ОБМІН","ОБРАЗ","ОБРІЙ","ОБРЯД",
+  "ОВЕЧА","ОВОЧ","ОГОНЬ","ОДЯГ","ОЗЕРО","ОКРАС","ОЛЕНЬ","ОЛІЯ","ОЛІЯР",
+  "ОРДЕН","ОРЕЛ","ОСІНЬ","ОСТРІВ","ОТАРА","ОХОТА",
+  // П
+  "ПАЛАЦ","ПАРУС","ПАСІКА","ПЕРО","ПЕЧЕРА","ПИЛОК","ПИСАР","ПІЩАНИК","ПЛАХА",
+  "ПЛАНЕР","ПЛЕСО","ПОВІНЬ","ПОРІГ","ПОТІК","ПРАЦЯ","ПРИВАЛ","ПРИЧАЛ","ПРОВАЛ",
+  "ПРОЛОМ","ПРОМІНЬ","ПРОПУСК","ПРОРУБ","ПРОСО","ПРЯНИК","ПУСТЕЛЯ","ПУЧОК",
+  // Р
+  "РАДА","РАДІСТЬ","РАЗОК","РИБАК","РИБИНА","РІВЕНЬ","РІВНИНА","РІДНЯ","РІЗЕЦЬ",
+  "РІЗНИЦЯ","РІЛЛЯ","РІПАК","РОГАЧ","РОГІЗ","РОЗДУМ","РОЗУМ","РОКІТ","РОСЛИНА",
+  "РУБІН","РУКАВ","РУШНИК",
+  // С
+  "САГАЙДАК","САДИБА","САМОТА","СВІЖІСТЬ","СВОБОДА","СЕЛЕЗЕНЬ","СЕРП","СИВИНА",
+  "СИЛА","СИРЕЦЬ","СИРОТА","СІНО","СІМЯ","СІРНИК","СІЯЧ","СКАЛА","СКЕЛЯ",
+  "СКРИПАЛЬ","СЛОН","СЛЬОЗА","СМАРАГД","СМЕРЕКА","СМОЛА","СНІГ","СОНЕТ",
+  "СОСНА","СПИС","СТЕЖКА","СТЕРНО","СТОВП","СТРІЛА","СУМІШ","СУПІНЬ","СУЧА",
+  // Т
+  "ТАБІР","ТАРГАН","ТЕМІНЬ","ТЕПЛІНЬ","ТЕРЕН","ТИША","ТІСТО","ТКАНИНА",
+  "ТОПОЛЯ","ТОРБА","ТРАВА","ТРИВОГА","ТРУБАЧ","ТУМБА","ТУМАН",
+  // У
+  "УБРУС","УВАГА","УГОДА","УДАЧА","УЗБІЧ","УЗЛІССЯ","УКУС","УМОВА","УПОР",
+  "УСПІХ","УТВОРЕННЯ",
+  // Ф
+  "ФАРБА","ФАСАД","ФЕНІКС","ФЛЮГЕР","ФОНТАН","ФОРПОСТ","ФРЕГАТ",
+  // Х
+  "ХАОС","ХАТА","ХВИЛЯ","ХМАРА","ХМІЛЬ","ХОДАК","ХОЛОД","ХОМУТ","ХОРОБРИЙ",
+  "ХРЕСТ","ХРІН","ХУДОЖНИК",
+  // Ц
+  "ЦЕГЛА","ЦИБУЛЯ","ЦІЛИНА","ЦІННИК","ЦИТАТА","ЦУКОР",
+  // Ч
+  "ЧАБАН","ЧАЙКА","ЧАРІВНИК","ЧАША","ЧЕМПІОН","ЧЕРЕПАХА","ЧИНАР","ЧІПС",
+  "ЧОБОТИ","ЧОРНИЛО","ЧОРНИЦЯ","ЧУБОК","ЧУДАСІЯ",
+  // Ш
+  "ШАБЛЯ","ШАХТА","ШЕЛЕСТ","ШИНЕЛЬ","ШИПШИНА","ШЛЯХТА","ШОЛОМОК","ШТУРМАН",
+  // Щ
+  "ЩАСТЯ","ЩЕДРІСТЬ","ЩОДЕННИК","ЩУКА",
+  // Ю
+  "ЮНАК","ЮРБА","ЮРИСТ",
+  // Я
+  "ЯГОДА","ЯКІР","ЯСТРУБ","ЯЧМІНЬ",
+  // КОРОТКІ (3-4 букви) — важливі для кросворду
+  "АЇСТ","БОРТ","БРАТ","БРИЗ","БУРЯ","ВИНО","ВІСЬ","ВОВК","ГОРА","ГОРБ",
+  "ГРІМ","ГРИБ","ДОЩ","ДУГА","ЖАРТ","ЗИМА","ЗІРКА","ЗЛИЙ","ЗМІЙ","ЗНАК",
+  "КІНЬ","КРАБ","КРАН","КРОВ","КРУК","ЛАНЬ","ЛЕВА","ЛИСТ","ЛІТО","ЛОСЬ",
+  "ЛУНА","ЛЬОН","МАЯК","МЕЖА","МІСТ","МИТЬ","МОВА","МОРЕ","МРАК","НИВА",
+  "НОРА","НІША","НЕБО","ОСЕЛ","РИСЬ","РИБА","РОСА","РОСЬ","РУТА","СІЛЬ",
+  "СНІГ","СОВА","СОСН","СТЕП","ТИША","ТУГА","УМНА","УПАВ","УСНА","ХАТА",
+  "ХЛІБ","ХМАР","ЦВЯХ","ЧАРК","ЧЕРВ","ЧОРН","ШЛЯХ","ЩУКА","ЯЛИН","ЯСЕН",
+  // Доповнення — чисті 4-5 буквені
+  "РОСА","ОСЕЛ","СЕЛО","ГОРА","ЛІРА","ЗИМА","СНІГ","МОДА","МОРЕ","ОРДА",
+  "ВОДА","РЕВО","ПТАХ","НЕБО","ТАНЕ","ПАНО","КРАН","РАНО","ВИНО","НОРА",
+  "РИСА","САЛО","НИВА","РАМА","КОМА","ЛАМА","ДАМА","ДІРА","МІРА","ТІРА",
+  "МАЗІ","ГІМН","ЗНІС","ЕГОР","ЛІГА","ДРОВА","МАСЛО","ОРЕЛ","САЛО",
+  "БАЛЕТ","ВІТЕР","ГІСТЬ","ДОЩИК","ЗБРОЯ","КАЗКА","КРАСА","ЛОТОС","МАСКА",
+  "НАМЕТ","ОБРАЗ","ПАРУС","РИБАК","СИЛА","ТРАВА","УСПІХ","ФАРБА","ХВИЛЯ",
+  "ЦЕГЛА","ЧАЙКА","ШЛЯХ","ЯГОДА","ЯКІР",
+];
+
+// Унікальні слова, від 3 до 6 букв, тільки кириличні
+const WORDS = [...new Set(DICTIONARY.filter(w=>w.length>=3&&w.length<=6&&/^[А-ЯІЇЄҐЬ]+$/.test(w)))];
+
+// ══════════════════════════════════════════════════════
+// ГЕНЕРАТОР РІВНЯ
+// ══════════════════════════════════════════════════════
+
+function shuffleArr(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function canForm(word, letters){
+  const pool=[...letters];
+  for(const ch of word){
+    const i=pool.indexOf(ch);
+    if(i<0) return false;
+    pool.splice(i,1);
+  }
+  return true;
+}
+
+// Генеруємо набір букв з популярних груп
+const LETTER_POOLS = [
+  ['Р','О','С','А','Л','І','Г','Е'],
+  ['З','И','М','А','С','Н','І','Г'],
+  ['М','О','Р','Е','В','О','Д','А'],
+  ['П','Т','А','Х','Н','Е','Б','О'],
+  ['К','Р','А','Н','О','В','И','Й'],
+  ['Д','О','Б','Р','О','С','Е','Р'],
+  ['Т','Р','А','В','А','Л','Е','С'],
+  ['К','О','З','А','К','И','Н','Е'],
+  ['В','І','Т','Е','Р','Г','О','Р'],
+  ['С','О','Н','Я','Ч','Н','И','Й'],
+  ['Л','І','С','О','В','И','К','А'],
+  ['М','О','Р','О','З','И','В','О'],
+  ['Б','А','Г','А','Т','О','С','Т'],
+  ['В','О','Г','Н','Е','Б','О','Р'],
+  ['К','А','М','І','Н','Ь','Д','А'],
+  ['З','О','Р','Е','П','А','Д','Н'],
+  ['Р','И','Б','А','Л','К','А','С'],
+  ['Ч','А','Р','І','В','Н','И','К'],
+  ['Х','В','И','Л','Я','М','О','Р'],
+  ['З','Е','Р','Н','О','С','А','Д'],
+];
+
+function generateLevel(){
+  // Беремо випадковий пул букв
+  const pool = shuffleArr([...LETTER_POOLS])[0];
+
+  // Знаходимо всі слова які можна скласти з цих букв
+  const possible = shuffleArr(WORDS.filter(w => canForm(w, pool)));
+
+  // Беремо 5-7 слів різної довжини для кросворду
+  // Пріоритет: хочемо мікс довжин 3,4,5,6
+  const chosen = [];
+  const byLen = {3:[],4:[],5:[],6:[]};
+  for(const w of possible){
+    if(byLen[w.length]) byLen[w.length].push(w);
+  }
+  // Беремо по 1-2 від кожної довжини
+  for(const len of [4,5,6,3]){
+    const arr=byLen[len]||[];
+    const take=len>=4?2:1;
+    for(let i=0;i<Math.min(take,arr.length);i++) chosen.push(arr[i]);
+    if(chosen.length>=6) break;
+  }
+
+  if(chosen.length < 4) return null; // замало слів
+
+  // Будуємо кросворд автоматично
+  const grid = buildCrossword(chosen);
+  if(!grid) return null;
+
+  return {letters: pool, words: grid};
+}
+
+// ══════════════════════════════════════════════════════
+// АВТОМАТИЧНИЙ КРОСВОРД
+// ══════════════════════════════════════════════════════
+
+function buildCrossword(words){
+  // Перше слово — горизонтально в (0,0)
+  const placed = [];
+  placed.push({word:words[0], row:0, col:0, dir:'h'});
+
+  for(let wi=1; wi<words.length; wi++){
+    const w = words[wi];
+    let best = null;
+
+    // Пробуємо прикріпити до вже розміщених
+    for(const placed_w of shuffleArr([...placed])){
+      // Шукаємо спільні букви
+      for(let pi=0; pi<placed_w.word.length; pi++){
+        for(let wi2=0; wi2<w.length; wi2++){
+          if(placed_w.word[pi] !== w[wi2]) continue;
+
+          // Позиція перетину
+          const newDir = placed_w.dir==='h' ? 'v' : 'h';
+          let newRow, newCol;
+          if(placed_w.dir==='h'){
+            // placed горизонтальне: перетин у placed_w.col+pi, рядок placed_w.row
+            newCol = placed_w.col + pi;
+            newRow = placed_w.row - wi2;
+          } else {
+            newRow = placed_w.row + pi;
+            newCol = placed_w.col - wi2;
+          }
+
+          if(newRow < 0 || newCol < 0) continue;
+
+          // Перевіряємо що нове слово не конфліктує
+          if(checkPlacement(placed, w, newRow, newCol, newDir)){
+            best = {word:w, row:newRow, col:newCol, dir:newDir};
+            break;
+          }
+        }
+        if(best) break;
+      }
+      if(best) break;
+    }
+
+    if(best) placed.push(best);
+  }
+
+  if(placed.length < 4) return null;
+
+  // Нормалізуємо: зсуваємо щоб всі row,col >= 0
+  const minR = Math.min(...placed.map(p=>p.row));
+  const minC = Math.min(...placed.map(p=>p.col));
+  return placed.map(p=>({...p, row:p.row-minR, col:p.col-minC, found:false, clue:''}));
+}
+
+function checkPlacement(placed, word, row, col, dir){
+  // Збираємо всі зайняті клітинки
+  const cells = {};
+  for(const p of placed){
+    for(let i=0;i<p.word.length;i++){
+      const r = p.dir==='h' ? p.row : p.row+i;
+      const c = p.dir==='h' ? p.col+i : p.col;
+      cells[`${r}_${c}`] = p.word[i];
+    }
+  }
+
+  // Перевіряємо нове слово
+  for(let i=0;i<word.length;i++){
+    const r = dir==='h' ? row : row+i;
+    const c = dir==='h' ? col+i : col;
+    const key = `${r}_${c}`;
+    if(cells[key] && cells[key] !== word[i]) return false; // конфлікт
+  }
+
+  // Перевіряємо що сусідні клітинки не створюють зайвих слів
+  for(let i=0;i<word.length;i++){
+    const r = dir==='h' ? row : row+i;
+    const c = dir==='h' ? col+i : col;
+    const key = `${r}_${c}`;
+    if(cells[key]) continue; // перетин — ок
+
+    // Перевіряємо сусідів з боків (паралельно напряму)
+    if(dir==='h'){
+      if(cells[`${r-1}_${c}`] || cells[`${r+1}_${c}`]) return false;
+    } else {
+      if(cells[`${r}_${c-1}`] || cells[`${r}_${c+1}`]) return false;
+    }
+  }
+
+  // Перевіряємо кінці слова
+  const endR = dir==='h' ? row : row+word.length;
+  const endC = dir==='h' ? col+word.length : col;
+  if(cells[`${endR}_${endC}`]) return false;
+  const preR = dir==='h' ? row : row-1;
+  const preC = dir==='h' ? col-1 : col;
+  if(preR>=0 && preC>=0 && cells[`${preR}_${preC}`]) return false;
+
+  return true;
+}
+
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let level=0, coins=0, hints=3;
+let currentLetters=[], currentWords=[];
+let selectedIdx=[], isDragging=false;
+let levelStartTime=0;
+let GRID={}, maxR=0, maxC=0;
+let cwCv,cwCtx,cirCv,cirCtx;
+let CS=0,CR=0,nodePos=[];
+const CELL=38,GAP=4;
+const NODE_R=22;
+const svgNS='http://www.w3.org/2000/svg';
+
+function startGame(){
+  $('ovStart').classList.add('hide');
+  $('gameHead').style.display='';
+  $('cwWrap').style.display='';
+  $('curWord').style.display='';
+  $('circleWrap').style.display='';
+  cwCv=$('cwCanvas');cwCtx=cwCv.getContext('2d');
+  cirCv=$('circleCanvas');cirCtx=cirCv.getContext('2d');
+  setupCircleEvents();
+  loadLevel();
+}
+
+function loadLevel(){
+  $('ovNoWords').classList.add('hide');
+  let levelData=null;
+  for(let attempt=0;attempt<20;attempt++){
+    levelData=generateLevel();
+    if(levelData) break;
+  }
+  if(!levelData){$('ovNoWords').classList.remove('hide');return;}
+
+  currentLetters=shuffleArr([...levelData.letters]);
+  currentWords=levelData.words;
+  selectedIdx=[];isDragging=false;hints=3;levelStartTime=Date.now();
+  $('lvlNum').textContent=level+1;
+  $('coinCount').textContent=coins;
+  $('hintCount').textContent=hints;
+  $('hintBtn').classList.remove('off');
+  $('curWord').textContent='・・・';
+  $('curWord').className='cur-word';
+  rebuildGrid();
+  sizeCrossword();
+  sizeCircle();
+  drawCrossword();
+  drawCircle();
+}
+
+function rebuildGrid(){
+  GRID={};maxR=0;maxC=0;
+  currentWords.forEach(e=>{
+    for(let i=0;i<e.word.length;i++){
+      const r=e.dir==='h'?e.row:e.row+i;
+      const c=e.dir==='h'?e.col+i:e.col;
+      const key=`${r}_${c}`;
+      if(!GRID[key]) GRID[key]={letter:e.word[i],found:false,hint:false};
+      maxR=Math.max(maxR,r);maxC=Math.max(maxC,c);
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// CROSSWORD CANVAS
+// ══════════════════════════════════════════════════════
+function sizeCrossword(){
+  const cols=maxC+1,rows=maxR+1;
+  const vw=Math.min(window.innerWidth,420);
+  const cellSize=Math.min(CELL,Math.floor((vw-30)/(cols+0.5)));
+  const cw=(cols*cellSize+(cols-1)*GAP)+20;
+  const ch=(rows*cellSize+(rows-1)*GAP)+10;
+  cwCv.width=cw;cwCv.height=ch;
+  cwCv.style.width=cw+'px';cwCv.style.height=ch+'px';
+  cwCv._cell=cellSize;
+}
+function cellXY(r,c){
+  const cs=cwCv._cell||CELL;
+  return{x:10+c*(cs+GAP),y:5+r*(cs+GAP),cs};
+}
+function rr(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
+}
+function drawCrossword(){
+  const cw=cwCv.width,ch=cwCv.height;
+  cwCtx.clearRect(0,0,cw,ch);
+  Object.entries(GRID).forEach(([key,cell])=>{
+    const[r,c]=key.split('_').map(Number);
+    const{x,y,cs}=cellXY(r,c);
+    if(cell.found){cwCtx.fillStyle='#063d24';cwCtx.strokeStyle='#00e676';}
+    else if(cell.hint){cwCtx.fillStyle='#3d3214';cwCtx.strokeStyle='#ffd740';}
+    else{cwCtx.fillStyle='rgba(255,255,255,0.07)';cwCtx.strokeStyle='rgba(255,255,255,0.18)';}
+    cwCtx.lineWidth=1.5;
+    rr(cwCtx,x,y,cs,cs,5);cwCtx.fill();cwCtx.stroke();
+    if(cell.found||cell.hint){
+      cwCtx.fillStyle=cell.found?'#00e676':'#ffd740';
+      cwCtx.font=`900 ${cs*0.46}px Nunito,sans-serif`;
+      cwCtx.textAlign='center';cwCtx.textBaseline='middle';
+      cwCtx.fillText(cell.letter,x+cs/2,y+cs/2+1);
+    }
+  });
+}
+function markFound(word,row,col,dir){
+  for(let i=0;i<word.length;i++){
+    const r=dir==='h'?row:row+i;
+    const c=dir==='h'?col+i:col;
+    const key=`${r}_${c}`;
+    if(GRID[key]) GRID[key].found=true;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// CIRCLE CANVAS
+// ══════════════════════════════════════════════════════
+function sizeCircle(){
+  const vw=Math.min(window.innerWidth,420);
+  CS=Math.min(vw-20,300);CR=(CS/2)*0.72;
+  cirCv.width=CS;cirCv.height=CS;
+  cirCv.style.width=CS+'px';cirCv.style.height=CS+'px';
+  const cx=CS/2,cy=CS/2,n=currentLetters.length;
+  nodePos=currentLetters.map((_,i)=>{
+    const a=(2*Math.PI*i/n)-Math.PI/2;
+    return{x:cx+CR*Math.cos(a),y:cy+CR*Math.sin(a)};
+  });
+}
+
+function drawCircle(mx,my){
+  const ctx=cirCtx,cx=CS/2,cy=CS/2;
+  ctx.clearRect(0,0,CS,CS);
+  // bg disk
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,CR+NODE_R+4,0,Math.PI*2);
+  ctx.fillStyle='rgba(10,18,40,0.85)';ctx.fill();
+  ctx.strokeStyle='rgba(0,230,118,0.1)';ctx.lineWidth=1;ctx.stroke();ctx.restore();
+
+  // selection lines
+  if(selectedIdx.length>=2){
+    ctx.save();ctx.strokeStyle='rgba(0,230,118,0.55)';ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();
+    const p0=nodePos[selectedIdx[0]];ctx.moveTo(p0.x,p0.y);
+    for(let i=1;i<selectedIdx.length;i++){const p=nodePos[selectedIdx[i]];ctx.lineTo(p.x,p.y);}
+    ctx.stroke();ctx.restore();
+  }
+  // live line to finger
+  if(isDragging&&selectedIdx.length>=1&&mx!==undefined){
+    const last=nodePos[selectedIdx[selectedIdx.length-1]];
+    ctx.save();ctx.strokeStyle='rgba(0,230,118,0.3)';ctx.lineWidth=3;ctx.lineCap='round';
+    ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(mx,my);
+    ctx.stroke();ctx.setLineDash([]);ctx.restore();
+  }
+  // nodes
+  currentLetters.forEach((letter,i)=>{
+    const{x,y}=nodePos[i];
+    const sel=selectedIdx.includes(i);
+    const isLast=selectedIdx[selectedIdx.length-1]===i;
+    if(sel){
+      ctx.save();const g=ctx.createRadialGradient(x,y,NODE_R*.5,x,y,NODE_R*1.8);
+      g.addColorStop(0,'rgba(0,230,118,0.28)');g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,NODE_R*1.8,0,Math.PI*2);ctx.fill();ctx.restore();
+    }
+    ctx.save();ctx.beginPath();ctx.arc(x,y,NODE_R,0,Math.PI*2);
+    if(isLast){const g=ctx.createRadialGradient(x-3,y-3,2,x,y,NODE_R);g.addColorStop(0,'#00e676');g.addColorStop(1,'#007a3d');ctx.fillStyle=g;}
+    else if(sel){ctx.fillStyle='#0a2e1a';}
+    else{const g=ctx.createRadialGradient(x-3,y-4,2,x,y,NODE_R);g.addColorStop(0,'#1e2d50');g.addColorStop(1,'#0d1630');ctx.fillStyle=g;}
+    ctx.fill();
+    ctx.strokeStyle=isLast?'#00e676':sel?'rgba(0,230,118,0.7)':'rgba(255,255,255,0.1)';
+    ctx.lineWidth=sel?2:1.5;ctx.stroke();ctx.restore();
+    ctx.save();ctx.font=`900 ${NODE_R*.9}px Nunito,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle=isLast?'#050d1a':sel?'#00e676':'#e8edf5';ctx.fillText(letter,x,y+1);ctx.restore();
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// EVENTS
+// ══════════════════════════════════════════════════════
+function setupCircleEvents(){
+  cirCv.addEventListener('mousedown',e=>{e.preventDefault();const p=ep(e);tryStart(p.x,p.y);});
+  cirCv.addEventListener('mousemove',e=>{e.preventDefault();const p=ep(e);tryMove(p.x,p.y);});
+  cirCv.addEventListener('mouseup',  e=>{e.preventDefault();endDrag();});
+  cirCv.addEventListener('touchstart',e=>{e.preventDefault();const p=ep(e);tryStart(p.x,p.y);},{passive:false});
+  cirCv.addEventListener('touchmove', e=>{e.preventDefault();const p=ep(e);tryMove(p.x,p.y);},{passive:false});
+  cirCv.addEventListener('touchend',  e=>{e.preventDefault();endDrag();},{passive:false});
+}
+function ep(e){const r=cirCv.getBoundingClientRect();const s=e.touches?e.touches[0]:e;return{x:s.clientX-r.left,y:s.clientY-r.top};}
+function near(x,y){for(let i=0;i<nodePos.length;i++){const p=nodePos[i];if((x-p.x)**2+(y-p.y)**2<=(NODE_R+8)**2)return i;}return -1;}
+function tryStart(x,y){const i=near(x,y);if(i<0)return;isDragging=true;selectedIdx=[i];updateCurWord();drawCircle(x,y);}
+function tryMove(x,y){if(!isDragging){drawCircle(x,y);return;}const i=near(x,y);
+  if(i>=0){const last=selectedIdx[selectedIdx.length-1];
+    if(i!==last){if(selectedIdx.length>=2&&selectedIdx[selectedIdx.length-2]===i){selectedIdx.pop();}
+    else if(!selectedIdx.includes(i)){selectedIdx.push(i);}updateCurWord();}}drawCircle(x,y);}
+function endDrag(){if(!isDragging)return;isDragging=false;checkWord();selectedIdx=[];updateCurWord();drawCircle();}
+
+function updateCurWord(){
+  const el=$('curWord');const w=selectedIdx.map(i=>currentLetters[i]).join('');
+  if(!w){el.textContent='・・・';el.className='cur-word';return;}
+  el.textContent=w;
+  const match=currentWords.find(e=>!e.found&&e.word===w);
+  el.className='cur-word'+(match?' ok':w.length>=3?' bad':'');
+}
+function checkWord(){
+  const w=selectedIdx.map(i=>currentLetters[i]).join('');if(w.length<3)return;
+  const wi=currentWords.findIndex(e=>!e.found&&e.word===w);
+  if(wi>=0){currentWords[wi].found=true;markFound(currentWords[wi].word,currentWords[wi].row,currentWords[wi].col,currentWords[wi].dir);
+    drawCrossword();showToast(`✅ ${w}`);if(currentWords.every(e=>e.found))setTimeout(showWin,500);}
+}
+
+// ══════════════════════════════════════════════════════
+// HINT
+// ══════════════════════════════════════════════════════
+function useHint(){
+  if(hints<=0)return;
+  const unfound=currentWords.filter(e=>!e.found);if(!unfound.length)return;
+  let hintKey=null,hintLetter='';
+  outer:for(const entry of shuffleArr([...unfound])){
+    for(let i=0;i<entry.word.length;i++){
+      const r=entry.dir==='h'?entry.row:entry.row+i;
+      const c=entry.dir==='h'?entry.col+i:entry.col;
+      const key=`${r}_${c}`;
+      if(GRID[key]&&!GRID[key].found&&!GRID[key].hint){hintKey=key;hintLetter=entry.word[i];break outer;}
+    }
+  }
+  if(!hintKey){showToast('💡 Немає що розкривати');return;}
+  GRID[hintKey].hint=true;hints--;$('hintCount').textContent=hints;
+  if(hints===0)$('hintBtn').classList.add('off');
+  drawCrossword();showToast(`💡 Буква "${hintLetter}" відкрита!`);
+}
+
+// ══════════════════════════════════════════════════════
+// WIN / NEXT
+// ══════════════════════════════════════════════════════
+function showWin(){
+  coins++;$('coinCount').textContent=coins;
+  $('winCoins').textContent=`+1 🪙 (всього: ${coins})`;
+  $('winWords').textContent=`Знайдено ${currentWords.length} слів!`;
+  $('ovWin').classList.remove('hide');sendResult();
+}
+function nextLevel(){level++;$('ovWin').classList.add('hide');loadLevel();}
+function closeGame(){if(tg?.close)tg.close();else showToast('Гру завершено!');}
+
+async function sendResult(){
+  const uid=getTgUid();if(!uid)return;
+  const el=Math.round((Date.now()-levelStartTime)/1000);
+  try{await fetch(`${GAS}?type=circle_result&userId=${uid}&level=${level}&coins=${coins}&elapsed=${el}&secret=${SECRET}&_t=${Date.now()}`);}catch(e){}
+}
+async function init(){
+  const uid=getTgUid();if(!uid)return;
+  try{const r=await fetch(`${GAS}?type=circle_init&userId=${uid}&secret=${SECRET}&_t=${Date.now()}`);
+    const d=await r.json();if(d.coins!==undefined){coins=d.coins;$('coinCount').textContent=coins;}}catch(e){}
+}
+init();
+</script>
+</body>
+</html>
