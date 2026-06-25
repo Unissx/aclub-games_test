@@ -49,7 +49,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   letter-spacing:3px;text-transform:uppercase;min-height:28px;flex-shrink:0;color:#e8edf5;}
 .cur.ok{color:#00e676;text-shadow:0 0 12px rgba(0,230,118,.5);}
 .cur.bad{color:#ff6090;}
-.cir-wrap{flex:1;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;}
+.cir-wrap{flex:1;display:flex;align-items:flex-end;justify-content:center;padding-bottom:16px;}
 
 /* TOAST */
 .toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%) translateY(16px);
@@ -57,6 +57,15 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   border-radius:10px;padding:8px 18px;font-size:12px;font-weight:800;color:#00e676;
   opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:300;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+/* BONUS BAR */
+.bonus-bar{position:fixed;bottom:0;left:0;right:0;
+  background:rgba(10,18,40,0.92);border-top:1px solid rgba(255,215,64,0.2);
+  padding:5px 12px 6px;display:flex;align-items:center;gap:8px;z-index:10;flex-shrink:0;}
+.bonus-bar.hide{display:none;}
+.bonus-label{font-size:10px;font-weight:800;color:#ffd740;white-space:nowrap;}
+.bonus-track{flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;}
+.bonus-fill{height:100%;background:linear-gradient(90deg,#ffd740,#ff9900);border-radius:3px;transition:width .3s ease;}
+.bonus-words{font-size:9px;color:#5b7090;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -103,6 +112,12 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   <div class="cur hide" id="curWord">・・・</div>
   <div class="cir-wrap hide" id="cirWrap"><canvas id="cirCv"></canvas></div>
 
+  <!-- BONUS BAR -->
+  <div class="bonus-bar hide" id="bonusBar">
+    <span class="bonus-label">⭐ БОНУС</span>
+    <div class="bonus-track"><div class="bonus-fill" id="bonusFill" style="width:0%"></div></div>
+    <span class="bonus-words" id="bonusWords">0/5</span>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -200,30 +215,38 @@ function generateLevel(){
   for(let att=0;att<100;att++){
     const anchor=sw[att%sw.length];
     if(!anchor||anchor.length<4||anchor.length>5)continue;
-    // Збираємо пул з букв якоря + випадкові (10 букв для більше слів)
+    // Збираємо пул з букв якоря + випадкові (8 букв)
     const pool=[...new Set(anchor.split(''))];
     for(const l of shuffle('АЕІОУРСНТМКЛГДПБВХЗЙЩ'.split(''))){
-      if(pool.length>=10)break;
+      if(pool.length>=8)break;
       if(!pool.includes(l))pool.push(l);
     }
     // Знаходимо слова
     const pos=shuffle(WORDS.filter(w=>w.length>=3&&w.length<=5&&canForm(w,pool)));
     if(pos.length<3)continue;
-    // Відбираємо рівно 6 слів
+    // Відбираємо 5 слів РІЗНОЇ довжини (мінімум 2 різні довжини)
     const byL={3:[],4:[],5:[]};
     for(const w of pos)if(byL[w.length])byL[w.length].push(w);
     const chosen=[];
+    // Беремо по 2 від кожної довжини (пріоритет 4 і 5)
     for(const l of [4,5,3]){
-      for(let i=0;i<byL[l].length;i++){
+      const take=l===3?1:2;
+      for(let i=0;i<Math.min(take,byL[l].length);i++){
         if(!chosen.includes(byL[l][i]))chosen.push(byL[l][i]);
-        if(chosen.length>=6)break;
       }
-      if(chosen.length>=6)break;
     }
-    if(chosen.length<6)continue;
+    // Якщо менше 5 — добираємо
+    for(const l of [4,5,3]){
+      for(let i=0;i<byL[l].length&&chosen.length<5;i++){
+        if(!chosen.includes(byL[l][i]))chosen.push(byL[l][i]);
+      }
+    }
+    // Перевіряємо що є мінімум 2 різні довжини
+    const lens=new Set(chosen.map(w=>w.length));
+    if(chosen.length<5||lens.size<2)continue;
     const grid=buildCrossword(chosen);
-    if(!grid||grid.length<6)continue;
-    return{letters:shuffle(pool.slice(0,10)),words:grid.slice(0,6)};
+    if(!grid||grid.length<5)continue;
+    return{letters:shuffle(pool.slice(0,8)),words:grid.slice(0,5)};
   }
   return null;
 }
@@ -253,7 +276,7 @@ function buildCrossword(words){
     }
     if(!ok&&wi<4) return null; // перші 4 слова обовʼязкові
   }
-  if(placed.length<6)return null;
+  if(placed.length<5)return null;
   const minR=Math.min(...placed.map(p=>p.row));
   const minC=Math.min(...placed.map(p=>p.col));
   const maxR2=Math.max(...placed.map(p=>p.dir==='v'?p.row+p.word.length-1:p.row))-minR;
@@ -285,16 +308,17 @@ function chkPlace(placed,word,row,col,dir){
 
 // ── STATE ─────────────────────────────────────────────
 let level=0,coins=0,hints=3,hintNextTime=0;
+let bonusWordCount=0; // бонусні слова (не з кросворду)
 const HINT_IV=2*60*60*1000,MAX_H=5;
 let curLetters=[],curWords=[],selIdx=[],dragging=false,lvlStart=0;
 let GRID={},maxR=0,maxC=0;
 let cwCv,cwCtx,cirCv,cirCtx,CS=260,CR=0,nodePos=[];
-const CELL=34,GAP=3,NR=22;
+const CELL=40,GAP=4,NR=24;
 
 // ── START ─────────────────────────────────────────────
 function startGame(){
   hide('ovStart');
-  show('gameHead');show('cwWrap');show('curWord');show('cirWrap');
+  show('gameHead');show('cwWrap');show('curWord');show('cirWrap');show('bonusBar');
   cwCv=$i('cwCv');cwCtx=cwCv.getContext('2d');
   cirCv=$i('cirCv');cirCtx=cirCv.getContext('2d');
   // Розмір кола ПЕРШИМ — потім кросворд
@@ -309,7 +333,7 @@ function loadLevel(){
   for(let i=0;i<30;i++){data=generateLevel();if(data)break;}
   if(!data){toast('❌ Помилка генерації, спробуй ще');return;}
   curLetters=data.letters;curWords=data.words;
-  selIdx=[];dragging=false;lvlStart=Date.now();
+  selIdx=[];dragging=false;lvlStart=Date.now();bonusWordCount=0;updateBonusBar();
   $i('lvlNum').textContent=level+1;
   $i('coinCount').textContent=coins;
   updateHintUI();
@@ -475,7 +499,32 @@ function checkWord(){
     curWords[wi].found=true;markFound(curWords[wi].word,curWords[wi].row,curWords[wi].col,curWords[wi].dir);
     drawCW();toast('✅ '+w);
     if(curWords.every(e=>e.found))setTimeout(showWin,500);
+    return;
   }
+  // Бонусне слово — є в словнику, можна скласти з букв, але не в кросворді
+  if(WORDS.includes(w)&&!curWords.some(e=>e.word===w)){
+    bonusWordCount++;
+    updateBonusBar();
+    toast('⭐ '+w+' — бонус!');
+    // Кожні 5 бонусних слів = +1 монета
+    if(bonusWordCount%5===0){
+      coins++;$i('coinCount').textContent=coins;
+      toast('🪙 +1 монета за 5 бонусних слів!',2500);
+      sendBonusResult();
+    }
+  }
+}
+
+function updateBonusBar(){
+  const fill=$i('bonusFill'),words=$i('bonusWords');
+  const progress=(bonusWordCount%5)/5*100;
+  if(fill)fill.style.width=progress+'%';
+  if(words)words.textContent=(bonusWordCount%5)+'/5 ⭐';
+}
+
+async function sendBonusResult(){
+  const u=uid();if(!u)return;
+  try{await fetch(GAS+'?type=circle_result&userId='+u+'&level=bonus_'+level+'&score=1&elapsed=0&secret='+SECRET+'&_t='+Date.now());}catch(e){}
 }
 
 // ── HINTS ─────────────────────────────────────────────
