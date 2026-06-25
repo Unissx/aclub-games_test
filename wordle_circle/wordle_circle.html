@@ -107,170 +107,58 @@ let wordsLoaded = false;
 // ГЕНЕРАТОР РІВНЯ
 // ══════════════════════════════════════════════════════
 
-function shuffleArr(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function shuffleArr(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
 
-function canForm(word, letters){
+function canForm(word,letters){
   const pool=[...letters];
-  for(const ch of word){
-    const i=pool.indexOf(ch);
-    if(i<0) return false;
-    pool.splice(i,1);
-  }
+  for(const ch of word){const i=pool.indexOf(ch);if(i<0)return false;pool.splice(i,1);}
   return true;
 }
 
-// Генеруємо набір букв з популярних груп
-const LETTER_POOLS = [
-  ['Р','О','С','А','Л','І','Г','Е'],
-  ['З','И','М','А','С','Н','І','Г'],
-  ['М','О','Р','Е','В','О','Д','А'],
-  ['П','Т','А','Х','Н','Е','Б','О'],
-  ['К','Р','А','Н','О','В','И','Й'],
-  ['Д','О','Б','Р','О','С','Е','Р'],
-  ['Т','Р','А','В','А','Л','Е','С'],
-  ['К','О','З','А','К','И','Н','Е'],
-  ['В','І','Т','Е','Р','Г','О','Р'],
-  ['С','О','Н','Я','Ч','Н','И','Й'],
-  ['Л','І','С','О','В','И','К','А'],
-  ['М','О','Р','О','З','И','В','О'],
-  ['Б','А','Г','А','Т','О','С','Т'],
-  ['В','О','Г','Н','Е','Б','О','Р'],
-  ['К','А','М','І','Н','Ь','Д','А'],
-  ['З','О','Р','Е','П','А','Д','Н'],
-  ['Р','И','Б','А','Л','К','А','С'],
-  ['Ч','А','Р','І','В','Н','И','К'],
-  ['Х','В','И','Л','Я','М','О','Р'],
-  ['З','Е','Р','Н','О','С','А','Д'],
-];
-
+// Генерує рівень: спочатку вибираємо слова, потім збираємо букви з них
 function generateLevel(){
-  // Беремо випадковий пул букв
-  const pool = LETTER_POOLS[Math.floor(Math.random()*LETTER_POOLS.length)];
+  if(!WORDS||WORDS.length<10) return null;
+  const shuffled=shuffleArr(WORDS);
 
-  // Знаходимо всі слова які можна скласти з цих букв
-  const possible = shuffleArr(WORDS.filter(w => canForm(w, pool)));
+  // Вибираємо 4-5 слів які мають спільні букви (для кросворду)
+  for(let attempt=0;attempt<50;attempt++){
+    // Беремо випадкове "якорне" слово 4-5 букв
+    const anchors=shuffled.filter(w=>w.length>=4&&w.length<=5);
+    if(!anchors.length) return null;
+    const anchor=anchors[Math.floor(Math.random()*anchors.length)];
 
-  // Беремо 4-6 слів, максимум 5 букв для компактного кросворду
-  const chosen = [];
-  const byLen = {3:[],4:[],5:[]};
-  for(const w of possible){
-    if(byLen[w.length]) byLen[w.length].push(w);
-  }
-  for(const len of [4,5,3]){
-    const arr=byLen[len]||[];
-    const take=2;
-    for(let i=0;i<Math.min(take,arr.length);i++) chosen.push(arr[i]);
-    if(chosen.length>=5) break;
-  }
-
-  if(chosen.length < 3) return null; // замало слів
-
-  // Будуємо кросворд автоматично
-  const grid = buildCrossword(chosen);
-  if(!grid) return null;
-
-  return {letters: pool, words: grid};
-}
-
-// ══════════════════════════════════════════════════════
-// АВТОМАТИЧНИЙ КРОСВОРД
-// ══════════════════════════════════════════════════════
-
-function buildCrossword(words){
-  // Перше слово — горизонтально в (0,0)
-  const placed = [];
-  placed.push({word:words[0], row:0, col:0, dir:'h'});
-
-  for(let wi=1; wi<words.length; wi++){
-    const w = words[wi];
-    let best = null;
-
-    // Пробуємо прикріпити до вже розміщених
-    for(const placed_w of shuffleArr([...placed])){
-      // Шукаємо спільні букви
-      for(let pi=0; pi<placed_w.word.length; pi++){
-        for(let wi2=0; wi2<w.length; wi2++){
-          if(placed_w.word[pi] !== w[wi2]) continue;
-
-          // Позиція перетину
-          const newDir = placed_w.dir==='h' ? 'v' : 'h';
-          let newRow, newCol;
-          if(placed_w.dir==='h'){
-            // placed горизонтальне: перетин у placed_w.col+pi, рядок placed_w.row
-            newCol = placed_w.col + pi;
-            newRow = placed_w.row - wi2;
-          } else {
-            newRow = placed_w.row + pi;
-            newCol = placed_w.col - wi2;
-          }
-
-          if(newRow < 0 || newCol < 0) continue;
-
-          // Перевіряємо що нове слово не конфліктує
-          if(checkPlacement(placed, w, newRow, newCol, newDir)){
-            best = {word:w, row:newRow, col:newCol, dir:newDir};
-            break;
-          }
-        }
-        if(best) break;
-      }
-      if(best) break;
+    // Збираємо всі унікальні букви з anchor + ще 2-4 рандомних букв
+    const letters=[...new Set(anchor.split(''))];
+    // Додаємо букви поки не набереться 8
+    const extraLetters='АЕІОУРСНТМКЛГДПБВХЗЙФЩЖ'.split('');
+    const extra=shuffleArr(extraLetters);
+    for(const l of extra){
+      if(letters.length>=8) break;
+      if(!letters.includes(l)) letters.push(l);
     }
+    const pool=letters.slice(0,8);
 
-    if(best) placed.push(best);
-  }
+    // Знаходимо всі слова з цих букв
+    const possible=shuffleArr(WORDS.filter(w=>w.length>=3&&w.length<=5&&canForm(w,pool)));
+    if(possible.length<3) continue;
 
-  if(placed.length < 4) return null;
-
-  // Нормалізуємо: зсуваємо щоб всі row,col >= 0
-  const minR = Math.min(...placed.map(p=>p.row));
-  const minC = Math.min(...placed.map(p=>p.col));
-  return placed.map(p=>({...p, row:p.row-minR, col:p.col-minC, found:false, clue:''}));
-}
-
-function checkPlacement(placed, word, row, col, dir){
-  // Збираємо всі зайняті клітинки
-  const cells = {};
-  for(const p of placed){
-    for(let i=0;i<p.word.length;i++){
-      const r = p.dir==='h' ? p.row : p.row+i;
-      const c = p.dir==='h' ? p.col+i : p.col;
-      cells[`${r}_${c}`] = p.word[i];
+    // Вибираємо 4-5 слів різної довжини
+    const byLen={3:[],4:[],5:[]};
+    for(const w of possible) if(byLen[w.length]) byLen[w.length].push(w);
+    const chosen=[];
+    for(const len of [4,5,3]){
+      for(let i=0;i<Math.min(2,byLen[len].length);i++) chosen.push(byLen[len][i]);
+      if(chosen.length>=5) break;
     }
+    if(chosen.length<3) continue;
+
+    // Будуємо кросворд
+    const grid=buildCrossword(chosen);
+    if(!grid) continue;
+
+    return{letters:shuffleArr(pool), words:grid};
   }
-
-  // Перевіряємо нове слово
-  for(let i=0;i<word.length;i++){
-    const r = dir==='h' ? row : row+i;
-    const c = dir==='h' ? col+i : col;
-    const key = `${r}_${c}`;
-    if(cells[key] && cells[key] !== word[i]) return false; // конфлікт
-  }
-
-  // Перевіряємо що сусідні клітинки не створюють зайвих слів
-  for(let i=0;i<word.length;i++){
-    const r = dir==='h' ? row : row+i;
-    const c = dir==='h' ? col+i : col;
-    const key = `${r}_${c}`;
-    if(cells[key]) continue; // перетин — ок
-
-    // Перевіряємо сусідів з боків (паралельно напряму)
-    if(dir==='h'){
-      if(cells[`${r-1}_${c}`] || cells[`${r+1}_${c}`]) return false;
-    } else {
-      if(cells[`${r}_${c-1}`] || cells[`${r}_${c+1}`]) return false;
-    }
-  }
-
-  // Перевіряємо кінці слова
-  const endR = dir==='h' ? row : row+word.length;
-  const endC = dir==='h' ? col+word.length : col;
-  if(cells[`${endR}_${endC}`]) return false;
-  const preR = dir==='h' ? row : row-1;
-  const preC = dir==='h' ? col-1 : col;
-  if(preR>=0 && preC>=0 && cells[`${preR}_${preC}`]) return false;
-
-  return true;
+  return null;
 }
 
 // ══════════════════════════════════════════════════════
