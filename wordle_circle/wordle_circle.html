@@ -591,16 +591,16 @@ async function saveHints(){
 }
 
 function showBuyHint(){
-  // Синхронізуємо баланс перед показом (щоб показати актуальний)
+  show('ovBuyHint');
+  // Синхронізуємо баланс перед показом
   syncBalance().then(()=>{
     const left=hintNextTime-Date.now();
     $i('hintTimerMsg').textContent=left>0?`Наступна безкоштовна через ${left/3600000|0}г ${left%3600000/60000|0}хв`:'';
     const canBuy=coins>=1;
     $i('buyHintBtn').disabled=!canBuy;
     $i('buyHintBtn').style.opacity=canBuy?'1':'0.4';
-    $i('buyHintBtn').textContent=canBuy?'💰 КУПИТИ 1 🪙':'❌ Недостатньо монет';
+    $i('buyHintBtn').textContent=canBuy?`💰 КУПИТИ за 1 🪙 (є: ${coins})`:'❌ Недостатньо монет (є: '+coins+')';
   });
-  show('ovBuyHint');
 }
 
 async function buyHint(){
