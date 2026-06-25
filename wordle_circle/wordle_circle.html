@@ -13,657 +13,526 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
 #app{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
   background:radial-gradient(circle at 50% -10%,rgba(0,230,118,.07),transparent 55%),#050d1a;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+
+/* OVERLAYS */
 .ov{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
     justify-content:center;background:rgba(4,12,26,.96);z-index:99;padding:20px;gap:12px;}
 .ov.hide{display:none;}
-.ov-title{font-family:'Press Start 2P',monospace;font-size:clamp(12px,3.5vw,18px);
-  color:#00e676;letter-spacing:1px;text-shadow:0 0 18px rgba(0,230,118,.5);line-height:1.5;text-align:center;}
-.ov-sub{font-size:12px;color:#5b7090;text-align:center;line-height:1.7;max-width:300px;}
 .btn{font-family:'Press Start 2P',monospace;font-size:clamp(9px,2.5vw,12px);
   background:linear-gradient(135deg,#00e676,#00b248);color:#050d1a;border:none;
   border-radius:10px;padding:13px 30px;cursor:pointer;letter-spacing:.5px;
   box-shadow:0 0 22px rgba(0,230,118,.4);transition:transform .1s;}
 .btn:active{transform:scale(.95);}
-.btn-sec{background:transparent;color:#00e676;border:2px solid rgba(0,230,118,.5);box-shadow:none;padding:10px 24px;}
-.win-coins{font-family:'Press Start 2P',monospace;font-size:clamp(22px,7vw,34px);
-  color:#ffd740;text-shadow:0 0 22px rgba(255,215,64,.6);}
-.head{width:100%;max-width:420px;padding:6px 14px 2px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
-.htitle{font-family:'Press Start 2P',monospace;font-size:clamp(8px,2.5vw,11px);color:#00e676;letter-spacing:1px;}
+.btn-sec{background:transparent;color:#00e676;border:2px solid rgba(0,230,118,.5);
+  box-shadow:none;padding:10px 24px;}
+.ov-title{font-family:'Press Start 2P',monospace;font-size:clamp(12px,3.5vw,16px);
+  color:#00e676;letter-spacing:1px;text-shadow:0 0 18px rgba(0,230,118,.5);
+  line-height:1.5;text-align:center;}
+.ov-sub{font-size:12px;color:#5b7090;text-align:center;line-height:1.7;max-width:300px;}
+
+/* HEADER */
+.head{width:100%;max-width:420px;padding:6px 14px 2px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;}
+.htitle{font-family:'Press Start 2P',monospace;font-size:clamp(7px,2vw,10px);color:#00e676;}
 .badges{display:flex;gap:5px;align-items:center;}
-.badge{display:inline-flex;align-items:center;gap:3px;border-radius:14px;padding:3px 9px;font-weight:800;font-size:10px;}
-.badge-coin{background:rgba(255,215,64,.1);border:1px solid rgba(255,215,64,.3);color:#ffd740;}
-.badge-lvl{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:#00e676;}
-.badge-hint{background:rgba(255,215,64,.08);border:1px solid rgba(255,215,64,.3);color:#ffd740;cursor:pointer;}
-.badge-hint:active{opacity:.6;}
-.badge-hint.off{opacity:.3;pointer-events:none;}
-.cw-wrap{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:100%;max-width:420px;padding:4px 10px;}
-#cwCanvas{display:block;}
-.cur-word{text-align:center;font-weight:900;font-size:clamp(18px,5vw,24px);
-  letter-spacing:4px;text-transform:uppercase;min-height:32px;flex-shrink:0;
-  color:#e8edf5;transition:color .15s;}
-.cur-word.ok{color:#00e676;text-shadow:0 0 12px rgba(0,230,118,.5);}
-.cur-word.bad{color:#ff6090;}
-.circle-wrap{flex-shrink:0;}
-#circleCanvas{display:block;touch-action:none;}
-.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(16px);
+.badge{display:inline-flex;align-items:center;gap:3px;border-radius:14px;
+  padding:3px 9px;font-weight:800;font-size:10px;cursor:default;}
+.bc{background:rgba(255,215,64,.1);border:1px solid rgba(255,215,64,.3);color:#ffd740;}
+.bl{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:#00e676;}
+.bh{background:rgba(255,215,64,.08);border:1px solid rgba(255,215,64,.3);color:#ffd740;cursor:pointer;}
+.bh:active{opacity:.6;}
+
+/* CANVAS AREAS */
+.cw-wrap{flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  width:100%;max-width:420px;padding:2px 10px;overflow:hidden;}
+.cur{text-align:center;font-weight:900;font-size:clamp(16px,5vw,22px);
+  letter-spacing:3px;text-transform:uppercase;min-height:28px;flex-shrink:0;color:#e8edf5;}
+.cur.ok{color:#00e676;text-shadow:0 0 12px rgba(0,230,118,.5);}
+.cur.bad{color:#ff6090;}
+.cir-wrap{flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+
+/* TOAST */
+.toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%) translateY(16px);
   background:rgba(10,20,44,.97);border:1px solid rgba(0,230,118,.35);
-  border-radius:10px;padding:8px 20px;font-size:12px;font-weight:800;color:#00e676;
+  border-radius:10px;padding:8px 18px;font-size:12px;font-weight:800;color:#00e676;
   opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:300;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-.loading{color:#5b7090;font-size:12px;text-align:center;padding:20px;}
 </style>
 </head>
 <body>
 <div id="app">
+
+  <!-- START -->
   <div class="ov" id="ovStart">
     <div class="ov-title">🔡 СЛОВА<br>ПО КОЛУ</div>
-    <div class="ov-sub">Проводь лінію між буквами — склади слова і заповни кросворд!<br><br>Кожен рівень — унікальний набір слів 🎲</div>
-    <button class="btn" id="startBtn" onclick="startGame()" disabled style="opacity:.6;filter:brightness(1.3)">⏳ Завантаження...</button>
-  </div>
-  <div class="ov hide" id="ovWin">
-    <div style="font-family:'Press Start 2P',monospace;font-size:clamp(10px,3vw,13px);color:#00e676;text-align:center;line-height:1.5;">✅ РІВЕНЬ ПРОЙДЕНО!</div>
-    <div style="font-family:'Press Start 2P',monospace;font-size:clamp(16px,5vw,24px);color:#ffd740;text-shadow:0 0 16px rgba(255,215,64,.6);" id="winCoins">+1 🪙</div>
-    <div style="font-size:11px;color:#5b7090;" id="winWords"></div>
-    <button class="btn" onclick="nextLevel()" style="padding:10px 22px;font-size:clamp(8px,2vw,10px);">▶ ДАЛІ</button>
-    <button class="btn btn-sec" onclick="closeGame()" style="padding:8px 18px;font-size:clamp(8px,2vw,10px);">✕ ВИЙТИ</button>
-  </div>
-  <!-- Купівля підказки -->
-  <div class="ov hide" id="ovBuyHint">
-    <div style="font-size:32px">💡</div>
-    <div style="font-family:'Press Start 2P',monospace;font-size:clamp(10px,3vw,13px);color:#ffd740;text-align:center;">ПІДКАЗКИ<br>ЗАКІНЧИЛИСЬ</div>
-    <div style="font-size:12px;color:#5b7090;text-align:center;line-height:1.7;">Купити 1 підказку<br>за <b style="color:#ffd740">1 🪙</b> монету?<br><br><span id="hintTimerMsg" style="color:#00e676;font-size:11px;"></span></div>
-    <button class="btn" onclick="buyHint()" id="buyHintBtn" style="background:linear-gradient(135deg,#ffd740,#e6a800);color:#050d1a;padding:10px 22px;font-size:clamp(8px,2vw,10px);">💰 КУПИТИ за 1 🪙</button>
-    <button class="btn btn-sec" onclick="$('ovBuyHint').classList.add('hide')" style="padding:8px 18px;font-size:clamp(8px,2vw,10px);">✕ ЗАКРИТИ</button>
+    <div class="ov-sub">Проводь лінію між буквами — склади слова і заповни кросворд!</div>
+    <button class="btn" onclick="startGame()">▶ ГРАТИ</button>
   </div>
 
-  <div class="ov hide" id="ovNoWords">
-    <div class="ov-title" style="color:#ffd740">😅 УПСС...</div>
-    <div class="ov-sub">Не вдалось знайти достатньо слів.<br>Генеруємо новий рівень!</div>
-    <button class="btn" onclick="loadLevel()">🔄 НОВИЙ РІВЕНЬ</button>
+  <!-- WIN -->
+  <div class="ov hide" id="ovWin">
+    <div class="ov-title">✅ РІВЕНЬ<br>ПРОЙДЕНО!</div>
+    <div id="winCoins" style="font-family:'Press Start 2P',monospace;font-size:clamp(16px,5vw,22px);color:#ffd740;text-shadow:0 0 16px rgba(255,215,64,.6);">+1 🪙</div>
+    <div id="winWords" style="font-size:11px;color:#5b7090;"></div>
+    <button class="btn" onclick="nextLevel()" style="padding:10px 22px;font-size:10px;">▶ ДАЛІ</button>
+    <button class="btn btn-sec" onclick="closeGame()" style="padding:8px 18px;font-size:10px;">✕ ВИЙТИ</button>
   </div>
-  <div class="head" id="gameHead" style="display:none">
+
+  <!-- BUY HINT -->
+  <div class="ov hide" id="ovBuyHint">
+    <div style="font-size:32px">💡</div>
+    <div class="ov-title" style="color:#ffd740;font-size:clamp(9px,2.5vw,12px);">ПІДКАЗКИ<br>ЗАКІНЧИЛИСЬ</div>
+    <div style="font-size:12px;color:#5b7090;text-align:center;line-height:1.7;">
+      Купити 1 підказку за <b style="color:#ffd740">1 🪙</b>?<br>
+      <span id="hintTimerMsg" style="color:#00e676;font-size:11px;"></span>
+    </div>
+    <button class="btn" onclick="buyHint()" id="buyHintBtn" style="background:linear-gradient(135deg,#ffd740,#e6a800);color:#050d1a;padding:10px 22px;font-size:10px;">💰 КУПИТИ 1 🪙</button>
+    <button class="btn btn-sec" onclick="closeOverlay('ovBuyHint')" style="padding:8px 18px;font-size:10px;">✕ ЗАКРИТИ</button>
+  </div>
+
+  <!-- GAME -->
+  <div class="head hide" id="gameHead">
     <div class="htitle">🔡 СЛОВА ПО КОЛУ</div>
     <div class="badges">
-      <span class="badge badge-coin">🪙 <span id="coinCount">0</span></span>
-      <span class="badge badge-lvl">⭐ <span id="lvlNum">1</span></span>
-      <span class="badge badge-hint" id="hintBtn" onclick="useHint()">💡 <span id="hintCount">3</span></span>
+      <span class="badge bc">🪙 <span id="coinCount">0</span></span>
+      <span class="badge bl">⭐ <span id="lvlNum">1</span></span>
+      <span class="badge bh" id="hintBtn" onclick="useHint()">💡 <span id="hintCount">3</span></span>
     </div>
   </div>
-  <div class="cw-wrap" id="cwWrap" style="display:none"><canvas id="cwCanvas"></canvas></div>
-  <div class="cur-word" id="curWord" style="display:none">・・・</div>
-  <div class="circle-wrap" id="circleWrap" style="display:none"><canvas id="circleCanvas"></canvas></div>
+  <div class="cw-wrap hide" id="cwWrap"><canvas id="cwCv"></canvas></div>
+  <div class="cur hide" id="curWord">・・・</div>
+  <div class="cir-wrap hide" id="cirWrap"><canvas id="cirCv"></canvas></div>
+
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
+// ── CONFIG ───────────────────────────────────────────
 const GAS='https://script.google.com/macros/s/AKfycbzH8qt2_fUmnrLEw0Z56fsyMEH-D3uOgBSeTxwzUMCDTFDDoNBAowLTZqEGwSFo26ie9A/exec';
-const WRK='https://aclub-runner-test.rjcnz-faw4.workers.dev';
 const SECRET='aclub2026runnertest';
 const tg=window.Telegram?.WebApp;
 if(tg){tg.ready();tg.expand();}
-function getTgUid(){try{return String(tg?.initDataUnsafe?.user?.id||'');}catch(e){return '';}}
-function $(id){return document.getElementById(id);}
-function showToast(msg,dur=1800){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),dur);}
+function uid(){try{return String(tg?.initDataUnsafe?.user?.id||'');}catch(e){return '';}}
+function $i(id){return document.getElementById(id);}
+function show(id){$i(id).classList.remove('hide');}
+function hide(id){$i(id).classList.add('hide');}
+function closeOverlay(id){hide(id);}
 
-// ══════════════════════════════════════════════════════
-// СЛОВНИК — вбудований + доповнюється з Google Sheets
-// ══════════════════════════════════════════════════════
-let wordsLoaded = false;
-// Великий вбудований словник (працює без GAS)
-let WORDS = [
+let toastTimer;
+function toast(msg,dur=2000){
+  const t=$i('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),dur);
+}
+
+// ── СЛОВНИК ──────────────────────────────────────────
+const WORDS=[
   "РОСА","ОСЕЛ","СЕЛО","ГОРА","ЛІРА","ЗИМА","СНІГ","МОДА","МОРЕ","ОРДА",
   "ВОДА","РЕВО","ПТАХ","НЕБО","ТАНЕ","ПАНО","КРАН","РАНО","ВИНО","НОРА",
   "РИСА","САЛО","НИВА","РАМА","ДІРА","МІРА","МАЗІ","ГІМН","СИЛА","РИБА",
-  "ОСІНЬ","ОБРАЗ","ОРЕЛ","НАМЕТ","ТРАВА","УСПІХ","ХВИЛЯ","КАЗКА","КРАСА",
-  "БАЛЕТ","ВІТЕР","ГІСТЬ","ЛОТОС","МАСКА","ПАРУС","РИБАК","ЗБРОЯ","ЗІРКА",
   "СТЕП","ТИША","ХАТА","ХЛІБ","ЩУКА","БОРЩ","БРИЗ","ЗОРЯ","ЛУНА","МЕЖА",
   "МІСТ","МОВА","СОВА","ЛАНЬ","КРОВ","ЗМІЙ","ЗНАК","КІНЬ","КРАБ","РИСЬ",
   "БОРТ","БРАТ","ВОВК","ГРІМ","ГРИБ","ДУГА","ЖАРТ","ЛІТО","ЛОСЬ","МАЯК",
-  "РОЛЬ","ВОЛЯ","КОСА","РОЗА","КОЗА","ЛОЗА","БАЗА","ВАЗА","МЕТА","НОТА",
-  "РОТА","МИЛА","ЖИЛА","ПІЛА","МІНА","ВИНА","ТИНА","ЛИНА","РИНА","ДИНА",
-  "КОРА","МОРА","НОРА","ТОРА","БОРА","ЗОРА","ЛІГА","ЗНІС","ЕГОР","ДРОВА",
-  "МАСЛО","ОРЕЛ","БЕРЕГ","БІЛКА","БРАМА","БУКВА","БУРАН","ВАПНО","ВАРТА",
-  "ВЕРБА","ВЕЧІР","ВОВНА","ВУЛИК","ГАМАН","ГІРКА","ГОЛОС","ГОРІХ","ДУМКА",
-  "ДРОЗД","ЗБРОЯ","ЗЕРНО","КНИГА","КОЗАК","КОЛОС","КРИГА","КРИЗА","КРИЛО",
-  "КУБИК","КУЛАК","КУПОЛ","ЛАЗУР","ЛАМПА","ЛІНЗА","ЛІСОК","ЛІТАК","ЛОТОС",
-  "ЛУСКА","МАЙОР","МАСКА","МЕТАЛ","МЕТОД","МІСТО","МІШОК","МОРЯК","НИТКА",
-  "НОВИНА","ПАЛАЦ","ПЕРО","ПИЛОК","ПРАЦЯ","РИБАК","РІВЕНЬ","РІЗЕЦЬ","РІЛЛЯ",
-  "РОГАЧ","РУБІН","РУКАВ","РУШНИК","САМОТА","СЕРП","СИРОТА","СІНО","СКАЛА",
-  "СКЕЛЯ","СЛОН","СОСНА","СТЕЖКА","СТРІЛА","ТРУБАЧ","ТУМАН","УВАГА","УГОДА",
-  "УДАЧА","УМОВА","УСПІХ","ФАРБА","ФАСАД","ФОНТАН","ХАОС","ХМАРА","ХОЛОД",
+  "ВОЛЯ","КОСА","РОЗА","КОЗА","ЛОЗА","БАЗА","ВАЗА","МЕТА","НОТА","РОТА",
+  "МИЛА","ЖИЛА","ПІЛА","МІНА","ВИНА","ТИНА","ЛИНА","РИНА","ДИНА","КОРА",
+  "ЛІГА","ЗНІС","ДРОВА","МАСЛО","ОРЕЛ","БЕРЕГ","БІЛКА","БРАМА","БУКВА",
+  "БУРАН","ВАПНО","ВАРТА","ВЕРБА","ВЕЧІР","ВОВНА","ГАМАН","ГІРКА","ГОЛОС",
+  "ГОРІХ","ДУМКА","ДРОЗД","ЗБРОЯ","ЗЕРНО","КНИГА","КОЗАК","КОЛОС","КРИГА",
+  "КРИЗА","КРИЛО","КУБИК","КУЛАК","КУПОЛ","ЛАЗУР","ЛАМПА","ЛІНЗА","ЛІСОК",
+  "ЛІТАК","ЛОТОС","ЛУСКА","МАЙОР","МАСКА","МЕТАЛ","МЕТОД","МІСТО","МІШОК",
+  "МОРЯК","НИТКА","ПАЛАЦ","ПЕРО","ПИЛОК","ПРАЦЯ","РИБАК","РІВЕНЬ","РОГАЧ",
+  "РУБІН","РУКАВ","РУШНИК","САМОТА","СЕРП","СИРОТА","СІНО","СКАЛА","СКЕЛЯ",
+  "СЛОН","СОСНА","СТЕЖКА","СТРІЛА","ТРУБАЧ","ТУМАН","УВАГА","УГОДА","УДАЧА",
+  "УМОВА","УСПІХ","ФАРБА","ФАСАД","ФОНТАН","ХАОС","ХВИЛЯ","ХМАРА","ХОЛОД",
   "ХРЕСТ","ЦЕГЛА","ЦУКОР","ЧАЙКА","ЧАША","ШАБЛЯ","ШАХТА","ЩАСТЯ","ЯГОДА",
   "РАЙ","ЛІС","МАК","РАК","БУК","ДУБ","КІТ","НІЖ","ВАЛ","КАЛ","МАЛ",
-  "РОД","КОД","МОД","ВОД","НІС","КОС","РОС","ЧАД","РАД","ЖАР","РІЧ","ЧАС",
-  "ГАЗ","ВАЗ","РАЗ","МАЗ","ДАР","ВАР","БАР","ЖАЛ","САД","ЛАД","ВАД","МАД",
-  "ВІСЬ","ТУГА","СІЛЬ","РОСЬ","РУТА","ТИША","ЯСЕН","ЯЛИН","ЛУНА","НИВА",
-  "ГОРА","КРАБ","КРУК","РИСЬ","ЛЬОН","ЦВЯХ","ШЛЯХ","ЗОРЯ","БРИЗ","БУРЯ",
-  "КОМА","ЛАМА","ДАМА","ЗАЛА","РАКА","МАКА","САГА","ГАЛА","МАЛА","ВАЛА",
-  "СИМА","РИМА","ДИМА","ТИМА","КИМА","ПОЗА","ЛОЗА","КОЗА","РОЗА","МОЗА",
-  "ГОРА","НОРА","КОРА","МОРА","ТОРА","СОРА","БОРА","ЗОРА","ВОРА","ЖОРА",
-  "ЛІРА","МІРА","ТІРА","ПІРА","НІРА","ДІРА","ГІРА","КИРА","ЛИРА","ЖИРА",
+  "НОС","КОС","РОС","ЧАД","РАД","ЖАР","РІЧ","ЧАС","ГАЗ","ДАР","ВАР","БАР",
+  "САД","ЛАД","ВАД","МАД","РАМ","КАМ","ДАМ","ТАМ","НАМ","САМ","БАМ","ЗАМ",
+  "ВІСЬ","ТУГА","СІЛЬ","РОСТЬ","РУТА","ЯСЕН","ЯЛИН","НИВА","КРАБ","КРУК",
+  "ЗАЛА","РАКА","МАКА","САГА","ГАЛА","МАЛА","ВАЛА","СИМА","РИМА","ДИМА",
+  "ПОЗА","МОЗА","ТОРА","СОРА","ВОРА","ЖОРА","ТІРА","ПІРА","НІРА","ГІРА",
+  "ОСІНЬ","ОБРАЗ","НАМЕТ","ТРАВА","УСПІХ","ХВИЛЯ","КАЗКА","КРАСА","БАЛЕТ",
+  "ВІТЕР","ГІСТЬ","ЛОТОС","ПАРУС","ЗБРОЯ","ЗІРКА","ЯКІР","ЯГОДА","ЩАСТЯ",
 ];
-wordsLoaded = true; // вбудований словник завжди доступний
 
-
-// ══════════════════════════════════════════════════════
-// ГЕНЕРАТОР РІВНЯ
-// ══════════════════════════════════════════════════════
-
-function shuffleArr(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+// ── ГЕНЕРАТОР ─────────────────────────────────────────
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]];}return b;}
 
 function canForm(word,letters){
-  const pool=[...letters];
-  for(const ch of word){const i=pool.indexOf(ch);if(i<0)return false;pool.splice(i,1);}
+  const p=[...letters];
+  for(const ch of word){const i=p.indexOf(ch);if(i<0)return false;p.splice(i,1);}
   return true;
 }
 
-// Генерує рівень: спочатку вибираємо слова, потім збираємо букви з них
 function generateLevel(){
-  if(!WORDS||WORDS.length<10) return null;
-  const shuffled=shuffleArr(WORDS);
-
-  // Вибираємо 4-5 слів які мають спільні букви (для кросворду)
-  for(let attempt=0;attempt<50;attempt++){
-    // Беремо випадкове "якорне" слово 4-5 букв
-    const anchors=shuffled.filter(w=>w.length>=4&&w.length<=5);
-    if(!anchors.length) return null;
-    const anchor=anchors[Math.floor(Math.random()*anchors.length)];
-
-    // Збираємо всі унікальні букви з anchor + ще 2-4 рандомних букв
-    const letters=[...new Set(anchor.split(''))];
-    // Додаємо букви поки не набереться 8
-    const extraLetters='АЕІОУРСНТМКЛГДПБВХЗЙФЩЖ'.split('');
-    const extra=shuffleArr(extraLetters);
-    for(const l of extra){
-      if(letters.length>=8) break;
-      if(!letters.includes(l)) letters.push(l);
+  const sw=shuffle(WORDS);
+  for(let att=0;att<60;att++){
+    // Якорне слово 4-5 букв
+    const anchor=sw.find((w,i)=>i>=att%sw.length&&w.length>=4&&w.length<=5)||sw.find(w=>w.length>=4&&w.length<=5);
+    if(!anchor) continue;
+    // Збираємо пул з букв якоря + випадкові
+    const pool=[...new Set(anchor.split(''))];
+    for(const l of shuffle('АЕІОУРСНТМКЛГДПБВХЗЙЩ'.split(''))){
+      if(pool.length>=8)break;
+      if(!pool.includes(l))pool.push(l);
     }
-    const pool=letters.slice(0,8);
-
-    // Знаходимо всі слова з цих букв
-    const possible=shuffleArr(WORDS.filter(w=>w.length>=3&&w.length<=5&&canForm(w,pool)));
-    if(possible.length<3) continue;
-
-    // Вибираємо 4-5 слів різної довжини
-    const byLen={3:[],4:[],5:[]};
-    for(const w of possible) if(byLen[w.length]) byLen[w.length].push(w);
+    // Знаходимо слова
+    const pos=shuffle(WORDS.filter(w=>w.length>=3&&w.length<=5&&canForm(w,pool)));
+    if(pos.length<3)continue;
+    // Відбираємо 3-5 різних
+    const byL={3:[],4:[],5:[]};
+    for(const w of pos)if(byL[w.length])byL[w.length].push(w);
     const chosen=[];
-    for(const len of [4,5,3]){
-      for(let i=0;i<Math.min(2,byLen[len].length);i++) chosen.push(byLen[len][i]);
-      if(chosen.length>=5) break;
+    for(const l of [4,5,3]){
+      for(let i=0;i<Math.min(2,byL[l].length);i++)chosen.push(byL[l][i]);
+      if(chosen.length>=5)break;
     }
-    if(chosen.length<3) continue;
-
-    // Будуємо кросворд
+    if(chosen.length<3)continue;
     const grid=buildCrossword(chosen);
-    if(!grid) continue;
-
-    return{letters:shuffleArr(pool), words:grid};
+    if(!grid)continue;
+    return{letters:shuffle(pool.slice(0,8)),words:grid};
   }
   return null;
 }
 
-// ══════════════════════════════════════════════════════
-// АВТОМАТИЧНИЙ КРОСВОРД
-// ══════════════════════════════════════════════════════
+// ── КРОСВОРД БУДІВНИК ─────────────────────────────────
 function buildCrossword(words){
-  const placed=[];
-  placed.push({word:words[0],row:0,col:0,dir:'h',found:false});
+  const placed=[{word:words[0],row:0,col:0,dir:'h',found:false}];
   for(let wi=1;wi<words.length;wi++){
-    const w=words[wi];
-    let added=false;
-    const dirs=['h','v'];
-    for(const pw of shuffleArr([...placed])){
-      for(let pi=0;pi<pw.word.length&&!added;pi++){
-        for(let wi2=0;wi2<w.length&&!added;wi2++){
-          if(pw.word[pi]!==w[wi2]) continue;
-          const newDir=pw.dir==='h'?'v':'h';
-          let nr,nc;
-          if(pw.dir==='h'){nc=pw.col+pi;nr=pw.row-wi2;}
-          else{nr=pw.row+pi;nc=pw.col-wi2;}
-          if(nr<0||nc<0) continue;
-          if(checkPlacement(placed,w,nr,nc,newDir)){
-            placed.push({word:w,row:nr,col:nc,dir:newDir,found:false});
-            added=true;
-          }
+    const w=words[wi];let ok=false;
+    for(const pw of shuffle([...placed])){
+      for(let pi=0;pi<pw.word.length&&!ok;pi++){
+        for(let wi2=0;wi2<w.length&&!ok;wi2++){
+          if(pw.word[pi]!==w[wi2])continue;
+          const nd=pw.dir==='h'?'v':'h';
+          const nr=pw.dir==='h'?pw.row-wi2:pw.row+pi;
+          const nc=pw.dir==='h'?pw.col+pi:pw.col-wi2;
+          if(nr<0||nc<0)continue;
+          if(chkPlace(placed,w,nr,nc,nd)){placed.push({word:w,row:nr,col:nc,dir:nd,found:false});ok=true;}
         }
       }
-      if(added) break;
+      if(ok)break;
     }
   }
-  if(placed.length<3) return null;
-  // Нормалізація
+  if(placed.length<3)return null;
   const minR=Math.min(...placed.map(p=>p.row));
   const minC=Math.min(...placed.map(p=>p.col));
-  // Перевірка розміру — не більше 8 колонок і 8 рядків
-  const maxR2=Math.max(...placed.map(p=>p.dir==='h'?p.row:p.row+p.word.length-1))-minR;
+  const maxR2=Math.max(...placed.map(p=>p.dir==='v'?p.row+p.word.length-1:p.row))-minR;
   const maxC2=Math.max(...placed.map(p=>p.dir==='h'?p.col+p.word.length-1:p.col))-minC;
-  if(maxR2>7||maxC2>7) return null;
+  if(maxR2>7||maxC2>7)return null;
   return placed.map(p=>({...p,row:p.row-minR,col:p.col-minC}));
 }
 
-function checkPlacement(placed,word,row,col,dir){
+function chkPlace(placed,word,row,col,dir){
   const cells={};
-  for(const p of placed){
-    for(let i=0;i<p.word.length;i++){
-      const r=p.dir==='h'?p.row:p.row+i;
-      const c=p.dir==='h'?p.col+i:p.col;
-      cells[`${r}_${c}`]=p.word[i];
-    }
+  for(const p of placed)for(let i=0;i<p.word.length;i++){
+    const r=p.dir==='h'?p.row:p.row+i,c=p.dir==='h'?p.col+i:p.col;
+    cells[r+'_'+c]=p.word[i];
   }
   for(let i=0;i<word.length;i++){
-    const r=dir==='h'?row:row+i;
-    const c=dir==='h'?col+i:col;
-    const key=`${r}_${c}`;
-    if(cells[key]&&cells[key]!==word[i]) return false;
-    if(!cells[key]){
-      if(dir==='h'){if(cells[`${r-1}_${c}`]||cells[`${r+1}_${c}`]) return false;}
-      else{if(cells[`${r}_${c-1}`]||cells[`${r}_${c+1}`]) return false;}
+    const r=dir==='h'?row:row+i,c=dir==='h'?col+i:col,k=r+'_'+c;
+    if(cells[k]&&cells[k]!==word[i])return false;
+    if(!cells[k]){
+      if(dir==='h'){if(cells[(r-1)+'_'+c]||cells[(r+1)+'_'+c])return false;}
+      else{if(cells[r+'_'+(c-1)]||cells[r+'_'+(c+1)])return false;}
     }
   }
-  const endR=dir==='h'?row:row+word.length;
-  const endC=dir==='h'?col+word.length:col;
-  if(cells[`${endR}_${endC}`]) return false;
-  const preR=dir==='h'?row:row-1;
-  const preC=dir==='h'?col-1:col;
-  if(preR>=0&&preC>=0&&cells[`${preR}_${preC}`]) return false;
+  const er=dir==='h'?row:row+word.length,ec=dir==='h'?col+word.length:col;
+  if(cells[er+'_'+ec])return false;
+  const pr=dir==='h'?row:row-1,pc=dir==='h'?col-1:col;
+  if(pr>=0&&pc>=0&&cells[pr+'_'+pc])return false;
   return true;
 }
 
-// ══════════════════════════════════════════════════════
-// STATE
-// ══════════════════════════════════════════════════════
-let level=0, coins=0, hints=0;
-let hintNextTime=0; // timestamp коли буде наступна безкоштовна підказка
-const HINT_INTERVAL=2*60*60*1000; // 2 години в мс
-const MAX_HINTS=5; // максимум підказок
-let currentLetters=[], currentWords=[];
-let selectedIdx=[], isDragging=false;
-let levelStartTime=0;
-let GRID={}, maxR=0, maxC=0;
-let cwCv,cwCtx,cirCv,cirCtx;
-let CS=0,CR=0,nodePos=[];
-const CELL=38,GAP=4;
-const NODE_R=22;
-const svgNS='http://www.w3.org/2000/svg';
+// ── STATE ─────────────────────────────────────────────
+let level=0,coins=0,hints=3,hintNextTime=0;
+const HINT_IV=2*60*60*1000,MAX_H=5;
+let curLetters=[],curWords=[],selIdx=[],dragging=false,lvlStart=0;
+let GRID={},maxR=0,maxC=0;
+let cwCv,cwCtx,cirCv,cirCtx,CS=260,CR=0,nodePos=[];
+const CELL=34,GAP=3,NR=22;
 
+// ── START ─────────────────────────────────────────────
 function startGame(){
-  $('ovStart').classList.add('hide');
-  $('gameHead').style.display='';
-  $('cwWrap').style.display='';
-  $('curWord').style.display='';
-  $('circleWrap').style.display='';
-  cwCv=$('cwCanvas');cwCtx=cwCv.getContext('2d');
-  cirCv=$('circleCanvas');cirCtx=cirCv.getContext('2d');
-  setupCircleEvents();
+  hide('ovStart');
+  show('gameHead');show('cwWrap');show('curWord');show('cirWrap');
+  cwCv=$i('cwCv');cwCtx=cwCv.getContext('2d');
+  cirCv=$i('cirCv');cirCtx=cirCv.getContext('2d');
+  // Розмір кола ПЕРШИМ — потім кросворд
+  sizeCircle();
+  setupEvents();
   loadLevel();
 }
 
 function loadLevel(){
-  $('ovNoWords').classList.add('hide');
-  // Дебаг
-  showToast(`Слів: ${WORDS.length}, генерую...`,3000);
-  let levelData=null;
-  for(let attempt=0;attempt<20;attempt++){
-    levelData=generateLevel();
-    if(levelData) break;
-  }
-  if(!levelData){
-    showToast(`❌ Не вдалось з ${WORDS.length} слів`,3000);
-    $('ovNoWords').classList.remove('hide');return;
-  }
-  showToast(`✅ Рівень: ${levelData.words.length} слів`,2000);
-
-  currentLetters=shuffleArr([...levelData.letters]);
-  currentWords=levelData.words;
-  selectedIdx=[];isDragging=false;levelStartTime=Date.now();
-  $('lvlNum').textContent=level+1;
-  $('coinCount').textContent=coins;
+  hide('ovWin');
+  let data=null;
+  for(let i=0;i<30;i++){data=generateLevel();if(data)break;}
+  if(!data){toast('❌ Помилка генерації, спробуй ще');return;}
+  curLetters=data.letters;curWords=data.words;
+  selIdx=[];dragging=false;lvlStart=Date.now();
+  $i('lvlNum').textContent=level+1;
+  $i('coinCount').textContent=coins;
   updateHintUI();
-  $('curWord').textContent='・・・';
-  $('curWord').className='cur-word';
-  rebuildGrid();
-  sizeCrossword();
-  sizeCircle();
-  drawCrossword();
-  drawCircle();
+  $i('curWord').textContent='・・・';
+  $i('curWord').className='cur';
+  buildGrid();sizeCW();drawCW();drawCircle();
 }
 
-function rebuildGrid(){
+function buildGrid(){
   GRID={};maxR=0;maxC=0;
-  currentWords.forEach(e=>{
+  curWords.forEach(e=>{
     for(let i=0;i<e.word.length;i++){
-      const r=e.dir==='h'?e.row:e.row+i;
-      const c=e.dir==='h'?e.col+i:e.col;
-      const key=`${r}_${c}`;
-      if(!GRID[key]) GRID[key]={letter:e.word[i],found:false,hint:false};
+      const r=e.dir==='h'?e.row:e.row+i,c=e.dir==='h'?e.col+i:e.col;
+      const k=r+'_'+c;
+      if(!GRID[k])GRID[k]={l:e.word[i],found:false,hint:false};
       maxR=Math.max(maxR,r);maxC=Math.max(maxC,c);
     }
   });
 }
 
-// ══════════════════════════════════════════════════════
-// CROSSWORD CANVAS
-// ══════════════════════════════════════════════════════
-function sizeCrossword(){
+// ── CROSSWORD CANVAS ──────────────────────────────────
+function sizeCW(){
   const cols=maxC+1,rows=maxR+1;
-  const vw=Math.min(window.innerWidth,420);
-  // Висота доступна для кросворду: екран мінус header(50) мінус curWord(36) мінус коло(CS+10) мінус відступи
-  const availH=window.innerHeight - 50 - 36 - (CS||260) - 30;
-  const maxCellW=Math.floor((vw-30)/(cols+0.5));
-  const maxCellH=rows>1?Math.floor((availH-10)/(rows+0.3)):CELL;
-  const cellSize=Math.min(CELL, maxCellW, maxCellH, 36);
-  const cw=(cols*cellSize+(cols-1)*GAP)+20;
-  const ch=(rows*cellSize+(rows-1)*GAP)+10;
-  cwCv.width=cw;cwCv.height=ch;
-  cwCv.style.width=cw+'px';cwCv.style.height=ch+'px';
-  cwCv._cell=cellSize;
+  const vw=Math.min(window.innerWidth,420)-24;
+  const availH=window.innerHeight-55-30-CS-20;
+  const cs=Math.max(22,Math.min(CELL,Math.floor(vw/cols),rows>1?Math.floor(availH/rows):CELL));
+  cwCv.width=cols*(cs+GAP)+10;cwCv.height=rows*(cs+GAP)+6;
+  cwCv.style.width=cwCv.width+'px';cwCv.style.height=cwCv.height+'px';
+  cwCv._cs=cs;
 }
-function cellXY(r,c){
-  const cs=cwCv._cell||CELL;
-  return{x:10+c*(cs+GAP),y:5+r*(cs+GAP),cs};
-}
-function rr(ctx,x,y,w,h,r){
+
+function cxy(r,c){const cs=cwCv._cs||CELL;return{x:5+c*(cs+GAP),y:3+r*(cs+GAP),cs};}
+
+function rrect(ctx,x,y,w,h,r){
   ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
   ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
-  ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
-  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
+  ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
 }
-function drawCrossword(){
-  const cw=cwCv.width,ch=cwCv.height;
-  cwCtx.clearRect(0,0,cw,ch);
-  Object.entries(GRID).forEach(([key,cell])=>{
-    const[r,c]=key.split('_').map(Number);
-    const{x,y,cs}=cellXY(r,c);
-    if(cell.found){cwCtx.fillStyle='#063d24';cwCtx.strokeStyle='#00e676';}
-    else if(cell.hint){cwCtx.fillStyle='#3d3214';cwCtx.strokeStyle='#ffd740';}
-    else{cwCtx.fillStyle='rgba(255,255,255,0.07)';cwCtx.strokeStyle='rgba(255,255,255,0.18)';}
-    cwCtx.lineWidth=1.5;
-    rr(cwCtx,x,y,cs,cs,5);cwCtx.fill();cwCtx.stroke();
+
+function drawCW(){
+  cwCtx.clearRect(0,0,cwCv.width,cwCv.height);
+  Object.entries(GRID).forEach(([k,cell])=>{
+    const[r,c]=k.split('_').map(Number);
+    const{x,y,cs}=cxy(r,c);
+    cwCtx.fillStyle=cell.found?'#063d24':cell.hint?'#3d3214':'rgba(255,255,255,0.07)';
+    cwCtx.strokeStyle=cell.found?'#00e676':cell.hint?'#ffd740':'rgba(255,255,255,0.18)';
+    cwCtx.lineWidth=1.5;rrect(cwCtx,x,y,cs,cs,4);cwCtx.fill();cwCtx.stroke();
     if(cell.found||cell.hint){
       cwCtx.fillStyle=cell.found?'#00e676':'#ffd740';
-      cwCtx.font=`900 ${cs*0.46}px Nunito,sans-serif`;
+      cwCtx.font=`900 ${cs*.44}px Nunito,sans-serif`;
       cwCtx.textAlign='center';cwCtx.textBaseline='middle';
-      cwCtx.fillText(cell.letter,x+cs/2,y+cs/2+1);
+      cwCtx.fillText(cell.l,x+cs/2,y+cs/2+1);
     }
   });
 }
+
 function markFound(word,row,col,dir){
   for(let i=0;i<word.length;i++){
-    const r=dir==='h'?row:row+i;
-    const c=dir==='h'?col+i:col;
-    const key=`${r}_${c}`;
-    if(GRID[key]) GRID[key].found=true;
+    const r=dir==='h'?row:row+i,c=dir==='h'?col+i:col;
+    const k=r+'_'+c;if(GRID[k])GRID[k].found=true;
   }
 }
 
-// ══════════════════════════════════════════════════════
-// CIRCLE CANVAS
-// ══════════════════════════════════════════════════════
+// ── CIRCLE CANVAS ─────────────────────────────────────
 function sizeCircle(){
   const vw=Math.min(window.innerWidth,420);
-  CS=Math.min(vw-20,260);CR=(CS/2)*0.72;
+  CS=Math.min(vw-20,260);CR=(CS/2)*.72;
   cirCv.width=CS;cirCv.height=CS;
   cirCv.style.width=CS+'px';cirCv.style.height=CS+'px';
-  const cx=CS/2,cy=CS/2,n=currentLetters.length;
-  nodePos=currentLetters.map((_,i)=>{
-    const a=(2*Math.PI*i/n)-Math.PI/2;
+}
+
+function calcPos(){
+  const cx=CS/2,cy=CS/2,n=curLetters.length;
+  nodePos=curLetters.map((_,i)=>{
+    const a=2*Math.PI*i/n-Math.PI/2;
     return{x:cx+CR*Math.cos(a),y:cy+CR*Math.sin(a)};
   });
 }
 
 function drawCircle(mx,my){
+  if(!cirCtx)return;
   const ctx=cirCtx,cx=CS/2,cy=CS/2;
   ctx.clearRect(0,0,CS,CS);
-  // bg disk
-  ctx.save();ctx.beginPath();ctx.arc(cx,cy,CR+NODE_R+4,0,Math.PI*2);
+  // bg
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,CR+NR+4,0,Math.PI*2);
   ctx.fillStyle='rgba(10,18,40,0.85)';ctx.fill();
   ctx.strokeStyle='rgba(0,230,118,0.1)';ctx.lineWidth=1;ctx.stroke();ctx.restore();
-
-  // selection lines
-  if(selectedIdx.length>=2){
-    ctx.save();ctx.strokeStyle='rgba(0,230,118,0.55)';ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';
-    ctx.beginPath();
-    const p0=nodePos[selectedIdx[0]];ctx.moveTo(p0.x,p0.y);
-    for(let i=1;i<selectedIdx.length;i++){const p=nodePos[selectedIdx[i]];ctx.lineTo(p.x,p.y);}
+  // lines
+  if(selIdx.length>=2){
+    ctx.save();ctx.strokeStyle='rgba(0,230,118,0.55)';ctx.lineWidth=4;ctx.lineCap='round';
+    ctx.beginPath();const p0=nodePos[selIdx[0]];ctx.moveTo(p0.x,p0.y);
+    for(let i=1;i<selIdx.length;i++){const p=nodePos[selIdx[i]];ctx.lineTo(p.x,p.y);}
     ctx.stroke();ctx.restore();
   }
-  // live line to finger
-  if(isDragging&&selectedIdx.length>=1&&mx!==undefined){
-    const last=nodePos[selectedIdx[selectedIdx.length-1]];
+  // live line
+  if(dragging&&selIdx.length>=1&&mx!==undefined){
+    const last=nodePos[selIdx[selIdx.length-1]];
     ctx.save();ctx.strokeStyle='rgba(0,230,118,0.3)';ctx.lineWidth=3;ctx.lineCap='round';
     ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(mx,my);
     ctx.stroke();ctx.setLineDash([]);ctx.restore();
   }
   // nodes
-  currentLetters.forEach((letter,i)=>{
-    const{x,y}=nodePos[i];
-    const sel=selectedIdx.includes(i);
-    const isLast=selectedIdx[selectedIdx.length-1]===i;
+  curLetters.forEach((letter,i)=>{
+    const{x,y}=nodePos[i],sel=selIdx.includes(i),isLast=selIdx[selIdx.length-1]===i;
     if(sel){
-      ctx.save();const g=ctx.createRadialGradient(x,y,NODE_R*.5,x,y,NODE_R*1.8);
-      g.addColorStop(0,'rgba(0,230,118,0.28)');g.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,NODE_R*1.8,0,Math.PI*2);ctx.fill();ctx.restore();
+      ctx.save();const g=ctx.createRadialGradient(x,y,NR*.5,x,y,NR*1.8);
+      g.addColorStop(0,'rgba(0,230,118,0.25)');g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,NR*1.8,0,Math.PI*2);ctx.fill();ctx.restore();
     }
-    ctx.save();ctx.beginPath();ctx.arc(x,y,NODE_R,0,Math.PI*2);
-    if(isLast){const g=ctx.createRadialGradient(x-3,y-3,2,x,y,NODE_R);g.addColorStop(0,'#00e676');g.addColorStop(1,'#007a3d');ctx.fillStyle=g;}
-    else if(sel){ctx.fillStyle='#0a2e1a';}
-    else{const g=ctx.createRadialGradient(x-3,y-4,2,x,y,NODE_R);g.addColorStop(0,'#1e2d50');g.addColorStop(1,'#0d1630');ctx.fillStyle=g;}
+    ctx.save();ctx.beginPath();ctx.arc(x,y,NR,0,Math.PI*2);
+    if(isLast){const g=ctx.createRadialGradient(x-3,y-3,2,x,y,NR);g.addColorStop(0,'#00e676');g.addColorStop(1,'#007a3d');ctx.fillStyle=g;}
+    else if(sel)ctx.fillStyle='#0a2e1a';
+    else{const g=ctx.createRadialGradient(x-3,y-4,2,x,y,NR);g.addColorStop(0,'#1e2d50');g.addColorStop(1,'#0d1630');ctx.fillStyle=g;}
     ctx.fill();
     ctx.strokeStyle=isLast?'#00e676':sel?'rgba(0,230,118,0.7)':'rgba(255,255,255,0.1)';
     ctx.lineWidth=sel?2:1.5;ctx.stroke();ctx.restore();
-    ctx.save();ctx.font=`900 ${NODE_R*.9}px Nunito,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.save();ctx.font=`900 ${NR*.9}px Nunito,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillStyle=isLast?'#050d1a':sel?'#00e676':'#e8edf5';ctx.fillText(letter,x,y+1);ctx.restore();
   });
 }
 
-// ══════════════════════════════════════════════════════
-// EVENTS
-// ══════════════════════════════════════════════════════
-function setupCircleEvents(){
-  cirCv.addEventListener('mousedown',e=>{e.preventDefault();const p=ep(e);tryStart(p.x,p.y);});
-  cirCv.addEventListener('mousemove',e=>{e.preventDefault();const p=ep(e);tryMove(p.x,p.y);});
-  cirCv.addEventListener('mouseup',  e=>{e.preventDefault();endDrag();});
-  cirCv.addEventListener('touchstart',e=>{e.preventDefault();const p=ep(e);tryStart(p.x,p.y);},{passive:false});
-  cirCv.addEventListener('touchmove', e=>{e.preventDefault();const p=ep(e);tryMove(p.x,p.y);},{passive:false});
-  cirCv.addEventListener('touchend',  e=>{e.preventDefault();endDrag();},{passive:false});
-}
-function ep(e){const r=cirCv.getBoundingClientRect();const s=e.touches?e.touches[0]:e;return{x:s.clientX-r.left,y:s.clientY-r.top};}
-function near(x,y){for(let i=0;i<nodePos.length;i++){const p=nodePos[i];if((x-p.x)**2+(y-p.y)**2<=(NODE_R+8)**2)return i;}return -1;}
-function tryStart(x,y){const i=near(x,y);if(i<0)return;isDragging=true;selectedIdx=[i];updateCurWord();drawCircle(x,y);}
-function tryMove(x,y){if(!isDragging){drawCircle(x,y);return;}const i=near(x,y);
-  if(i>=0){const last=selectedIdx[selectedIdx.length-1];
-    if(i!==last){if(selectedIdx.length>=2&&selectedIdx[selectedIdx.length-2]===i){selectedIdx.pop();}
-    else if(!selectedIdx.includes(i)){selectedIdx.push(i);}updateCurWord();}}drawCircle(x,y);}
-function endDrag(){if(!isDragging)return;isDragging=false;checkWord();selectedIdx=[];updateCurWord();drawCircle();}
+// ── EVENTS ────────────────────────────────────────────
+function evP(e){const r=cirCv.getBoundingClientRect(),s=e.touches?e.touches[0]:e;return{x:s.clientX-r.left,y:s.clientY-r.top};}
+function nearNode(x,y){for(let i=0;i<nodePos.length;i++){const p=nodePos[i];if((x-p.x)**2+(y-p.y)**2<=(NR+8)**2)return i;}return -1;}
 
-function updateCurWord(){
-  const el=$('curWord');const w=selectedIdx.map(i=>currentLetters[i]).join('');
-  if(!w){el.textContent='・・・';el.className='cur-word';return;}
-  el.textContent=w;
-  const match=currentWords.find(e=>!e.found&&e.word===w);
-  el.className='cur-word'+(match?' ok':w.length>=3?' bad':'');
-}
-function checkWord(){
-  const w=selectedIdx.map(i=>currentLetters[i]).join('');if(w.length<3)return;
-  const wi=currentWords.findIndex(e=>!e.found&&e.word===w);
-  if(wi>=0){currentWords[wi].found=true;markFound(currentWords[wi].word,currentWords[wi].row,currentWords[wi].col,currentWords[wi].dir);
-    drawCrossword();showToast(`✅ ${w}`);if(currentWords.every(e=>e.found))setTimeout(showWin,500);}
+function setupEvents(){
+  cirCv.addEventListener('mousedown',e=>{e.preventDefault();const p=evP(e);startSel(p.x,p.y);});
+  cirCv.addEventListener('mousemove',e=>{e.preventDefault();const p=evP(e);moveSel(p.x,p.y);});
+  cirCv.addEventListener('mouseup',  e=>{e.preventDefault();endSel();});
+  cirCv.addEventListener('touchstart',e=>{e.preventDefault();const p=evP(e);startSel(p.x,p.y);},{passive:false});
+  cirCv.addEventListener('touchmove', e=>{e.preventDefault();const p=evP(e);moveSel(p.x,p.y);},{passive:false});
+  cirCv.addEventListener('touchend',  e=>{e.preventDefault();endSel();},{passive:false});
 }
 
-// ══════════════════════════════════════════════════════
-// HINTS — загальний ресурс гравця
-// ══════════════════════════════════════════════════════
-function updateHintUI(){
-  const hb=$('hintBtn');
-  if(hints>0){
-    hb.innerHTML=`💡 <span id="hintCount">${hints}</span>`;
-    hb.classList.remove('off');
-    hb.style.opacity='1';
-    hb.onclick=useHint;
-  } else {
-    // Рахуємо скільки лишилось до наступної підказки
-    const now=Date.now();
-    const left=hintNextTime-now;
-    if(left>0){
-      const hh=Math.floor(left/3600000);
-      const mm=Math.floor((left%3600000)/60000);
-      hb.innerHTML=`⏳ ${hh}г ${mm}хв`;
-    } else {
-      hb.innerHTML=`💡 купити`;
+function startSel(x,y){const i=nearNode(x,y);if(i<0)return;dragging=true;selIdx=[i];updWord();drawCircle(x,y);}
+function moveSel(x,y){
+  if(!dragging){drawCircle(x,y);return;}
+  const i=nearNode(x,y);
+  if(i>=0){
+    const last=selIdx[selIdx.length-1];
+    if(i!==last){
+      if(selIdx.length>=2&&selIdx[selIdx.length-2]===i)selIdx.pop();
+      else if(!selIdx.includes(i))selIdx.push(i);
+      updWord();
     }
-    hb.classList.remove('off');
-    hb.style.opacity='0.7';
-    hb.onclick=showBuyHint;
+  }
+  drawCircle(x,y);
+}
+function endSel(){if(!dragging)return;dragging=false;checkWord();selIdx=[];updWord();drawCircle();}
+
+function updWord(){
+  const el=$i('curWord'),w=selIdx.map(i=>curLetters[i]).join('');
+  if(!w){el.textContent='・・・';el.className='cur';return;}
+  el.textContent=w;
+  el.className='cur'+(curWords.find(e=>!e.found&&e.word===w)?' ok':w.length>=3?' bad':'');
+}
+
+function checkWord(){
+  const w=selIdx.map(i=>curLetters[i]).join('');if(w.length<3)return;
+  const wi=curWords.findIndex(e=>!e.found&&e.word===w);
+  if(wi>=0){
+    curWords[wi].found=true;markFound(curWords[wi].word,curWords[wi].row,curWords[wi].col,curWords[wi].dir);
+    drawCW();toast('✅ '+w);
+    if(curWords.every(e=>e.found))setTimeout(showWin,500);
   }
 }
 
-// Таймер поновлення підказок
-let hintTimer=null;
-function startHintTimer(){
-  clearInterval(hintTimer);
-  hintTimer=setInterval(()=>{
-    const now=Date.now();
-    if(hints>=MAX_HINTS){clearInterval(hintTimer);return;}
-    if(now>=hintNextTime&&hintNextTime>0){
-      hints=Math.min(hints+1,MAX_HINTS);
-      hintNextTime=now+HINT_INTERVAL;
-      updateHintUI();
-      showToast('💡 +1 підказка поновилась!');
-      saveHints();
-    } else {
-      updateHintUI(); // оновлюємо таймер відображення
-    }
-  },60000); // перевіряємо раз на хвилину
+// ── HINTS ─────────────────────────────────────────────
+function updateHintUI(){
+  const hb=$i('hintBtn');
+  if(hints>0){hb.innerHTML='💡 <span id="hintCount">'+hints+'</span>';hb.style.opacity='1';hb.onclick=useHint;}
+  else{
+    const left=hintNextTime-Date.now();
+    hb.innerHTML=left>0?'⏳ '+(left/3600000|0)+'г '+(left%3600000/60000|0)+'хв':'💡 купити';
+    hb.style.opacity='0.7';hb.onclick=showBuyHint;
+  }
 }
 
+let hintTimer=setInterval(()=>{
+  if(hints>=MAX_H)return;
+  if(hintNextTime>0&&Date.now()>=hintNextTime){
+    hints=Math.min(hints+1,MAX_H);hintNextTime=Date.now()+HINT_IV;
+    updateHintUI();toast('💡 +1 підказка поновилась!');saveHints();
+  } else updateHintUI();
+},30000);
+
 async function saveHints(){
-  const uid=getTgUid();if(!uid)return;
-  try{await fetch(`${GAS}?type=circle_hints_save&userId=${uid}&hints=${hints}&hintNextTime=${hintNextTime}&secret=${SECRET}&_t=${Date.now()}`);}catch(e){}
+  const u=uid();if(!u)return;
+  try{await fetch(`${GAS}?type=circle_hints_save&userId=${u}&hints=${hints}&hintNextTime=${hintNextTime}&secret=${SECRET}&_t=${Date.now()}`);}catch(e){}
 }
 
 function showBuyHint(){
-  const now=Date.now();
-  const left=hintNextTime-now;
-  const el=$('hintTimerMsg');
-  if(left>0){
-    const hh=Math.floor(left/3600000);
-    const mm=Math.floor((left%3600000)/60000);
-    el.textContent=`Або зачекай ще ${hh}г ${mm}хв — безкоштовно`;
-  } else {
-    el.textContent='Або зачекай — підказка вже готова!';
-  }
-  $('buyHintBtn').disabled=coins<1;
-  $('buyHintBtn').style.opacity=coins<1?'0.4':'1';
-  $('ovBuyHint').classList.remove('hide');
+  const left=hintNextTime-Date.now();
+  $i('hintTimerMsg').textContent=left>0?`Або зачекай ${left/3600000|0}г ${left%3600000/60000|0}хв`:'';
+  $i('buyHintBtn').disabled=coins<1;$i('buyHintBtn').style.opacity=coins<1?'0.4':'1';
+  show('ovBuyHint');
 }
 
 async function buyHint(){
-  if(coins<1){showToast('❌ Недостатньо монет!');return;}
-  const uid=getTgUid();
-  $('buyHintBtn').disabled=true;
+  if(coins<1){toast('❌ Недостатньо монет!');return;}
+  $i('buyHintBtn').disabled=true;
   try{
-    const res=await fetch(`${GAS}?type=circle_buy_hint&userId=${uid}&secret=${SECRET}&_t=${Date.now()}`);
+    const res=await fetch(`${GAS}?type=circle_buy_hint&userId=${uid()}&secret=${SECRET}&_t=${Date.now()}`);
     const d=await res.json();
-    if(d.ok){
-      coins=d.coins;hints=d.hints;hintNextTime=d.hintNextTime||0;
-      $('coinCount').textContent=coins;
-      updateHintUI();
-      $('ovBuyHint').classList.add('hide');
-      showToast('✅ Підказку куплено!');
-    } else {
-      showToast(d.error||'❌ Помилка');
-    }
-  }catch(e){showToast('❌ Помилка зєднання');}
-  $('buyHintBtn').disabled=false;
+    if(d.ok){coins=d.coins;hints=d.hints;hintNextTime=d.hintNextTime||0;
+      $i('coinCount').textContent=coins;updateHintUI();hide('ovBuyHint');toast('✅ Підказку куплено!');}
+    else toast(d.error||'❌ Помилка');
+  }catch(e){toast('❌ Немає зєднання');}
+  $i('buyHintBtn').disabled=false;
 }
 
 function useHint(){
   if(hints<=0){showBuyHint();return;}
-  const unfound=currentWords.filter(e=>!e.found);if(!unfound.length)return;
-  let hintKey=null,hintLetter='';
-  outer:for(const entry of shuffleArr([...unfound])){
-    for(let i=0;i<entry.word.length;i++){
-      const r=entry.dir==='h'?entry.row:entry.row+i;
-      const c=entry.dir==='h'?entry.col+i:entry.col;
-      const key=`${r}_${c}`;
-      if(GRID[key]&&!GRID[key].found&&!GRID[key].hint){hintKey=key;hintLetter=entry.word[i];break outer;}
+  const unfound=curWords.filter(e=>!e.found);if(!unfound.length)return;
+  let hk=null,hl='';
+  outer:for(const e of shuffle([...unfound])){
+    for(let i=0;i<e.word.length;i++){
+      const r=e.dir==='h'?e.row:e.row+i,c=e.dir==='h'?e.col+i:e.col,k=r+'_'+c;
+      if(GRID[k]&&!GRID[k].found&&!GRID[k].hint){hk=k;hl=e.word[i];break outer;}
     }
   }
-  if(!hintKey){showToast('💡 Немає що розкривати');return;}
-  GRID[hintKey].hint=true;hints--;
-  hintNextTime=Math.max(hintNextTime,Date.now()+HINT_INTERVAL);
-  updateHintUI();
-  drawCrossword();showToast(`💡 Буква "${hintLetter}" відкрита!`);
-  saveHints();
+  if(!hk){toast('💡 Немає що розкривати');return;}
+  GRID[hk].hint=true;hints--;
+  hintNextTime=Math.max(hintNextTime,Date.now()+HINT_IV);
+  updateHintUI();drawCW();toast('💡 Буква "'+hl+'" відкрита!');saveHints();
 }
 
-// ══════════════════════════════════════════════════════
-// WIN / NEXT
-// ══════════════════════════════════════════════════════
+// ── WIN ───────────────────────────────────────────────
 function showWin(){
-  coins++;$('coinCount').textContent=coins;
-  $('winCoins').textContent=`+1 🪙 (всього: ${coins})`;
-  $('winWords').textContent=`Знайдено ${currentWords.length} слів!`;
-  $('ovWin').classList.remove('hide');sendResult();
+  coins++;$i('coinCount').textContent=coins;
+  $i('winCoins').textContent='+1 🪙 (всього: '+coins+')';
+  $i('winWords').textContent='Знайдено '+curWords.length+' слів!';
+  show('ovWin');sendResult();
 }
-function nextLevel(){level++;$('ovWin').classList.add('hide');loadLevel();}
-function closeGame(){if(tg?.close)tg.close();else showToast('Гру завершено!');}
+function nextLevel(){level++;hide('ovWin');loadLevel();}
+function closeGame(){if(tg?.close)tg.close();else toast('Гру завершено!');}
 
 async function sendResult(){
-  const uid=getTgUid();if(!uid)return;
-  const elapsed=Math.round((Date.now()-levelStartTime)/1000);
-  // Відправляємо результат через GAS — нараховуємо монету
-  const url=`${GAS}?type=circle_result&userId=${uid}&level=${level}&score=${currentWords.length}&elapsed=${elapsed}&secret=${SECRET}&_t=${Date.now()}`;
+  const u=uid();if(!u)return;
+  const el=Math.round((Date.now()-lvlStart)/1000);
+  const url=GAS+'?type=circle_result&userId='+u+'&level='+level+'&score='+curWords.length+'&elapsed='+el+'&secret='+SECRET+'&_t='+Date.now();
   for(let i=0;i<3;i++){
-    try{
-      const res=await fetch(url);
-      const d=await res.json();
-      if(d.ok){
-        // Оновлюємо показник монет якщо сервер повернув актуальне значення
-        if(d.coins!==undefined){coins=d.coins;$('coinCount').textContent=coins;$('winCoins').textContent=`+1 🪙 (всього: ${coins})`;}
-        return;
-      }
+    try{const r=await fetch(url);const d=await r.json();
+      if(d.ok){if(d.coins!==undefined){coins=d.coins;$i('coinCount').textContent=coins;$i('winCoins').textContent='+1 🪙 (всього: '+coins+')';}return;}
     }catch(e){}
     await new Promise(r=>setTimeout(r,2000));
   }
 }
+
+// ── INIT ──────────────────────────────────────────────
 async function init(){
-  // 1. Намагаємось доповнити словник з таблиці (не блокує старт)
-  fetch(`${GAS}?type=circle_words&secret=${SECRET}&_t=${Date.now()}`)
-    .then(r=>r.json())
-    .then(d=>{
-      if(d.ok&&d.words&&d.words.length>10){
-        const extra=d.words.filter(w=>w&&w.length>=3&&w.length<=5&&/^[А-ЯІЇЄҐЬ]+$/.test(w));
-        WORDS=[...new Set([...WORDS,...extra])];
-      }
-    }).catch(()=>{});
-
-  // 2. Завантажуємо монети і підказки
-  const uid=getTgUid();
-  if(uid){
+  const u=uid();
+  if(u){
     try{
-      const r=await fetch(`${GAS}?type=circle_init&userId=${uid}&secret=${SECRET}&_t=${Date.now()}`);
+      const r=await fetch(GAS+'?type=circle_init&userId='+u+'&secret='+SECRET+'&_t='+Date.now());
       const d=await r.json();
-      if(d.coins!==undefined){coins=d.coins;$('coinCount').textContent=coins;}
-      if(d.hints!==undefined){hints=d.hints;}
-      if(d.hintNextTime!==undefined){hintNextTime=d.hintNextTime;}
-      // Якщо підказок немає і час пройшов — даємо 1
-      if(hints===0&&hintNextTime>0&&Date.now()>=hintNextTime){hints=1;hintNextTime=Date.now()+HINT_INTERVAL;}
-      // Якщо перший раз — даємо 3 підказки
-      if(hints===0&&hintNextTime===0){hints=3;hintNextTime=Date.now()+HINT_INTERVAL;}
-    }catch(e){
-      hints=3; // якщо офлайн — даємо 3
-    }
-  } else {
-    hints=3;
+      if(d.coins!==undefined)coins=d.coins;
+      if(d.hints!==undefined)hints=d.hints;
+      if(d.hintNextTime!==undefined)hintNextTime=d.hintNextTime;
+      if(hints===0&&hintNextTime===0){hints=3;}
+      $i('coinCount').textContent=coins;
+    }catch(e){}
   }
-  updateHintUI();
-  startHintTimer();
-
-  // 3. Розблоковуємо кнопку ГРАТИ
-  const btn=$("startBtn");
-  if(btn){btn.disabled=false;btn.style.opacity="1";btn.style.filter="none";btn.textContent="▶ ГРАТИ";}
 }
 init();
 </script>
