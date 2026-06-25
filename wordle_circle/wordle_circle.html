@@ -61,11 +61,11 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
     <button class="btn" onclick="startGame()">▶ ГРАТИ</button>
   </div>
   <div class="ov hide" id="ovWin">
-    <div class="ov-title">✅ РІВЕНЬ<br>ПРОЙДЕНО!</div>
-    <div class="win-coins" id="winCoins">+1 🪙</div>
-    <div style="font-size:11px;color:#5b7090;margin-top:4px;" id="winWords"></div>
-    <button class="btn" onclick="nextLevel()">▶ ДАЛІ</button>
-    <button class="btn btn-sec" onclick="closeGame()">✕ ВИЙТИ</button>
+    <div style="font-family:'Press Start 2P',monospace;font-size:clamp(10px,3vw,13px);color:#00e676;text-align:center;line-height:1.5;">✅ РІВЕНЬ ПРОЙДЕНО!</div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:clamp(16px,5vw,24px);color:#ffd740;text-shadow:0 0 16px rgba(255,215,64,.6);" id="winCoins">+1 🪙</div>
+    <div style="font-size:11px;color:#5b7090;" id="winWords"></div>
+    <button class="btn" onclick="nextLevel()" style="padding:10px 22px;font-size:clamp(8px,2vw,10px);">▶ ДАЛІ</button>
+    <button class="btn btn-sec" onclick="closeGame()" style="padding:8px 18px;font-size:clamp(8px,2vw,10px);">✕ ВИЙТИ</button>
   </div>
   <div class="ov hide" id="ovNoWords">
     <div class="ov-title" style="color:#ffd740">😅 УПСС...</div>
@@ -88,6 +88,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
 
 <script>
 const GAS='https://script.google.com/macros/s/AKfycbzH8qt2_fUmnrLEw0Z56fsyMEH-D3uOgBSeTxwzUMCDTFDDoNBAowLTZqEGwSFo26ie9A/exec';
+const WRK='https://aclub-runner-test.rjcnz-faw4.workers.dev';
 const SECRET='aclub2026runnertest';
 const tg=window.Telegram?.WebApp;
 if(tg){tg.ready();tg.expand();}
@@ -254,7 +255,7 @@ const LETTER_POOLS = [
 
 function generateLevel(){
   // Беремо випадковий пул букв
-  const pool = shuffleArr([...LETTER_POOLS])[0];
+  const pool = LETTER_POOLS[Math.floor(Math.random()*LETTER_POOLS.length)];
 
   // Знаходимо всі слова які можна скласти з цих букв
   const possible = shuffleArr(WORDS.filter(w => canForm(w, pool)));
@@ -628,8 +629,21 @@ function closeGame(){if(tg?.close)tg.close();else showToast('Гру заверш
 
 async function sendResult(){
   const uid=getTgUid();if(!uid)return;
-  const el=Math.round((Date.now()-levelStartTime)/1000);
-  try{await fetch(`${GAS}?type=circle_result&userId=${uid}&level=${level}&coins=${coins}&elapsed=${el}&secret=${SECRET}&_t=${Date.now()}`);}catch(e){}
+  const elapsed=Math.round((Date.now()-levelStartTime)/1000);
+  // Відправляємо результат через GAS — нараховуємо монету
+  const url=`${GAS}?type=circle_result&userId=${uid}&level=${level}&score=${currentWords.length}&elapsed=${elapsed}&secret=${SECRET}&_t=${Date.now()}`;
+  for(let i=0;i<3;i++){
+    try{
+      const res=await fetch(url);
+      const d=await res.json();
+      if(d.ok){
+        // Оновлюємо показник монет якщо сервер повернув актуальне значення
+        if(d.coins!==undefined){coins=d.coins;$('coinCount').textContent=coins;$('winCoins').textContent=`+1 🪙 (всього: ${coins})`;}
+        return;
+      }
+    }catch(e){}
+    await new Promise(r=>setTimeout(r,2000));
+  }
 }
 async function init(){
   const uid=getTgUid();if(!uid)return;
