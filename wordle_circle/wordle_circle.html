@@ -58,7 +58,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   <div class="ov" id="ovStart">
     <div class="ov-title">🔡 СЛОВА<br>ПО КОЛУ</div>
     <div class="ov-sub">Проводь лінію між буквами — склади слова і заповни кросворд!<br><br>Кожен рівень — унікальний набір слів 🎲</div>
-    <button class="btn" id="startBtn" onclick="startGame()" disabled style="opacity:.5">⏳ Завантаження...</button>
+    <button class="btn" id="startBtn" onclick="startGame()" disabled style="opacity:.6;filter:brightness(1.3)">⏳ Завантаження...</button>
   </div>
   <div class="ov hide" id="ovWin">
     <div style="font-family:'Press Start 2P',monospace;font-size:clamp(10px,3vw,13px);color:#00e676;text-align:center;line-height:1.5;">✅ РІВЕНЬ ПРОЙДЕНО!</div>
@@ -67,6 +67,15 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
     <button class="btn" onclick="nextLevel()" style="padding:10px 22px;font-size:clamp(8px,2vw,10px);">▶ ДАЛІ</button>
     <button class="btn btn-sec" onclick="closeGame()" style="padding:8px 18px;font-size:clamp(8px,2vw,10px);">✕ ВИЙТИ</button>
   </div>
+  <!-- Купівля підказки -->
+  <div class="ov hide" id="ovBuyHint">
+    <div style="font-size:32px">💡</div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:clamp(10px,3vw,13px);color:#ffd740;text-align:center;">ПІДКАЗКИ<br>ЗАКІНЧИЛИСЬ</div>
+    <div style="font-size:12px;color:#5b7090;text-align:center;line-height:1.7;">Купити 1 підказку<br>за <b style="color:#ffd740">1 🪙</b> монету?<br><br><span id="hintTimerMsg" style="color:#00e676;font-size:11px;"></span></div>
+    <button class="btn" onclick="buyHint()" id="buyHintBtn" style="background:linear-gradient(135deg,#ffd740,#e6a800);color:#050d1a;padding:10px 22px;font-size:clamp(8px,2vw,10px);">💰 КУПИТИ за 1 🪙</button>
+    <button class="btn btn-sec" onclick="$('ovBuyHint').classList.add('hide')" style="padding:8px 18px;font-size:clamp(8px,2vw,10px);">✕ ЗАКРИТИ</button>
+  </div>
+
   <div class="ov hide" id="ovNoWords">
     <div class="ov-title" style="color:#ffd740">😅 УПСС...</div>
     <div class="ov-sub">Не вдалось знайти достатньо слів.<br>Генеруємо новий рівень!</div>
@@ -164,7 +173,10 @@ function generateLevel(){
 // ══════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════
-let level=0, coins=0, hints=3;
+let level=0, coins=0, hints=0;
+let hintNextTime=0; // timestamp коли буде наступна безкоштовна підказка
+const HINT_INTERVAL=2*60*60*1000; // 2 години в мс
+const MAX_HINTS=5; // максимум підказок
 let currentLetters=[], currentWords=[];
 let selectedIdx=[], isDragging=false;
 let levelStartTime=0;
@@ -198,11 +210,10 @@ function loadLevel(){
 
   currentLetters=shuffleArr([...levelData.letters]);
   currentWords=levelData.words;
-  selectedIdx=[];isDragging=false;hints=3;levelStartTime=Date.now();
+  selectedIdx=[];isDragging=false;levelStartTime=Date.now();
   $('lvlNum').textContent=level+1;
   $('coinCount').textContent=coins;
-  $('hintCount').textContent=hints;
-  $('hintBtn').classList.remove('off');
+  updateHintUI();
   $('curWord').textContent='・・・';
   $('curWord').className='cur-word';
   rebuildGrid();
@@ -375,10 +386,94 @@ function checkWord(){
 }
 
 // ══════════════════════════════════════════════════════
-// HINT
+// HINTS — загальний ресурс гравця
 // ══════════════════════════════════════════════════════
+function updateHintUI(){
+  const hb=$('hintBtn');
+  if(hints>0){
+    hb.innerHTML=`💡 <span id="hintCount">${hints}</span>`;
+    hb.classList.remove('off');
+    hb.style.opacity='1';
+    hb.onclick=useHint;
+  } else {
+    // Рахуємо скільки лишилось до наступної підказки
+    const now=Date.now();
+    const left=hintNextTime-now;
+    if(left>0){
+      const hh=Math.floor(left/3600000);
+      const mm=Math.floor((left%3600000)/60000);
+      hb.innerHTML=`⏳ ${hh}г ${mm}хв`;
+    } else {
+      hb.innerHTML=`💡 купити`;
+    }
+    hb.classList.remove('off');
+    hb.style.opacity='0.7';
+    hb.onclick=showBuyHint;
+  }
+}
+
+// Таймер поновлення підказок
+let hintTimer=null;
+function startHintTimer(){
+  clearInterval(hintTimer);
+  hintTimer=setInterval(()=>{
+    const now=Date.now();
+    if(hints>=MAX_HINTS){clearInterval(hintTimer);return;}
+    if(now>=hintNextTime&&hintNextTime>0){
+      hints=Math.min(hints+1,MAX_HINTS);
+      hintNextTime=now+HINT_INTERVAL;
+      updateHintUI();
+      showToast('💡 +1 підказка поновилась!');
+      saveHints();
+    } else {
+      updateHintUI(); // оновлюємо таймер відображення
+    }
+  },60000); // перевіряємо раз на хвилину
+}
+
+async function saveHints(){
+  const uid=getTgUid();if(!uid)return;
+  try{await fetch(`${GAS}?type=circle_hints_save&userId=${uid}&hints=${hints}&hintNextTime=${hintNextTime}&secret=${SECRET}&_t=${Date.now()}`);}catch(e){}
+}
+
+function showBuyHint(){
+  const now=Date.now();
+  const left=hintNextTime-now;
+  const el=$('hintTimerMsg');
+  if(left>0){
+    const hh=Math.floor(left/3600000);
+    const mm=Math.floor((left%3600000)/60000);
+    el.textContent=`Або зачекай ще ${hh}г ${mm}хв — безкоштовно`;
+  } else {
+    el.textContent='Або зачекай — підказка вже готова!';
+  }
+  $('buyHintBtn').disabled=coins<1;
+  $('buyHintBtn').style.opacity=coins<1?'0.4':'1';
+  $('ovBuyHint').classList.remove('hide');
+}
+
+async function buyHint(){
+  if(coins<1){showToast('❌ Недостатньо монет!');return;}
+  const uid=getTgUid();
+  $('buyHintBtn').disabled=true;
+  try{
+    const res=await fetch(`${GAS}?type=circle_buy_hint&userId=${uid}&secret=${SECRET}&_t=${Date.now()}`);
+    const d=await res.json();
+    if(d.ok){
+      coins=d.coins;hints=d.hints;hintNextTime=d.hintNextTime||0;
+      $('coinCount').textContent=coins;
+      updateHintUI();
+      $('ovBuyHint').classList.add('hide');
+      showToast('✅ Підказку куплено!');
+    } else {
+      showToast(d.error||'❌ Помилка');
+    }
+  }catch(e){showToast('❌ Помилка зєднання');}
+  $('buyHintBtn').disabled=false;
+}
+
 function useHint(){
-  if(hints<=0)return;
+  if(hints<=0){showBuyHint();return;}
   const unfound=currentWords.filter(e=>!e.found);if(!unfound.length)return;
   let hintKey=null,hintLetter='';
   outer:for(const entry of shuffleArr([...unfound])){
@@ -390,9 +485,11 @@ function useHint(){
     }
   }
   if(!hintKey){showToast('💡 Немає що розкривати');return;}
-  GRID[hintKey].hint=true;hints--;$('hintCount').textContent=hints;
-  if(hints===0)$('hintBtn').classList.add('off');
+  GRID[hintKey].hint=true;hints--;
+  hintNextTime=Math.max(hintNextTime,Date.now()+HINT_INTERVAL);
+  updateHintUI();
   drawCrossword();showToast(`💡 Буква "${hintLetter}" відкрита!`);
+  saveHints();
 }
 
 // ══════════════════════════════════════════════════════
@@ -447,16 +544,31 @@ async function init(){
     wordsLoaded=true;
   }
 
-  // 2. Завантажуємо монети користувача
+  // 2. Завантажуємо монети і підказки
   const uid=getTgUid();
   if(uid){
-    try{const r=await fetch(`${GAS}?type=circle_init&userId=${uid}&secret=${SECRET}&_t=${Date.now()}`);
-      const d=await r.json();if(d.coins!==undefined){coins=d.coins;$('coinCount').textContent=coins;}}catch(e){}
+    try{
+      const r=await fetch(`${GAS}?type=circle_init&userId=${uid}&secret=${SECRET}&_t=${Date.now()}`);
+      const d=await r.json();
+      if(d.coins!==undefined){coins=d.coins;$('coinCount').textContent=coins;}
+      if(d.hints!==undefined){hints=d.hints;}
+      if(d.hintNextTime!==undefined){hintNextTime=d.hintNextTime;}
+      // Якщо підказок немає і час пройшов — даємо 1
+      if(hints===0&&hintNextTime>0&&Date.now()>=hintNextTime){hints=1;hintNextTime=Date.now()+HINT_INTERVAL;}
+      // Якщо перший раз — даємо 3 підказки
+      if(hints===0&&hintNextTime===0){hints=3;hintNextTime=Date.now()+HINT_INTERVAL;}
+    }catch(e){
+      hints=3; // якщо офлайн — даємо 3
+    }
+  } else {
+    hints=3;
   }
+  updateHintUI();
+  startHintTimer();
 
   // 3. Розблоковуємо кнопку ГРАТИ
   const btn=$('startBtn');
-  if(btn){btn.disabled=false;btn.textContent='▶ ГРАТИ';}
+  if(btn){btn.disabled=false;btn.style.opacity='1';btn.style.filter='none';btn.textContent='▶ ГРАТИ';}
 }
 init();
 </script>
