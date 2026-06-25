@@ -49,7 +49,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   letter-spacing:3px;text-transform:uppercase;min-height:28px;flex-shrink:0;color:#e8edf5;}
 .cur.ok{color:#00e676;text-shadow:0 0 12px rgba(0,230,118,.5);}
 .cur.bad{color:#ff6090;}
-.cir-wrap{flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.cir-wrap{flex:1;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;}
 
 /* TOAST */
 .toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%) translateY(16px);
@@ -178,15 +178,15 @@ function generateLevel(){
     // Знаходимо слова
     const pos=shuffle(WORDS.filter(w=>w.length>=3&&w.length<=5&&canForm(w,pool)));
     if(pos.length<3)continue;
-    // Відбираємо 3-5 різних
+    // Відбираємо 5-7 різних слів
     const byL={3:[],4:[],5:[]};
     for(const w of pos)if(byL[w.length])byL[w.length].push(w);
     const chosen=[];
     for(const l of [4,5,3]){
-      for(let i=0;i<Math.min(2,byL[l].length);i++)chosen.push(byL[l][i]);
-      if(chosen.length>=5)break;
+      for(let i=0;i<Math.min(3,byL[l].length);i++)chosen.push(byL[l][i]);
+      if(chosen.length>=7)break;
     }
-    if(chosen.length<3)continue;
+    if(chosen.length<4)continue;
     const grid=buildCrossword(chosen);
     if(!grid)continue;
     return{letters:shuffle(pool.slice(0,8)),words:grid};
@@ -471,14 +471,21 @@ function showBuyHint(){
 
 async function buyHint(){
   if(coins<1){toast('❌ Недостатньо монет!');return;}
+  const u=uid();
+  if(!u){toast('❌ Помилка авторизації');return;}
   $i('buyHintBtn').disabled=true;
   try{
-    const res=await fetch(`${GAS}?type=circle_buy_hint&userId=${uid()}&secret=${SECRET}&_t=${Date.now()}`);
+    const res=await fetch(GAS+'?type=circle_buy_hint&userId='+u+'&secret='+SECRET+'&_t='+Date.now());
     const d=await res.json();
-    if(d.ok){coins=d.coins;hints=d.hints;hintNextTime=d.hintNextTime||0;
+    if(d.ok){
+      coins=d.coins;hints=d.hints;hintNextTime=d.hintNextTime||0;
+      $i('coinCount').textContent=coins;updateHintUI();hide('ovBuyHint');toast('✅ Підказку куплено!');
+    } else toast(d.error||'❌ Помилка');
+  }catch(e){
+    // Якщо GAS недоступний — купуємо локально (оновлення при наступній сесії)
+    if(coins>=1){coins--;hints++;hintNextTime=Math.max(hintNextTime,Date.now()+HINT_IV);
       $i('coinCount').textContent=coins;updateHintUI();hide('ovBuyHint');toast('✅ Підказку куплено!');}
-    else toast(d.error||'❌ Помилка');
-  }catch(e){toast('❌ Немає зєднання');}
+  }
   $i('buyHintBtn').disabled=false;
 }
 
