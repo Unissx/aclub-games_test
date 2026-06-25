@@ -171,6 +171,73 @@ function generateLevel(){
 }
 
 // ══════════════════════════════════════════════════════
+// АВТОМАТИЧНИЙ КРОСВОРД
+// ══════════════════════════════════════════════════════
+function buildCrossword(words){
+  const placed=[];
+  placed.push({word:words[0],row:0,col:0,dir:'h',found:false});
+  for(let wi=1;wi<words.length;wi++){
+    const w=words[wi];
+    let added=false;
+    const dirs=['h','v'];
+    for(const pw of shuffleArr([...placed])){
+      for(let pi=0;pi<pw.word.length&&!added;pi++){
+        for(let wi2=0;wi2<w.length&&!added;wi2++){
+          if(pw.word[pi]!==w[wi2]) continue;
+          const newDir=pw.dir==='h'?'v':'h';
+          let nr,nc;
+          if(pw.dir==='h'){nc=pw.col+pi;nr=pw.row-wi2;}
+          else{nr=pw.row+pi;nc=pw.col-wi2;}
+          if(nr<0||nc<0) continue;
+          if(checkPlacement(placed,w,nr,nc,newDir)){
+            placed.push({word:w,row:nr,col:nc,dir:newDir,found:false});
+            added=true;
+          }
+        }
+      }
+      if(added) break;
+    }
+  }
+  if(placed.length<3) return null;
+  // Нормалізація
+  const minR=Math.min(...placed.map(p=>p.row));
+  const minC=Math.min(...placed.map(p=>p.col));
+  // Перевірка розміру — не більше 8 колонок і 8 рядків
+  const maxR2=Math.max(...placed.map(p=>p.dir==='h'?p.row:p.row+p.word.length-1))-minR;
+  const maxC2=Math.max(...placed.map(p=>p.dir==='h'?p.col+p.word.length-1:p.col))-minC;
+  if(maxR2>7||maxC2>7) return null;
+  return placed.map(p=>({...p,row:p.row-minR,col:p.col-minC}));
+}
+
+function checkPlacement(placed,word,row,col,dir){
+  const cells={};
+  for(const p of placed){
+    for(let i=0;i<p.word.length;i++){
+      const r=p.dir==='h'?p.row:p.row+i;
+      const c=p.dir==='h'?p.col+i:p.col;
+      cells[`${r}_${c}`]=p.word[i];
+    }
+  }
+  for(let i=0;i<word.length;i++){
+    const r=dir==='h'?row:row+i;
+    const c=dir==='h'?col+i:col;
+    const key=`${r}_${c}`;
+    if(cells[key]&&cells[key]!==word[i]) return false;
+    if(!cells[key]){
+      if(dir==='h'){if(cells[`${r-1}_${c}`]||cells[`${r+1}_${c}`]) return false;}
+      else{if(cells[`${r}_${c-1}`]||cells[`${r}_${c+1}`]) return false;}
+    }
+  }
+  const endR=dir==='h'?row:row+word.length;
+  const endC=dir==='h'?col+word.length:col;
+  if(cells[`${endR}_${endC}`]) return false;
+  const preR=dir==='h'?row:row-1;
+  const preC=dir==='h'?col-1:col;
+  if(preR>=0&&preC>=0&&cells[`${preR}_${preC}`]) return false;
+  return true;
+}
+
+// ══════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════
 let level=0, coins=0, hints=0;
