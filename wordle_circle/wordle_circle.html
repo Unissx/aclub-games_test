@@ -150,22 +150,20 @@ function generateLevel(){
   // Знаходимо всі слова які можна скласти з цих букв
   const possible = shuffleArr(WORDS.filter(w => canForm(w, pool)));
 
-  // Беремо 5-7 слів різної довжини для кросворду
-  // Пріоритет: хочемо мікс довжин 3,4,5,6
+  // Беремо 4-6 слів, максимум 5 букв для компактного кросворду
   const chosen = [];
-  const byLen = {3:[],4:[],5:[],6:[]};
+  const byLen = {3:[],4:[],5:[]};
   for(const w of possible){
     if(byLen[w.length]) byLen[w.length].push(w);
   }
-  // Беремо по 1-2 від кожної довжини
-  for(const len of [4,5,6,3]){
+  for(const len of [4,5,3]){
     const arr=byLen[len]||[];
-    const take=len>=4?2:1;
+    const take=2;
     for(let i=0;i<Math.min(take,arr.length);i++) chosen.push(arr[i]);
-    if(chosen.length>=6) break;
+    if(chosen.length>=5) break;
   }
 
-  if(chosen.length < 4) return null; // замало слів
+  if(chosen.length < 3) return null; // замало слів
 
   // Будуємо кросворд автоматично
   const grid = buildCrossword(chosen);
@@ -345,7 +343,11 @@ function rebuildGrid(){
 function sizeCrossword(){
   const cols=maxC+1,rows=maxR+1;
   const vw=Math.min(window.innerWidth,420);
-  const cellSize=Math.min(CELL,Math.floor((vw-30)/(cols+0.5)));
+  // Висота доступна для кросворду: екран мінус header(50) мінус curWord(36) мінус коло(CS+10) мінус відступи
+  const availH=window.innerHeight - 50 - 36 - (CS||260) - 30;
+  const maxCellW=Math.floor((vw-30)/(cols+0.5));
+  const maxCellH=rows>1?Math.floor((availH-10)/(rows+0.3)):CELL;
+  const cellSize=Math.min(CELL, maxCellW, maxCellH, 36);
   const cw=(cols*cellSize+(cols-1)*GAP)+20;
   const ch=(rows*cellSize+(rows-1)*GAP)+10;
   cwCv.width=cw;cwCv.height=ch;
@@ -395,7 +397,7 @@ function markFound(word,row,col,dir){
 // ══════════════════════════════════════════════════════
 function sizeCircle(){
   const vw=Math.min(window.innerWidth,420);
-  CS=Math.min(vw-20,300);CR=(CS/2)*0.72;
+  CS=Math.min(vw-20,260);CR=(CS/2)*0.72;
   cirCv.width=CS;cirCv.height=CS;
   cirCv.style.width=CS+'px';cirCv.style.height=CS+'px';
   const cx=CS/2,cy=CS/2,n=currentLetters.length;
