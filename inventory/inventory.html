@@ -15,6 +15,9 @@
     --panel3:#232A45;
     --line:#262C47;
     --brass:#D9A94E;
+    --green:#00E676;
+    --green-bright:#37FF9C;
+    --green-dark:#00B248;
     --brass-bright:#F2C879;
     --shard:#8B7CF6;
     --text:#F3F1EA;
@@ -37,7 +40,7 @@
   body::before{
     content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
     background:
-      radial-gradient(ellipse 600px 300px at 50% -10%, rgba(217,169,78,0.10), transparent 60%),
+      radial-gradient(ellipse 600px 300px at 50% -10%, rgba(0,230,118,0.09), transparent 60%),
       repeating-linear-gradient(115deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 64px);
   }
 
@@ -51,10 +54,10 @@
   .brand{display:flex; align-items:center; gap:8px;}
   .brand-mark{
     width:30px; height:30px; border-radius:9px;
-    background:linear-gradient(155deg, var(--brass-bright), var(--brass) 60%, #9c7530);
+    background:linear-gradient(155deg, var(--green-bright), var(--green) 60%, var(--green-dark));
     display:flex; align-items:center; justify-content:center;
-    font-family:'Unbounded'; font-weight:800; font-size:15px; color:#241a05;
-    box-shadow:0 2px 8px rgba(217,169,78,0.35), inset 0 1px 0 rgba(255,255,255,0.4);
+    font-family:'Unbounded'; font-weight:800; font-size:15px; color:#04150c;
+    box-shadow:0 2px 8px rgba(0,230,118,0.35), inset 0 1px 0 rgba(255,255,255,0.4);
   }
   .brand-name{font-family:'Unbounded'; font-weight:700; font-size:14.5px; letter-spacing:0.2px;}
   .brand-sub{font-size:10px; color:var(--text-faint); letter-spacing:1.5px; text-transform:uppercase; margin-top:1px;}
@@ -138,7 +141,7 @@
     background:var(--panel3); border-radius:8px; padding:4px 9px; flex:none;
   }
   .charge-item .count.zero{color:var(--text-faint);}
-  .charge-item .count.pos{color:var(--brass-bright);}
+  .charge-item .count.pos{color:var(--green-bright);}
   .charge-item.active{border-color:rgba(82,196,142,0.4);}
   .charge-item .badge-active{
     font-size:10px; font-weight:700; color:var(--success); background:rgba(82,196,142,0.12);
@@ -174,7 +177,7 @@
   .item-row .txt .s{font-size:10.5px; color:var(--text-faint); margin-top:1px;}
   .item-row .status{
     flex:none; font-size:10px; font-weight:700; padding:4px 8px; border-radius:7px;
-    background:rgba(217,169,78,0.12); color:var(--brass);
+    background:rgba(0,230,118,0.12); color:var(--green-bright);
   }
 
   .empty{
@@ -197,7 +200,7 @@
   }
   .tab-btn .ic{font-size:19px;}
   .tab-btn .lb{font-size:10.5px; font-weight:600;}
-  .tab-btn.active{color:var(--brass-bright); background:rgba(217,169,78,0.08);}
+  .tab-btn.active{color:var(--green-bright); background:rgba(0,230,118,0.08);}
 
   .view{display:none;}
   .view.active{display:block;}
@@ -235,7 +238,7 @@
     transition:transform .12s ease, opacity .12s ease;
   }
   .btn:active{transform:scale(0.97);}
-  .btn-brass{background:linear-gradient(155deg, var(--brass-bright), var(--brass)); color:#241a05; box-shadow:0 4px 14px rgba(217,169,78,0.25);}
+  .btn-brass{background:linear-gradient(155deg, var(--green-bright), var(--green)); color:#04150c; box-shadow:0 4px 14px rgba(0,230,118,0.3);}
   .btn-ghost{background:var(--panel2); color:var(--text); border:1px solid var(--line);}
   .btn-shard{background:linear-gradient(155deg, #b0a4fb, var(--shard)); color:#180f3d;}
   .btn:disabled{opacity:0.4; pointer-events:none;}
@@ -251,7 +254,7 @@
   .vault-stage{position:relative; width:220px; height:220px; display:flex; align-items:center; justify-content:center;}
   .vault-ring{
     position:absolute; inset:0; border-radius:50%;
-    border:3px solid var(--panel3); border-top-color:var(--brass); border-right-color:var(--brass);
+    border:3px solid var(--panel3); border-top-color:var(--green); border-right-color:var(--green);
   }
   .vault-overlay.spin .vault-ring{ animation:dialSpin 1.3s steps(28,end) forwards; }
   @keyframes dialSpin{ from{transform:rotate(0deg);} to{transform:rotate(900deg);} }
@@ -259,10 +262,10 @@
     width:150px; height:150px; border-radius:50%;
     background:radial-gradient(circle at 35% 30%, #322511, #0e0a03 70%);
     display:flex; align-items:center; justify-content:center; font-size:46px;
-    border:1px solid rgba(217,169,78,0.25);
+    border:1px solid rgba(0,230,118,0.25);
   }
   .vault-overlay.spin .vault-core{ animation:pulseGlow 1.3s ease forwards; }
-  @keyframes pulseGlow{ 0%,100%{box-shadow:0 0 0 rgba(217,169,78,0);} 90%{box-shadow:0 0 60px rgba(217,169,78,0.55);} }
+  @keyframes pulseGlow{ 0%,100%{box-shadow:0 0 0 rgba(0,230,118,0);} 90%{box-shadow:0 0 60px rgba(0,230,118,0.55);} }
   .vault-label{margin-top:26px; font-family:'Space Mono'; color:var(--text-faint); font-size:12px; letter-spacing:2px; text-transform:uppercase;}
 
   .vault-flash{position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none;}
