@@ -1,1 +1,754 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>áClub — Кейси та Інвентар</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0A0C14;
+    --panel:#14182A;
+    --panel2:#1C2136;
+    --panel3:#232A45;
+    --line:#262C47;
+    --brass:#D9A94E;
+    --brass-bright:#F2C879;
+    --shard:#8B7CF6;
+    --text:#F3F1EA;
+    --text-dim:#8890AA;
+    --text-faint:#5B6280;
+    --rare:#4E8FE0;
+    --epic:#B15EF0;
+    --legendary:#F2A93B;
+    --success:#52C48E;
+    --danger:#E2607A;
+    --radius:18px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--void); color:var(--text); font-family:'Inter',sans-serif; overscroll-behavior:none;}
+  body{padding-bottom:calc(78px + env(safe-area-inset-bottom)); min-height:100vh;}
+  .mono{font-family:'Space Mono',monospace;}
+  .display{font-family:'Unbounded',sans-serif;}
 
+  /* ── Фон: тонка вітражна текстура сейфа ── */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(ellipse 600px 300px at 50% -10%, rgba(217,169,78,0.10), transparent 60%),
+      repeating-linear-gradient(115deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 64px);
+  }
+
+  /* ── Топбар ── */
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 16px 12px; gap:10px;
+    background:linear-gradient(180deg, var(--void) 60%, rgba(10,12,20,0.85) 85%, transparent);
+  }
+  .brand{display:flex; align-items:center; gap:8px;}
+  .brand-mark{
+    width:30px; height:30px; border-radius:9px;
+    background:linear-gradient(155deg, var(--brass-bright), var(--brass) 60%, #9c7530);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Unbounded'; font-weight:800; font-size:15px; color:#241a05;
+    box-shadow:0 2px 8px rgba(217,169,78,0.35), inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .brand-name{font-family:'Unbounded'; font-weight:700; font-size:14.5px; letter-spacing:0.2px;}
+  .brand-sub{font-size:10px; color:var(--text-faint); letter-spacing:1.5px; text-transform:uppercase; margin-top:1px;}
+
+  .pills{display:flex; gap:6px;}
+  .pill{
+    display:flex; align-items:center; gap:5px;
+    background:var(--panel2); border:1px solid var(--line);
+    border-radius:100px; padding:6px 11px 6px 8px;
+  }
+  .pill .ic{width:16px; height:16px; flex:none;}
+  .pill .val{font-family:'Space Mono'; font-weight:700; font-size:13.5px;}
+  .pill.coin .val{color:var(--brass-bright);}
+  .pill.shard .val{color:var(--shard);}
+
+  /* ── Вкладки ── */
+  .tabs-content{position:relative; z-index:1; padding:2px 16px 24px;}
+  .section-title{
+    font-family:'Unbounded'; font-weight:700; font-size:17px;
+    margin:18px 2px 12px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .section-title .hint{font-family:'Inter'; font-weight:500; font-size:11.5px; color:var(--text-faint);}
+
+  /* ── Кейс-картки ── */
+  .chest-grid{display:flex; flex-direction:column; gap:10px;}
+  .chest-card{
+    position:relative; overflow:hidden;
+    display:flex; align-items:center; gap:13px;
+    background:linear-gradient(155deg, var(--panel2), var(--panel));
+    border:1px solid var(--line); border-radius:var(--radius);
+    padding:13px 14px; cursor:pointer; transition:transform .15s ease, border-color .15s ease;
+  }
+  .chest-card:active{transform:scale(0.975);}
+  .chest-card::after{
+    content:""; position:absolute; top:0; right:-30%; width:60%; height:100%;
+    background:linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.035) 50%, transparent 60%);
+  }
+  .chest-icon{
+    flex:none; width:52px; height:52px; border-radius:13px;
+    display:flex; align-items:center; justify-content:center; font-size:24px;
+    border:1px solid rgba(255,255,255,0.06);
+  }
+  .chest-icon.tier-coin{background:radial-gradient(circle at 30% 25%, #4a3a12, #241a08); box-shadow:inset 0 0 0 1px rgba(217,169,78,.25);}
+  .chest-icon.tier-bonus{background:radial-gradient(circle at 30% 25%, #2a2650, #171331); box-shadow:inset 0 0 0 1px rgba(139,124,246,.3);}
+  .chest-icon.tier-skin1{background:radial-gradient(circle at 30% 25%, #1c3a4a, #0f2028); box-shadow:inset 0 0 0 1px rgba(78,143,224,.3);}
+  .chest-icon.tier-skin2{background:radial-gradient(circle at 30% 25%, #3a1c40, #200f24); box-shadow:inset 0 0 0 1px rgba(177,94,240,.3);}
+  .chest-icon.tier-skin3{background:radial-gradient(circle at 30% 25%, #123a34, #0a201c); box-shadow:inset 0 0 0 1px rgba(82,196,142,.3);}
+  .chest-icon.tier-vip{background:radial-gradient(circle at 30% 25%, #4a3410, #241a05); box-shadow:inset 0 0 0 1px rgba(242,169,59,.35);}
+
+  .chest-info{flex:1; min-width:0;}
+  .chest-name{font-family:'Unbounded'; font-weight:700; font-size:14.5px; margin-bottom:2px;}
+  .chest-desc{font-size:11.5px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .chest-price{
+    flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:2px;
+  }
+  .chest-price .amt{font-family:'Space Mono'; font-weight:700; font-size:14.5px; color:var(--brass-bright); display:flex; align-items:center; gap:4px;}
+  .chest-price .lock{font-size:9.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.6px;}
+
+  /* ── Інвентар ── */
+  .stat-row{display:flex; gap:10px; margin-bottom:4px;}
+  .stat-card{
+    flex:1; background:var(--panel2); border:1px solid var(--line); border-radius:16px;
+    padding:14px 14px 12px;
+  }
+  .stat-card .label{font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;}
+  .stat-card .value{font-family:'Space Mono'; font-weight:700; font-size:22px;}
+  .stat-card.coin .value{color:var(--brass-bright);}
+  .stat-card.shard .value{color:var(--shard);}
+
+  .charge-list{display:flex; flex-direction:column; gap:8px;}
+  .charge-item{
+    display:flex; align-items:center; gap:11px;
+    background:var(--panel2); border:1px solid var(--line); border-radius:14px; padding:11px 13px;
+  }
+  .charge-item .ic{font-size:19px; flex:none; width:26px; text-align:center;}
+  .charge-item .txt{flex:1; min-width:0;}
+  .charge-item .txt .t{font-size:13px; font-weight:600;}
+  .charge-item .txt .s{font-size:11px; color:var(--text-faint); margin-top:1px;}
+  .charge-item .count{
+    font-family:'Space Mono'; font-weight:700; font-size:14px;
+    background:var(--panel3); border-radius:8px; padding:4px 9px; flex:none;
+  }
+  .charge-item .count.zero{color:var(--text-faint);}
+  .charge-item .count.pos{color:var(--brass-bright);}
+  .charge-item.active{border-color:rgba(82,196,142,0.4);}
+  .charge-item .badge-active{
+    font-size:10px; font-weight:700; color:var(--success); background:rgba(82,196,142,0.12);
+    border-radius:7px; padding:4px 8px; flex:none; letter-spacing:0.3px;
+  }
+
+  .craft-grid{display:flex; gap:9px;}
+  .craft-card{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;
+    background:var(--panel2); border:1px solid var(--line); border-radius:15px;
+    padding:14px 8px 12px; cursor:pointer; transition:transform .15s ease;
+  }
+  .craft-card:active{transform:scale(0.96);}
+  .craft-card .gem{width:34px; height:34px; border-radius:50%;}
+  .craft-card .rname{font-family:'Unbounded'; font-weight:700; font-size:12px;}
+  .craft-card .rcost{font-family:'Space Mono'; font-size:12px; color:var(--shard); display:flex; align-items:center; gap:3px;}
+  .craft-card.locked{opacity:0.45;}
+  .gem.rare{background:radial-gradient(circle at 35% 30%, #8fc0ff, var(--rare));}
+  .gem.epic{background:radial-gradient(circle at 35% 30%, #e0aaff, var(--epic));}
+  .gem.legendary{background:radial-gradient(circle at 35% 30%, #ffe1a0, var(--legendary));}
+
+  .items-list{display:flex; flex-direction:column; gap:8px;}
+  .item-row{
+    display:flex; align-items:center; gap:11px;
+    background:var(--panel2); border:1px solid var(--line); border-radius:14px; padding:11px 13px;
+  }
+  .item-row .rarity-dot{width:8px; height:8px; border-radius:50%; flex:none;}
+  .item-row .rarity-dot.rare{background:var(--rare); box-shadow:0 0 8px var(--rare);}
+  .item-row .rarity-dot.epic{background:var(--epic); box-shadow:0 0 8px var(--epic);}
+  .item-row .rarity-dot.legendary{background:var(--legendary); box-shadow:0 0 8px var(--legendary);}
+  .item-row .txt{flex:1; min-width:0;}
+  .item-row .txt .t{font-size:12.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .item-row .txt .s{font-size:10.5px; color:var(--text-faint); margin-top:1px;}
+  .item-row .status{
+    flex:none; font-size:10px; font-weight:700; padding:4px 8px; border-radius:7px;
+    background:rgba(217,169,78,0.12); color:var(--brass);
+  }
+
+  .empty{
+    text-align:center; padding:34px 20px; color:var(--text-faint);
+  }
+  .empty .ic{font-size:30px; margin-bottom:8px; opacity:0.7;}
+  .empty .t{font-size:13px; font-weight:600; color:var(--text-dim); margin-bottom:3px;}
+  .empty .s{font-size:11.5px; line-height:1.5;}
+
+  /* ── Нижні таби ── */
+  .tabbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    display:flex; padding:8px 14px calc(10px + env(safe-area-inset-bottom));
+    background:rgba(20,24,42,0.92); backdrop-filter:blur(14px);
+    border-top:1px solid var(--line); gap:8px;
+  }
+  .tab-btn{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:7px 0 5px; border-radius:13px; color:var(--text-faint); transition:.15s;
+  }
+  .tab-btn .ic{font-size:19px;}
+  .tab-btn .lb{font-size:10.5px; font-weight:600;}
+  .tab-btn.active{color:var(--brass-bright); background:rgba(217,169,78,0.08);}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ── Bottom sheet (деталі кейсу) ── */
+  .sheet-backdrop{
+    position:fixed; inset:0; z-index:40; background:rgba(5,6,11,0.72);
+    opacity:0; pointer-events:none; transition:opacity .22s ease;
+  }
+  .sheet-backdrop.show{opacity:1; pointer-events:auto;}
+  .sheet{
+    position:fixed; left:0; right:0; bottom:0; z-index:41;
+    background:var(--panel); border:1px solid var(--line); border-bottom:none;
+    border-radius:22px 22px 0 0; padding:10px 18px calc(22px + env(safe-area-inset-bottom));
+    transform:translateY(100%); transition:transform .28s cubic-bezier(.2,.9,.25,1);
+    max-height:82vh; overflow-y:auto;
+  }
+  .sheet.show{transform:translateY(0);}
+  .sheet-handle{width:36px; height:4px; border-radius:3px; background:var(--line); margin:2px auto 14px;}
+  .sheet-head{display:flex; align-items:center; gap:13px; margin-bottom:14px;}
+  .sheet-head .chest-icon{width:56px; height:56px; font-size:26px;}
+  .sheet-head .name{font-family:'Unbounded'; font-weight:700; font-size:17px;}
+  .sheet-head .desc{font-size:12px; color:var(--text-dim); margin-top:2px;}
+
+  .odds-list{display:flex; flex-direction:column; gap:7px; margin:4px 0 18px;}
+  .odds-row{display:flex; align-items:center; gap:10px;}
+  .odds-row .bar-wrap{flex:1; height:7px; background:var(--panel3); border-radius:5px; overflow:hidden;}
+  .odds-row .bar{height:100%; border-radius:5px;}
+  .odds-row .pct{font-family:'Space Mono'; font-size:11px; color:var(--text-dim); width:34px; text-align:right; flex:none;}
+  .odds-row .lb{font-size:11.5px; color:var(--text-dim); flex:2; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+  .btn{
+    width:100%; border:none; border-radius:15px; padding:15px; font-family:'Unbounded';
+    font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:transform .12s ease, opacity .12s ease;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-brass{background:linear-gradient(155deg, var(--brass-bright), var(--brass)); color:#241a05; box-shadow:0 4px 14px rgba(217,169,78,0.25);}
+  .btn-ghost{background:var(--panel2); color:var(--text); border:1px solid var(--line);}
+  .btn-shard{background:linear-gradient(155deg, #b0a4fb, var(--shard)); color:#180f3d;}
+  .btn:disabled{opacity:0.4; pointer-events:none;}
+  .btn-sub{font-size:11px; color:var(--text-faint); text-align:center; margin-top:9px;}
+
+  /* ── Оверлей відкриття (сейф) ── */
+  .vault-overlay{
+    position:fixed; inset:0; z-index:60; background:#05060b;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .25s ease;
+  }
+  .vault-overlay.show{opacity:1; pointer-events:auto;}
+  .vault-stage{position:relative; width:220px; height:220px; display:flex; align-items:center; justify-content:center;}
+  .vault-ring{
+    position:absolute; inset:0; border-radius:50%;
+    border:3px solid var(--panel3); border-top-color:var(--brass); border-right-color:var(--brass);
+  }
+  .vault-overlay.spin .vault-ring{ animation:dialSpin 1.3s steps(28,end) forwards; }
+  @keyframes dialSpin{ from{transform:rotate(0deg);} to{transform:rotate(900deg);} }
+  .vault-core{
+    width:150px; height:150px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #322511, #0e0a03 70%);
+    display:flex; align-items:center; justify-content:center; font-size:46px;
+    border:1px solid rgba(217,169,78,0.25);
+  }
+  .vault-overlay.spin .vault-core{ animation:pulseGlow 1.3s ease forwards; }
+  @keyframes pulseGlow{ 0%,100%{box-shadow:0 0 0 rgba(217,169,78,0);} 90%{box-shadow:0 0 60px rgba(217,169,78,0.55);} }
+  .vault-label{margin-top:26px; font-family:'Space Mono'; color:var(--text-faint); font-size:12px; letter-spacing:2px; text-transform:uppercase;}
+
+  .vault-flash{position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none;}
+  .vault-flash.go{animation:flashOut .5s ease forwards;}
+  @keyframes flashOut{ 0%{opacity:0;} 12%{opacity:0.9;} 100%{opacity:0;} }
+
+  .result-card{
+    position:relative; width:min(300px,84vw); text-align:center;
+    background:var(--panel2); border:1px solid var(--line); border-radius:22px; padding:30px 22px 24px;
+    opacity:0; transform:translateY(18px) scale(.92); transition:opacity .35s ease, transform .35s cubic-bezier(.2,.9,.25,1);
+  }
+  .result-card.show{opacity:1; transform:translateY(0) scale(1);}
+  .result-glow{
+    position:absolute; inset:-40px; z-index:-1; border-radius:50%; filter:blur(40px); opacity:0.35;
+  }
+  .result-icon{font-size:44px; margin-bottom:12px;}
+  .result-title{font-family:'Unbounded'; font-weight:700; font-size:16px; margin-bottom:6px;}
+  .result-desc{font-size:12.5px; color:var(--text-dim); line-height:1.55; margin-bottom:4px;}
+  .result-rarity{
+    display:inline-block; margin-top:10px; font-size:10.5px; font-weight:700; letter-spacing:1px;
+    text-transform:uppercase; padding:5px 12px; border-radius:100px;
+  }
+  .result-rarity.rare{background:rgba(78,143,224,0.15); color:var(--rare);}
+  .result-rarity.epic{background:rgba(177,94,240,0.15); color:var(--epic);}
+  .result-rarity.legendary{background:rgba(242,169,59,0.15); color:var(--legendary);}
+
+  .particles{position:absolute; inset:0; pointer-events:none; overflow:visible;}
+  .particle{
+    position:absolute; top:50%; left:50%; width:6px; height:6px; border-radius:50%;
+    opacity:0; animation:burst .9s ease-out forwards;
+  }
+  @keyframes burst{
+    0%{opacity:1; transform:translate(-50%,-50%) scale(1);}
+    100%{opacity:0; transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.3);}
+  }
+
+  .vault-actions{display:flex; flex-direction:column; gap:10px; width:min(300px,84vw); margin-top:18px; opacity:0; transition:opacity .3s ease .1s;}
+  .vault-actions.show{opacity:1;}
+
+  .toast{
+    position:fixed; left:50%; bottom:96px; transform:translateX(-50%) translateY(20px);
+    background:var(--panel3); border:1px solid var(--line); border-radius:13px;
+    padding:11px 18px; font-size:12.5px; font-weight:600; z-index:70;
+    opacity:0; transition:opacity .25s ease, transform .25s ease; pointer-events:none;
+    display:flex; align-items:center; gap:8px; white-space:nowrap;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .toast.err{border-color:rgba(226,96,122,0.4); color:var(--danger);}
+  .toast.ok{border-color:rgba(82,196,142,0.4); color:var(--success);}
+
+  ::-webkit-scrollbar{display:none;}
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">á</div>
+      <div>
+        <div class="brand-name">áClub</div>
+        <div class="brand-sub">Кейси · Інвентар</div>
+      </div>
+    </div>
+    <div class="pills">
+      <div class="pill coin"><span class="ic">🪙</span><span class="val" id="pillCoin">—</span></div>
+      <div class="pill shard"><span class="ic">🔮</span><span class="val" id="pillShard">—</span></div>
+    </div>
+  </div>
+
+  <div class="tabs-content">
+
+    <div class="view active" id="view-chests">
+      <div class="section-title">Кейси <span class="hint" id="chestHint">торкніться, щоб побачити шанси</span></div>
+      <div class="chest-grid" id="chestGrid"></div>
+    </div>
+
+    <div class="view" id="view-inventory">
+      <div class="section-title">Баланс</div>
+      <div class="stat-row">
+        <div class="stat-card coin"><div class="label">á-coin</div><div class="value mono" id="invCoin">—</div></div>
+        <div class="stat-card shard"><div class="label">Осколки</div><div class="value mono" id="invShard">—</div></div>
+      </div>
+
+      <div class="section-title">Заряди з кейсів</div>
+      <div class="charge-list" id="chargeList"></div>
+
+      <div class="section-title">Крафт із осколків</div>
+      <div class="craft-grid" id="craftGrid"></div>
+
+      <div class="section-title">Отримані предмети</div>
+      <div id="itemsWrap"></div>
+    </div>
+
+  </div>
+
+  <div class="tabbar">
+    <div class="tab-btn active" data-tab="chests"><span class="ic">📦</span><span class="lb">Кейси</span></div>
+    <div class="tab-btn" data-tab="inventory"><span class="ic">🎒</span><span class="lb">Інвентар</span></div>
+  </div>
+
+  <div class="sheet-backdrop" id="sheetBackdrop"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div class="chest-icon" id="sheetIcon"></div>
+      <div>
+        <div class="name" id="sheetName"></div>
+        <div class="desc" id="sheetDesc"></div>
+      </div>
+    </div>
+    <div class="odds-list" id="sheetOdds"></div>
+    <button class="btn btn-brass" id="sheetOpenBtn">Відкрити <span id="sheetCost"></span></button>
+    <div class="btn-sub">Списання одразу, приз визначає сервер</div>
+  </div>
+
+  <div class="vault-overlay" id="vaultOverlay">
+    <div class="vault-stage">
+      <div class="vault-ring"></div>
+      <div class="vault-core" id="vaultCoreIcon">📦</div>
+    </div>
+    <div class="vault-label" id="vaultLabel">Розкручуємо замок…</div>
+
+    <div id="resultWrap" style="display:none; flex-direction:column; align-items:center;">
+      <div class="result-card" id="resultCard">
+        <div class="result-glow" id="resultGlow"></div>
+        <div class="particles" id="particles"></div>
+        <div class="result-icon" id="resultIcon">🎁</div>
+        <div class="result-title" id="resultTitle"></div>
+        <div class="result-desc" id="resultDesc"></div>
+        <div id="resultRarityWrap"></div>
+      </div>
+      <div class="vault-actions" id="vaultActions">
+        <button class="btn btn-brass" id="againBtn">Відкрити ще</button>
+        <button class="btn btn-ghost" id="closeVaultBtn">До кейсів</button>
+      </div>
+    </div>
+  </div>
+  <div class="vault-flash" id="vaultFlash"></div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// КОНФІГ — за потреби відредагуйте WEBAPP_URL під ваш /exec
+// ============================================================
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzH8qt2_fUmnrLEw0Z56fsyMEH-D3uOgBSeTxwzUMCDTFDDoNBAowLTZqEGwSFo26ie9A/exec";
+const GAME_SECRET = "aclub2026runnertest";
+
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); try { tg.setHeaderColor("#0A0C14"); tg.setBackgroundColor("#0A0C14"); } catch(e){} }
+
+function getUserId() {
+  const qs = new URLSearchParams(location.search);
+  if (qs.get("tgid")) return qs.get("tgid");
+  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) return String(tg.initDataUnsafe.user.id);
+  return null;
+}
+const USER_ID = getUserId();
+
+async function api(type, payload) {
+  const body = Object.assign({ type, userId: USER_ID, secret: GAME_SECRET }, payload || {});
+  const res = await fetch(WEBAPP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" }, // без preflight
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
+// ── Іконки/оформлення кейсів на клієнті (сервер віддає лише дані) ──
+const CHEST_META = {
+  avangard:    { icon:"💰", tier:"tier-coin"  },
+  singularity: { icon:"⚡️", tier:"tier-bonus" },
+  ultimatum:   { icon:"🏃", tier:"tier-skin1" },
+  requiem:     { icon:"🌒", tier:"tier-skin2" },
+  collapse:    { icon:"🔤", tier:"tier-skin3" },
+  absolut:     { icon:"👑", tier:"tier-vip"   },
+};
+const DROP_COLORS = {
+  coins:"#D9A94E", shard:"#8B7CF6", freeHint:"#F2C879", diceBonus:"#F2C879",
+  streakImmunity:"#F2C879", weeklyX3:"#F2C879",
+  item_Rare:"#4E8FE0", item_Epic:"#B15EF0", item_Legendary:"#F2A93B", vipHours:"#F2A93B"
+};
+function dropColor(d){
+  if (d.type === "item") return DROP_COLORS["item_" + d.rarity] || "#8890AA";
+  return DROP_COLORS[d.type] || "#8890AA";
+}
+function dropLabel(d){
+  if (d.label) return d.label;
+  if (d.type === "coins") return d.amount + " á-coin";
+  if (d.type === "shard") return d.amount + " осколок";
+  return d.type;
+}
+
+let STATE = null;
+
+function toast(msg, kind){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (kind ? " " + kind : "");
+  clearTimeout(toast._h);
+  toast._h = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+function fmt(n){ return (n ?? 0).toLocaleString("uk-UA"); }
+
+async function loadInventory(){
+  if (!USER_ID) {
+    document.getElementById("chestGrid").innerHTML = emptyBlock("🔒","Немає доступу","Відкрийте цей застосунок кнопкою в боті — так ми дізнаємось, хто ви.");
+    return;
+  }
+  try {
+    const data = await api("get_inventory");
+    if (!data.ok) { toast(data.error || "Помилка завантаження", "err"); return; }
+    STATE = data;
+    renderPills();
+    renderChests();
+    renderInventory();
+  } catch(e) {
+    toast("Немає з'єднання з сервером", "err");
+  }
+}
+
+function renderPills(){
+  document.getElementById("pillCoin").textContent = fmt(STATE.balance);
+  document.getElementById("pillShard").textContent = fmt(STATE.shards);
+  document.getElementById("invCoin").textContent = fmt(STATE.balance);
+  document.getElementById("invShard").textContent = fmt(STATE.shards);
+}
+
+function emptyBlock(icon, title, sub){
+  return `<div class="empty"><div class="ic">${icon}</div><div class="t">${title}</div><div class="s">${sub}</div></div>`;
+}
+
+function renderChests(){
+  const grid = document.getElementById("chestGrid");
+  if (!STATE.chests || !STATE.chests.length) { grid.innerHTML = emptyBlock("📦","Кейсів поки немає","Зазирніть пізніше."); return; }
+  grid.innerHTML = STATE.chests.map(c => {
+    const meta = CHEST_META[c.id] || { icon:"🎁", tier:"tier-coin" };
+    const locked = STATE.balance < c.cost;
+    return `
+      <div class="chest-card" data-id="${c.id}">
+        <div class="chest-icon ${meta.tier}">${meta.icon}</div>
+        <div class="chest-info">
+          <div class="chest-name">${c.name}</div>
+          <div class="chest-desc">${c.desc}</div>
+        </div>
+        <div class="chest-price">
+          <div class="amt">${c.cost} 🪙</div>
+          ${locked ? '<div class="lock">не вистачає</div>' : ''}
+        </div>
+      </div>`;
+  }).join("");
+  grid.querySelectorAll(".chest-card").forEach(el => {
+    el.addEventListener("click", () => openSheet(el.getAttribute("data-id")));
+  });
+}
+
+function renderInventory(){
+  // заряди
+  const eff = STATE.effects || {};
+  const charges = [
+    { key:"freeHint", icon:"💡", title:"Безкоштовна підказка", sub:"Ребус — приз не зменшується", count:eff.freeHint||0 },
+    { key:"diceBonus", icon:"🎲", title:"Бонус-спроба", sub:"+1 спроба у «Щасливчику»", count:eff.diceBonus||0 },
+    { key:"streakImmunity", icon:"🛡", title:"Імунітет стріку", sub:"Спрацює автоматично при пропуску дня", count:eff.streakImmunity||0 },
+  ];
+  const chargeList = document.getElementById("chargeList");
+  let html = charges.map(c => `
+    <div class="charge-item">
+      <div class="ic">${c.icon}</div>
+      <div class="txt"><div class="t">${c.title}</div><div class="s">${c.sub}</div></div>
+      <div class="count ${c.count>0?'pos':'zero'} mono">${c.count}</div>
+    </div>`).join("");
+  html += `
+    <div class="charge-item ${eff.x3Active ? 'active' : ''}">
+      <div class="ic">⚡️</div>
+      <div class="txt"><div class="t">x3 щоденний бонус</div><div class="s">${eff.x3Active ? "Діє до " + fmtDate(eff.x3Until) : "Наразі не активний"}</div></div>
+      ${eff.x3Active ? '<div class="badge-active">АКТИВНО</div>' : '<div class="count zero mono">0</div>'}
+    </div>
+    <div class="charge-item">
+      <div class="ic">👑</div>
+      <div class="txt"><div class="t">VIP-години (банк)</div><div class="s">Активація — після запуску VIP-статусу</div></div>
+      <div class="count ${eff.vipBankedHours>0?'pos':'zero'} mono">${eff.vipBankedHours||0}</div>
+    </div>`;
+  chargeList.innerHTML = html;
+
+  // крафт
+  const craftGrid = document.getElementById("craftGrid");
+  craftGrid.innerHTML = (STATE.craftRecipes||[]).map(r => {
+    const locked = STATE.shards < r.cost;
+    return `
+      <div class="craft-card ${locked?'locked':''}" data-rarity="${r.id}">
+        <div class="gem ${r.id}"></div>
+        <div class="rname">${r.name}</div>
+        <div class="rcost">${r.cost} 🔮</div>
+      </div>`;
+  }).join("");
+  craftGrid.querySelectorAll(".craft-card").forEach(el => {
+    el.addEventListener("click", () => tryCraft(el.getAttribute("data-rarity")));
+  });
+
+  // предмети
+  const itemsWrap = document.getElementById("itemsWrap");
+  const items = STATE.items || [];
+  if (!items.length) {
+    itemsWrap.innerHTML = emptyBlock("🎒","Поки що порожньо","Відкривайте кейси або крафтіть із осколків — предмети з'являться тут.");
+  } else {
+    itemsWrap.innerHTML = `<div class="items-list">` + items.map(it => {
+      const rarity = /Legendary/.test(it.name) ? "legendary" : /Epic/.test(it.name) ? "epic" : "rare";
+      return `
+        <div class="item-row">
+          <div class="rarity-dot ${rarity}"></div>
+          <div class="txt"><div class="t">${it.name}</div><div class="s">${it.comment||""}</div></div>
+          <div class="status">${it.status === "Не використано" ? "В обробці" : it.status}</div>
+        </div>`;
+    }).join("") + `</div>`;
+  }
+}
+
+function fmtDate(iso){
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString("uk-UA",{day:"2-digit",month:"2-digit"}) + " " + d.toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
+}
+
+// ── Таби ──
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("view-" + btn.getAttribute("data-tab")).classList.add("active");
+  });
+});
+
+// ── Bottom sheet (деталі кейсу) ──
+let currentChestId = null;
+function openSheet(chestId){
+  const c = STATE.chests.find(x => x.id === chestId);
+  if (!c) return;
+  currentChestId = chestId;
+  const meta = CHEST_META[c.id] || { icon:"🎁", tier:"tier-coin" };
+  document.getElementById("sheetIcon").className = "chest-icon " + meta.tier;
+  document.getElementById("sheetIcon").textContent = meta.icon;
+  document.getElementById("sheetName").textContent = c.name;
+  document.getElementById("sheetDesc").textContent = c.desc;
+  document.getElementById("sheetCost").textContent = "— " + c.cost + " 🪙";
+  document.getElementById("sheetOdds").innerHTML = c.drops.map(d => `
+    <div class="odds-row">
+      <div class="pct mono">${d.chance}%</div>
+      <div class="lb">${dropLabel(d)}</div>
+      <div class="bar-wrap"><div class="bar" style="width:${d.chance}%; background:${dropColor(d)}"></div></div>
+    </div>`).join("");
+  const openBtn = document.getElementById("sheetOpenBtn");
+  openBtn.disabled = STATE.balance < c.cost;
+  openBtn.textContent = STATE.balance < c.cost ? "Недостатньо á-coin" : ("Відкрити — " + c.cost + " 🪙");
+
+  document.getElementById("sheetBackdrop").classList.add("show");
+  document.getElementById("sheet").classList.add("show");
+}
+function closeSheet(){
+  document.getElementById("sheetBackdrop").classList.remove("show");
+  document.getElementById("sheet").classList.remove("show");
+}
+document.getElementById("sheetBackdrop").addEventListener("click", closeSheet);
+document.getElementById("sheetOpenBtn").addEventListener("click", () => {
+  closeSheet();
+  playVaultOpen(currentChestId);
+});
+
+// ── Анімація відкриття кейсу ──
+async function playVaultOpen(chestId){
+  const overlay = document.getElementById("vaultOverlay");
+  const resultWrap = document.getElementById("resultWrap");
+  const resultCard = document.getElementById("resultCard");
+  const vaultActions = document.getElementById("vaultActions");
+  const meta = CHEST_META[chestId] || { icon:"📦" };
+
+  resultWrap.style.display = "none";
+  resultCard.classList.remove("show");
+  vaultActions.classList.remove("show");
+  document.getElementById("vaultCoreIcon").textContent = meta.icon;
+  document.getElementById("vaultLabel").textContent = "Розкручуємо замок…";
+  document.getElementById("particles").innerHTML = "";
+  overlay.style.display = "flex";
+  requestAnimationFrame(() => { overlay.classList.add("show", "spin"); });
+
+  const [res] = await Promise.all([
+    api("chest_open", { chestId }),
+    wait(1350)
+  ]);
+
+  if (!res.ok) {
+    overlay.classList.remove("show","spin");
+    overlay.style.display = "none";
+    toast(res.error || "Не вдалося відкрити кейс", "err");
+    return;
+  }
+
+  STATE.balance = res.balance;
+  STATE.shards = res.shards;
+  renderPills();
+
+  document.getElementById("vaultFlash").classList.add("go");
+  setTimeout(() => document.getElementById("vaultFlash").classList.remove("go"), 550);
+
+  document.getElementById("vaultLabel").textContent = "";
+  overlay.classList.remove("spin");
+  resultWrap.style.display = "flex";
+  fillResultCard(res.drop);
+  spawnParticles(dropColor(res.drop));
+
+  requestAnimationFrame(() => {
+    resultCard.classList.add("show");
+    setTimeout(() => vaultActions.classList.add("show"), 250);
+  });
+
+  document.getElementById("againBtn").onclick = () => playVaultOpen(chestId);
+  document.getElementById("closeVaultBtn").onclick = () => {
+    overlay.classList.remove("show");
+    setTimeout(() => { overlay.style.display = "none"; loadInventory(); }, 220);
+  };
+}
+
+function fillResultCard(drop){
+  const iconMap = { coins:"🪙", shard:"🔮", freeHint:"💡", diceBonus:"🎲", streakImmunity:"🛡", weeklyX3:"⚡️", vipHours:"👑", item:"✨" };
+  document.getElementById("resultIcon").textContent = iconMap[drop.type] || "🎁";
+  document.getElementById("resultGlow").style.background = dropColor(drop);
+
+  let title, desc;
+  if (drop.type === "coins") { title = "+" + drop.amount + " á-coin"; desc = "Нараховано на баланс"; }
+  else if (drop.type === "shard") { title = "+" + drop.amount + " осколок"; desc = "Використайте для крафту предмета"; }
+  else if (drop.type === "item") { title = drop.label; desc = "З'явиться у розділі «Предмети» після обробки"; }
+  else if (drop.type === "vipHours") { title = "+" + drop.amount + " год. VIP"; desc = "Заброньовано в банку годин"; }
+  else { title = dropLabel(drop); desc = "Заряд додано до інвентаря"; }
+
+  document.getElementById("resultTitle").textContent = title;
+  document.getElementById("resultDesc").textContent = desc;
+
+  const rarityWrap = document.getElementById("resultRarityWrap");
+  if (drop.type === "item" && drop.rarity) {
+    const cls = drop.rarity.toLowerCase();
+    rarityWrap.innerHTML = `<div class="result-rarity ${cls}">${drop.rarity}</div>`;
+  } else {
+    rarityWrap.innerHTML = "";
+  }
+}
+
+function spawnParticles(color){
+  const wrap = document.getElementById("particles");
+  wrap.innerHTML = "";
+  const n = 16;
+  for (let i=0;i<n;i++){
+    const p = document.createElement("div");
+    p.className = "particle";
+    const angle = (Math.PI*2/n)*i + Math.random()*0.4;
+    const dist = 70 + Math.random()*50;
+    p.style.setProperty("--dx", Math.cos(angle)*dist + "px");
+    p.style.setProperty("--dy", Math.sin(angle)*dist + "px");
+    p.style.background = color;
+    p.style.animationDelay = (Math.random()*0.08) + "s";
+    wrap.appendChild(p);
+  }
+}
+
+function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+// ── Крафт ──
+async function tryCraft(rarity){
+  const recipe = (STATE.craftRecipes||[]).find(r => r.id === rarity);
+  if (!recipe) return;
+  if (STATE.shards < recipe.cost) { toast("Недостатньо осколків", "err"); return; }
+  if (!confirm(`Скрафтити предмет рівня ${recipe.name} за ${recipe.cost} осколків?`)) return;
+  try {
+    const res = await api("craft_item", { rarity });
+    if (!res.ok) { toast(res.error || "Не вдалося скрафтити", "err"); return; }
+    STATE.shards = res.shards;
+    renderPills();
+    toast("Створено предмет рівня " + res.recipe.name, "ok");
+    await loadInventory();
+  } catch(e) {
+    toast("Немає з'єднання з сервером", "err");
+  }
+}
+
+loadInventory();
+</script>
+</body>
+</html>
