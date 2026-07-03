@@ -534,32 +534,69 @@ async function submitRebusAnswer(){
   if (!val) { toast("Введіть відповідь", "err"); return; }
   try {
     const r = await api("rebus_answer", { answer: val });
-    if (!r.ok) { toast(r.error === "already_answered" ? "Ви вже відповіли" : "Помилка", "err"); return; }
-    toast(`Відповідь прийнято! Приз до +${r.prize} á після закриття ребусу`, "ok");
+    if (!r.ok) {
+      showModal(`<div class="mh">❌ Не вдалось надіслати</div><div class="sub">${r.error === "already_answered" ? "Ви вже відповіли на цей ребус." : "Сталася помилка, спробуйте ще раз."}</div>`);
+      return;
+    }
+    showModal(`<div class="mh">⏳ Відповідь прийнято!</div><div class="sub">Результати будуть після закриття ребусу.<br>Якщо відповідь правильна — отримаєте <b>+${r.prize} á-coin</b>.</div>`);
     await refreshDashboard(); renderGames();
-  } catch(e) { toast("Помилка з'єднання", "err"); }
+  } catch(e) { showModal(`<div class="mh">⚠️ Немає з'єднання</div><div class="sub">Перевірте інтернет і спробуйте ще раз.</div>`); }
 }
 async function getRebusHint(){
   try {
     let r = await api("rebus_hint", { confirm:false });
-    if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
+    if (!r.ok) { showModal(`<div class="mh">⚠️ Помилка</div><div class="sub">${esc(r.error||"")}</div>`); return; }
     if (r.needConfirm) {
       if (!confirm("Підказка зменшує приз вдвічі. Продовжити?")) return;
       r = await api("rebus_hint", { confirm:true });
-      if (!r.ok) { toast("Помилка", "err"); return; }
+      if (!r.ok) { showModal(`<div class="mh">⚠️ Помилка</div>`); return; }
     }
     showModal(`<div class="mh">💡 Підказка</div><div class="sub">${esc(r.hint)}</div>`);
-  } catch(e) { toast("Помилка з'єднання", "err"); }
+  } catch(e) { showModal(`<div class="mh">⚠️ Немає з'єднання</div>`); }
 }
+
+// Результат «Щасливчика» — рандомайзер на сервері, без анімованого
+// кубика в Telegram-чаті. Показуємо коротку анімацію прямо в застосунку.
+const DICE_FACES = ["⚀","⚁","⚂","⚃","⚄","⚅"];
 async function rollLucky(guess){
   document.querySelectorAll("#luckyPicker button").forEach(b => b.disabled = true);
-  toast("Кидаємо кубик у чаті з ботом 🎲 — зачекайте...", "ok");
+  showModal(`
+    <div class="mh" style="text-align:center;">🎲 Кидаємо...</div>
+    <div style="text-align:center; font-size:52px; margin:10px 0;" id="diceFace">🎲</div>
+  `);
+  const faceEl = document.getElementById("diceFace");
+  let spins = 0;
+  const spinTimer = setInterval(() => {
+    if (faceEl) faceEl.textContent = DICE_FACES[Math.floor(Math.random()*6)];
+    spins++;
+  }, 90);
+
+  let r;
   try {
-    const r = await api("lucky_roll", { guess });
-    if (!r.ok) { toast(r.error === "no_attempts_left" ? "Спроби вичерпано на сьогодні" : "Помилка", "err"); await refreshDashboard(); renderGames(); return; }
-    toast(r.isWin ? `🎉 Випало ${r.diceVal}! +${r.reward} á-coin` : `Випало ${r.diceVal}. Спробуйте ще`, r.isWin?"ok":undefined);
+    r = await api("lucky_roll", { guess });
+  } catch(e) {
+    clearInterval(spinTimer);
+    showModal(`<div class="mh">⚠️ Немає з'єднання</div><div class="sub">Спробуйте ще раз.</div>`);
+    return;
+  }
+  // невеличка пауза, щоб анімація встигла покрутитись хоча б трохи
+  await new Promise(res => setTimeout(res, Math.max(0, 500 - spins*90)));
+  clearInterval(spinTimer);
+
+  if (!r.ok) {
+    const msg = r.error === "no_attempts_left" ? "Спроби на сьогодні вичерпано. Повертайтесь завтра 🌅" : "Сталася помилка, спробуйте ще раз.";
+    showModal(`<div class="mh">❌ Не вийшло</div><div class="sub">${msg}</div>`);
     await refreshDashboard(); renderGames();
-  } catch(e) { toast("Помилка з'єднання", "err"); }
+    return;
+  }
+  showModal(`
+    <div style="text-align:center; font-size:52px; margin:6px 0;">${DICE_FACES[r.diceVal-1]}</div>
+    <div class="mh" style="text-align:center;">${r.isWin ? '🎉 Перемога!' : '😅 Не цього разу'}</div>
+    <div class="sub" style="text-align:center; font-size:14px; margin-bottom:6px;">Випало число: <b style="color:var(--brass-bright); font-size:18px;">${r.diceVal}</b> (ви обрали ${guess})</div>
+    <div class="sub" style="text-align:center;">${r.isWin ? `Нараховано <b style="color:var(--success);">+${r.reward} á-coin</b>` : "Спробуйте ще раз, якщо є спроби."}</div>
+    <div class="sub" style="text-align:center; margin-top:6px;">Спроб залишилось сьогодні: <b>${r.attemptsLeft}</b></div>
+  `);
+  await refreshDashboard(); renderGames();
 }
 
 // ============================================================
