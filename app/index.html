@@ -280,9 +280,10 @@ function renderHome(){
   const db = DASH.dailyBonus || {};
   const streak = db.streak || 0;
   const daysTo7 = streak >= 7 ? 0 : 7 - streak;
+  const vip = DASH.vip || {};
   const screen = document.getElementById("screen");
   screen.innerHTML = `
-    <div class="h1">👋 Привіт, ${esc(DASH.name)}!</div>
+    <div class="h1" style="display:flex; align-items:center; gap:8px;">👋 Привіт, ${esc(DASH.name)}!${vip.active ? '<span class="badge ok">👑 VIP</span>' : ''}</div>
     <div class="stat-row">
       <div class="stat-card coin"><div class="label">Баланс</div><div class="value mono">${fmt(DASH.balance)} 🪙</div></div>
       <div class="stat-card shard"><div class="label">Осколки</div><div class="value mono">${fmt(DASH.shards)} 🔮</div></div>
@@ -386,7 +387,8 @@ async function loadMyItems(){
     if (!r.ok || !r.items.length) { wrap.innerHTML = emptyBlock("🎁","Поки що порожньо","Товари з магазину з'являться тут."); return; }
     wrap.innerHTML = `<div class="list">` + r.items.map(it => {
       const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
-      let statusTxt = "⏳ Очікує використання";
+      const selfUse = !it.isMerch && /^Кейс:|^Крафт:/.test(it.name||"");
+      let statusTxt = selfUse ? "🎁 Готово до використання — натисніть" : "⏳ Очікує використання";
       if (it.isMerch) {
         const accepted = ["Прийнято","Відправлено"].includes(it.merchStatus);
         statusTxt = accepted ? (it.merchStatus==="Відправлено"?"📬 Відправлено":"📬 Прийнято") : (it.isOrdered ? "✅ Дані вказано, очікує" : "⏳ Потрібно вказати доставку");
@@ -417,10 +419,26 @@ function openItemDetail(row, isMerch, it){
         <button class="btn danger" style="margin-top:8px;" onclick="cancelItem(${row})">❌ Скасувати замовлення</button>`;
     }
   } else {
-    body = `<div class="sub" style="margin-bottom:10px;">Для використання зверніться до СС особисто 💚</div>
-      <button class="btn danger" onclick="cancelItem(${row})">❌ Скасувати покупку</button>`;
+    const selfUse = /^Кейс:|^Крафт:/.test(it.name || "");
+    body = selfUse
+      ? `<div class="sub" style="margin-bottom:10px;">Предмет з кейсу/крафту — можна використати самостійно, без адміна.</div>
+        <button class="btn" onclick="selfUseItem(${row})">✅ Використати</button>
+        <button class="btn danger" style="margin-top:8px;" onclick="cancelItem(${row})">❌ Скасувати</button>`
+      : `<div class="sub" style="margin-bottom:10px;">Для використання зверніться до СС особисто 💚</div>
+        <button class="btn danger" onclick="cancelItem(${row})">❌ Скасувати покупку</button>`;
   }
   showModal(`<div class="mh">🎁 ${esc(shortName)}</div>${body}`);
+}
+
+async function selfUseItem(row){
+  try {
+    const r = await api("item_self_use", { row });
+    if (!r.ok) { toast(r.error === "already_used" ? "Вже використано" : "Помилка", "err"); return; }
+    toast("Використано! ✅", "ok");
+    closeModal();
+    if (document.getElementById("myItemsWrap")) loadMyItems();
+    if (TAB === "chests") renderChests();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 
 async function cancelItem(row){
@@ -501,9 +519,22 @@ function closeGameFrame(){
   if (el) el.remove();
 }
 
+// Підтягуємо рівні апгрейдів (максимум, якщо VIP активний) і передаємо
+// їх у query-параметрах, які Runner читає сам при старті.
+async function playRunner(){
+  let params = { bird:0, shield:0, magnet:0, uspeed:0, ulives:0 };
+  try {
+    const r = await api("runner_launch_params");
+    if (r.ok) params = r;
+  } catch(e) {}
+  const url = RUNNER_URL + `&bird=${params.bird}&shield=${params.shield}&magnet=${params.magnet}&uspeed=${params.uspeed}&ulives=${params.ulives}`;
+  openGameFrame(url, "🏃 áClub Runner");
+}
+
 function renderGames(){
   const rebus = DASH.rebus || {};
   const lucky = DASH.lucky || { used:0, cap:3 };
+  const vipActive = !!(DASH.vip && DASH.vip.active);
   const screen = document.getElementById("screen");
   screen.innerHTML = `
     <div class="h1">🎮 Заробити á-coin</div>
@@ -518,6 +549,8 @@ function renderGames(){
           <button class="btn secondary sm" onclick="getRebusHint()">💡 Підказка</button>
           <button class="btn sm" onclick="submitRebusAnswer()">✍️ Відповісти</button>
         </div>` : ""}
+      ${rebus.active && rebus.answered ? `
+        <button class="btn secondary sm" onclick="openChangeAnswer(${vipActive})">${vipActive ? '✏️ Змінити відповідь' : '🔒 Змінити відповідь (VIP)'}</button>` : ""}
     </div>
 
     <div class="game-card">
@@ -531,7 +564,7 @@ function renderGames(){
     <div class="game-card">
       <div class="gt">🏃 áClub Runner</div>
       <div class="gd">Біжи через перешкоди, збирай яблука, потрапляй у топ тижневого турніру.</div>
-      <button class="btn" onclick="openGameFrame('${RUNNER_URL}','🏃 áClub Runner')">🎮 Грати</button>
+      <button class="btn" onclick="playRunner()">🎮 Грати${vipActive ? ' (VIP: макс. прокачка)' : ''}</button>
     </div>
 
     <div class="game-card">
@@ -546,6 +579,27 @@ function renderGames(){
       <button class="btn" onclick="openGameFrame('${CIRCLE_URL}','🔵 Слова по колу')">🔵 Грати</button>
     </div>
   `;
+}
+
+function openChangeAnswer(vipActive){
+  if (!vipActive) {
+    showModal(`<div class="mh">🔒 Доступно з VIP</div><div class="sub" style="margin-bottom:12px;">Зміна відповіді після відправки — привілей VIP-статусу.</div><button class="btn" onclick="closeModal(); nav('chests');">👑 Придбати VIP</button>`);
+    return;
+  }
+  showModal(`
+    <div class="mh">✏️ Змінити відповідь</div>
+    <input class="field" id="rebusAnswerEdit" placeholder="Нова відповідь..." style="margin-bottom:10px;">
+    <button class="btn" onclick="submitChangeAnswer()">✅ Зберегти нову відповідь</button>
+  `);
+}
+async function submitChangeAnswer(){
+  const val = document.getElementById("rebusAnswerEdit").value.trim();
+  if (!val) { toast("Введіть відповідь", "err"); return; }
+  try {
+    const r = await api("rebus_change_answer", { answer: val });
+    if (!r.ok) { showModal(`<div class="mh">❌ Не вдалось</div><div class="sub">Спробуйте ще раз.</div>`); return; }
+    showModal(`<div class="mh">✅ Відповідь оновлено!</div><div class="sub">Нова відповідь збережена. Приз до <b>+${r.prize} á-coin</b> після закриття ребусу.</div>`);
+  } catch(e) { showModal(`<div class="mh">⚠️ Немає з'єднання</div>`); }
 }
 
 async function submitRebusAnswer(){
@@ -711,14 +765,16 @@ function dropLabel(d){
   return d.type;
 }
 let CHESTS_STATE = null;
+let CHEST_ITEMS_STATE = [];
 
 async function renderChests(){
   const screen = document.getElementById("screen");
   screen.innerHTML = `<div class="h1">📦 Кейси та осколки</div><div id="chestsBody">${loadingBlock()}</div>`;
   try {
-    const r = await apiRaw("get_inventory");
+    const [r, myItems] = await Promise.all([apiRaw("get_inventory"), api("my_items")]);
     if (!r.ok) { document.getElementById("chestsBody").innerHTML = emptyBlock("⚠️","Помилка",""); return; }
     CHESTS_STATE = r;
+    CHEST_ITEMS_STATE = (myItems.ok ? myItems.items : []).filter(it => !it.isMerch && /^Кейс:|^Крафт:/.test(it.name||""));
     paintChests();
   } catch(e) { document.getElementById("chestsBody").innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
 }
@@ -726,6 +782,7 @@ function paintChests(){
   const r = CHESTS_STATE;
   const wrap = document.getElementById("chestsBody");
   const eff = r.effects || {};
+  const vip = (DASH && DASH.vip) || { active:false, until:null, bankedHours: eff.vipBankedHours||0 };
   wrap.innerHTML = `
     <div class="h2">Кейси</div>
     <div class="list">${(r.chests||[]).map(c => {
@@ -738,13 +795,27 @@ function paintChests(){
       </div>`;
     }).join("")}</div>
 
+    <div class="h2">👑 VIP-статус</div>
+    <div class="card">
+      <div class="row between">
+        <div style="font-weight:700; font-size:13.5px;">${vip.active ? '✅ VIP активний' : '😴 VIP не активний'}</div>
+        <div class="badge ${vip.active?'ok':''}">${vip.active ? ('до '+fmtDate(vip.until)) : 'немає'}</div>
+      </div>
+      <div class="sub" style="margin:8px 0;">У банку: <b>${vip.bankedHours} год.</b> (випадають з кейсу «Абсолют»)</div>
+      ${vip.bankedHours > 0 ? `
+        <div class="btn-row">
+          <input class="field" id="vipHoursInput" type="number" min="1" max="${vip.bankedHours}" value="${Math.min(vip.bankedHours,24)}" style="flex:1;">
+          <button class="btn sm" style="flex:1;" onclick="activateVipHours()">👑 Активувати</button>
+        </div>` : `<div class="sub">Відкривайте кейс «Абсолют», щоб накопичити години.</div>`}
+      <div class="sub" style="margin-top:8px; font-size:11px;">VIP дає: максимальну прокачку в іграх, пріоритет у підтримці, безкоштовну підказку в ребусі, зміну відповіді в ребусі, +1 спробу в «Щасливчику».</div>
+    </div>
+
     <div class="h2">Заряди</div>
     <div class="list">
       <div class="item"><div class="ic">💡</div><div class="txt"><div class="t">Безкоштовна підказка</div><div class="s">Ребус — приз не зменшується</div></div><div class="right mono">${eff.freeHint||0}</div></div>
       <div class="item"><div class="ic">🎲</div><div class="txt"><div class="t">Бонус-спроба</div><div class="s">+1 спроба у «Щасливчику»</div></div><div class="right mono">${eff.diceBonus||0}</div></div>
       <div class="item"><div class="ic">🛡</div><div class="txt"><div class="t">Імунітет стріку</div><div class="s">Спрацьовує автоматично</div></div><div class="right mono">${eff.streakImmunity||0}</div></div>
       <div class="item"><div class="ic">⚡️</div><div class="txt"><div class="t">x3 щоденний бонус</div><div class="s">${eff.x3Active?('Діє до '+fmtDate(eff.x3Until)):'Не активний'}</div></div><div class="right">${eff.x3Active?'<span class="badge ok">АКТИВНО</span>':'<span class="mono">0</span>'}</div></div>
-      <div class="item"><div class="ic">👑</div><div class="txt"><div class="t">VIP-години (банк)</div><div class="s">Активація — окремим етапом</div></div><div class="right mono">${eff.vipBankedHours||0}</div></div>
     </div>
 
     <div class="h2">Крафт з осколків <span class="hint">🔮 ${fmt(r.shards)}</span></div>
@@ -752,13 +823,37 @@ function paintChests(){
       ${(r.craftRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${r.shards<rc.cost?'disabled':''} onclick="craftItem('${rc.id}')">${esc(rc.name)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
     </div>
 
-    <div class="h2">Предмети з кейсів</div>
-    <div class="list">${(r.items&&r.items.length) ? r.items.map(it => {
-      const rarity = /Legendary/.test(it.name) ? "legendary" : /Epic/.test(it.name) ? "epic" : "rare";
-      return `<div class="item"><div class="rarity-dot ${rarity}"></div><div class="txt"><div class="t">${esc(it.name)}</div><div class="s">${esc(it.comment||"")}</div></div><div class="right badge">${esc(it.status==="Не використано"?"В обробці":it.status)}</div></div>`;
-    }).join("") : emptyBlock("🎒","Поки що порожньо","Відкривайте кейси або крафтіть із осколків")}</div>
+    <div class="h2">Предмети з кейсів <span class="hint">тапніть, щоб використати</span></div>
+    <div class="list" id="chestItemsList">${chestItemsListHtml()}</div>
   `;
   wrap.querySelectorAll("[data-chest]").forEach(el => el.addEventListener("click", () => openChestSheet(el.getAttribute("data-chest"))));
+  wrap.querySelectorAll("[data-chest-item]").forEach(el => {
+    const row = parseInt(el.getAttribute("data-chest-item"));
+    el.addEventListener("click", () => openItemDetail(row, false, CHEST_ITEMS_STATE.find(x => x.row === row)));
+  });
+}
+function chestItemsListHtml(){
+  if (!CHEST_ITEMS_STATE.length) return emptyBlock("🎒","Поки що порожньо","Відкривайте кейси або крафтіть із осколків");
+  return CHEST_ITEMS_STATE.map(it => {
+    const rarity = /Legendary/.test(it.name) ? "legendary" : /Epic/.test(it.name) ? "epic" : "rare";
+    const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
+    return `<div class="item" data-chest-item="${it.row}" style="cursor:pointer">
+      <div class="rarity-dot ${rarity}"></div>
+      <div class="txt"><div class="t">${esc(shortName)}</div><div class="s">${esc(it.comment||"")}</div></div>
+      <div class="right badge ${it.status==='Не використано'?'new':'ok'}">${it.status==='Не використано'?'Використати →':'Використано'}</div>
+    </div>`;
+  }).join("");
+}
+async function activateVipHours(){
+  const hours = parseInt(document.getElementById("vipHoursInput").value);
+  if (!hours || hours <= 0) { toast("Вкажіть кількість годин", "err"); return; }
+  try {
+    const r = await api("vip_activate", { hours });
+    if (!r.ok) { toast(r.error === "insufficient_hours" ? "Недостатньо годин у банку" : "Помилка", "err"); return; }
+    toast("VIP активовано! 👑", "ok");
+    await refreshDashboard();
+    renderChests();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 function fmtDate(iso){
   if (!iso) return "";
@@ -1025,7 +1120,7 @@ async function loadAdminSupport(){
     wrap.innerHTML = `<div class="list">` + r.tickets.map(t => `
       <div class="item" style="cursor:pointer" onclick="openAdminTicket(${t.row})">
         <div class="ic">${t.type==='Технічна заявка'?'🐞':'❓'}</div>
-        <div class="txt"><div class="t">№${t.ticketId} · ${esc(t.name)}</div><div class="s">${esc(t.question).slice(0,50)}</div></div>
+        <div class="txt"><div class="t">№${t.ticketId} · ${esc(t.name)}${t.isVip?' 👑':''}</div><div class="s">${esc(t.question).slice(0,50)}</div></div>
         <div class="right badge ${t.takenBy?'':'new'}">${t.takenBy?('в роботі: '+esc(t.takenByName)):'нове'}</div>
       </div>`).join("") + `</div>`;
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
