@@ -739,17 +739,13 @@ async function loadShopChests(){
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
 }
 
-let SHOP_CACHE = {};
-
 async function loadShopAbank(){
-  const cached = SHOP_CACHE.abank;
-  if (cached) paintShopAbank(cached);
+  const wrap = document.getElementById("shopBody");
   try {
     const r = await api("shop_list");
-    if (!r.ok) { if (!cached) document.getElementById("shopBody").innerHTML = emptyBlock("⚠️","Помилка",""); return; }
-    SHOP_CACHE.abank = r;
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
     paintShopAbank(r);
-  } catch(e) { if (!cached) document.getElementById("shopBody").innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
 }
 function paintShopAbank(r){
   const wrap = document.getElementById("shopBody");
@@ -770,20 +766,17 @@ async function buyShopItem(id, price){
     const r = await api("shop_buy", { itemId:id });
     if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
     toast("Придбано! Перевірте «Мої товари»", "ok");
-    SHOP_CACHE.abank = null;
     await refreshDashboard(); loadShopAbank();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 
 async function loadUpgrades(kind){
-  const cached = SHOP_CACHE[kind];
-  if (cached) paintUpgrades(kind, cached);
+  const wrap = document.getElementById("shopBody");
   try {
     const r = await api(kind === "runner" ? "upgrades_runner_get" : "upgrades_wordle_get");
-    if (!r.ok) { if (!cached) document.getElementById("shopBody").innerHTML = emptyBlock("⚠️","Помилка",""); return; }
-    SHOP_CACHE[kind] = r;
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
     paintUpgrades(kind, r);
-  } catch(e) { if (!cached) document.getElementById("shopBody").innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
 }
 function paintUpgrades(kind, r){
   const wrap = document.getElementById("shopBody");
@@ -811,7 +804,6 @@ async function buyUpgrade(kind, key){
     const r = await api(kind === "runner" ? "upgrades_runner_buy" : "upgrades_wordle_buy", { key });
     if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
     toast("Апгрейд придбано!", "ok");
-    SHOP_CACHE[kind] = null;
     await refreshDashboard(); loadUpgrades(kind);
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
@@ -841,13 +833,8 @@ const CHEST_SLOTS_MAX_CLIENT = 4;
 async function renderInventory(){
   const screen = document.getElementById("screen");
   screen.innerHTML = `<div class="h1">🎒 Інвентар</div><div id="invBody">${loadingBlock()}</div>`;
-  if (CHESTS_STATE) {
-    paintInventory();               // миттєво з кешу
-    loadInventoryData().then(paintInventory); // тихе оновлення у фоні
-  } else {
-    await loadInventoryData();
-    paintInventory();
-  }
+  await loadInventoryData();
+  paintInventory();
 }
 async function loadInventoryData(){
   try {
@@ -1291,6 +1278,7 @@ async function submitAward(kind){
   if (!r.ok) { toast("Помилка", "err"); return; }
   toast("Готово, перевірте чат", "ok");
   if (r.results) document.getElementById("awardResult").textContent = r.results.join("\n");
+  await refreshDashboard(); // якщо адмін нарахував самому собі — пілюлі баланс/осколки оновляться одразу
 }
 
 async function loadAdminAdmins(){
