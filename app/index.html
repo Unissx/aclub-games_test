@@ -1,12 +1,9 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="uk" style="background:#0A0C14;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>áClub</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --void:#0A0C14; --panel:#14182A; --panel2:#1C2136; --panel3:#232A45;
@@ -130,6 +127,10 @@ textarea::placeholder, input.field::placeholder{color:var(--text-faint);}
 .game-card .gt{font-family:'Unbounded'; font-weight:700; font-size:14.5px; margin-bottom:4px;}
 .game-card .gd{font-size:12px; color:var(--text-dim); margin-bottom:10px;}
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://telegram.org">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 
@@ -171,13 +172,21 @@ const USER_ID = getUserId();
 
 async function api(action, payload){
   const body = { type:"web_action", userId: USER_ID, secret: GAME_SECRET, action, payload: payload || {} };
-  const res = await fetch(WEBAPP_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(body) });
-  return res.json();
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(WEBAPP_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(body), signal: controller.signal });
+    return await res.json();
+  } finally { clearTimeout(t); }
 }
 async function apiRaw(type, payload){
   const body = Object.assign({ type, userId: USER_ID, secret: GAME_SECRET }, payload || {});
-  const res = await fetch(WEBAPP_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(body) });
-  return res.json();
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(WEBAPP_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(body), signal: controller.signal });
+    return await res.json();
+  } finally { clearTimeout(t); }
 }
 
 function fmt(n){ return (n ?? 0).toLocaleString("uk-UA"); }
@@ -232,13 +241,28 @@ function nav(tab){
   render();
 }
 
+let BOOT_WATCHDOG = null;
+
 async function boot(){
   if (!USER_ID) {
     document.getElementById("screen").innerHTML = emptyBlock("🔒","Немає доступу","Відкрийте застосунок кнопкою в боті — так ми дізнаємось, хто ви.");
     renderNav();
     return;
   }
-  await refreshDashboard();
+  BOOT_WATCHDOG = setTimeout(() => {
+    document.getElementById("screen").innerHTML = emptyBlock("🐢","Довго вантажиться...","Сервер повільно відповідає. Перевірте інтернет.")
+      + `<button class="btn" style="margin-top:14px;" onclick="location.reload()">🔄 Спробувати ще раз</button>`;
+  }, 8000);
+
+  const ok = await refreshDashboard();
+  clearTimeout(BOOT_WATCHDOG);
+
+  if (!ok) {
+    document.getElementById("screen").innerHTML = emptyBlock("⚠️","Не вдалось завантажити","Перевірте інтернет-з'єднання і спробуйте ще раз.")
+      + `<button class="btn" style="margin-top:14px;" onclick="location.reload()">🔄 Спробувати ще раз</button>`;
+    renderNav();
+    return;
+  }
   renderNav();
   render();
 }
@@ -250,8 +274,10 @@ async function refreshDashboard(){
       DASH = d;
       document.getElementById("pillCoin").textContent = fmt(d.balance||0);
       document.getElementById("pillShard").textContent = fmt(d.shards||0);
+      return true;
     }
-  } catch(e) { toast("Немає з'єднання з сервером", "err"); }
+    return false;
+  } catch(e) { toast("Немає з'єднання з сервером", "err"); return false; }
 }
 
 function emptyBlock(icon, title, sub){
