@@ -201,6 +201,19 @@ function toast(msg, kind){
   toast._h = setTimeout(() => t.classList.remove("show"), 2600);
 }
 
+// Показуємо реальний текст будь-якої необробленої JS-помилки — щоб
+// відрізняти "немає з'єднання з сервером" від справжнього бага в
+// самому застосунку (без цього обидва виглядали як той самий текст).
+window.addEventListener('error', function(e){
+  try { toast('JS помилка: ' + (e.message || 'невідомо'), 'err'); } catch(_) {}
+});
+window.addEventListener('unhandledrejection', function(e){
+  try {
+    const m = (e.reason && (e.reason.message || e.reason.toString())) || 'невідомо';
+    toast('JS помилка: ' + m, 'err');
+  } catch(_) {}
+});
+
 function showModal(html){
   document.getElementById("modal").innerHTML = html;
   document.getElementById("modalBg").classList.add("show");
