@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>áClub</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#0A0C14; --panel:#14182A; --panel2:#1C2136; --panel3:#232A45;
+  --line:#262C47; --brass:#D9A94E; --brass-bright:#F2C879; --shard:#8B7CF6;
+  --text:#F3F1EA; --text-dim:#8890AA; --text-faint:#5B6280;
+  --rare:#4E8FE0; --epic:#B15EF0; --legendary:#F2A93B;
+  --success:#52C48E; --danger:#E2607A; --radius:16px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0; background:var(--void); color:var(--text); font-family:'Inter',sans-serif; overscroll-behavior:none;}
+body{padding-bottom:calc(76px + env(safe-area-inset-bottom)); min-height:100vh;}
+.mono{font-family:'Space Mono',monospace;}
+.display{font-family:'Unbounded',sans-serif;}
+button{font-family:inherit; cursor:pointer;}
+input,textarea{font-family:inherit;}
+
+body::before{
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background: radial-gradient(ellipse 600px 300px at 50% -10%, rgba(217,169,78,0.10), transparent 60%);
+}
+
+/* Topbar */
+.topbar{position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px 10px; gap:10px; background:linear-gradient(180deg, var(--void) 60%, rgba(10,12,20,.85) 85%, transparent);}
+.brand{display:flex; align-items:center; gap:8px;}
+.brand-mark{width:30px; height:30px; border-radius:9px; background:linear-gradient(155deg, var(--brass-bright), var(--brass) 60%, #9c7530);
+  display:flex; align-items:center; justify-content:center; font-family:'Unbounded'; font-weight:800; font-size:15px; color:#241a05;
+  box-shadow:0 2px 8px rgba(217,169,78,.35), inset 0 1px 0 rgba(255,255,255,.4);}
+.brand-name{font-family:'Unbounded'; font-weight:700; font-size:14.5px;}
+.pills{display:flex; gap:6px;}
+.pill{display:flex; align-items:center; gap:5px; background:var(--panel2); border:1px solid var(--line); border-radius:100px; padding:6px 11px 6px 8px;}
+.pill .val{font-family:'Space Mono'; font-weight:700; font-size:13.5px;}
+.pill.coin .val{color:var(--brass-bright);} .pill.shard .val{color:var(--shard);}
+
+.content{position:relative; z-index:1; padding:2px 16px 24px;}
+.h1{font-family:'Unbounded'; font-weight:700; font-size:19px; margin:14px 2px 12px;}
+.h2{font-family:'Unbounded'; font-weight:700; font-size:15px; margin:20px 2px 10px; display:flex; align-items:center; justify-content:space-between;}
+.h2 .hint{font-family:'Inter'; font-weight:500; font-size:11px; color:var(--text-faint);}
+.sub{color:var(--text-dim); font-size:12.5px; margin:-6px 2px 12px;}
+
+.card{background:linear-gradient(155deg, var(--panel2), var(--panel)); border:1px solid var(--line); border-radius:var(--radius); padding:14px;}
+.card + .card{margin-top:10px;}
+.row{display:flex; align-items:center; gap:10px;}
+.between{justify-content:space-between;}
+.stat-row{display:flex; gap:10px;}
+.stat-card{flex:1; background:var(--panel2); border:1px solid var(--line); border-radius:16px; padding:13px 14px 11px;}
+.stat-card .label{font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;}
+.stat-card .value{font-family:'Space Mono'; font-weight:700; font-size:20px;}
+.stat-card.coin .value{color:var(--brass-bright);} .stat-card.shard .value{color:var(--shard);}
+
+.btn{display:block; width:100%; text-align:center; border:none; border-radius:13px; padding:13px; font-weight:700; font-size:14px; color:#241a05;
+  background:linear-gradient(155deg, var(--brass-bright), var(--brass)); transition:transform .1s;}
+.btn:active{transform:scale(.97);}
+.btn.secondary{background:var(--panel3); color:var(--text); border:1px solid var(--line);}
+.btn.danger{background:var(--danger); color:#fff;}
+.btn:disabled{opacity:.45; pointer-events:none;}
+.btn.sm{padding:9px; font-size:12.5px; border-radius:10px;}
+.btn-row{display:flex; gap:8px;}
+.btn-row .btn{flex:1;}
+
+.list{display:flex; flex-direction:column; gap:8px;}
+.item{display:flex; align-items:center; gap:11px; background:var(--panel2); border:1px solid var(--line); border-radius:14px; padding:11px 13px;}
+.item .ic{font-size:19px; flex:none; width:26px; text-align:center;}
+.item .txt{flex:1; min-width:0;}
+.item .txt .t{font-size:13px; font-weight:600;}
+.item .txt .s{font-size:11px; color:var(--text-faint); margin-top:1px;}
+.item .right{flex:none; text-align:right;}
+
+.progress{height:8px; border-radius:6px; background:var(--panel3); overflow:hidden;}
+.progress > div{height:100%; background:linear-gradient(90deg, var(--brass), var(--brass-bright));}
+
+.empty{text-align:center; padding:34px 10px; color:var(--text-faint);}
+.empty .ic{font-size:34px; margin-bottom:8px;}
+.empty .t{font-weight:700; color:var(--text-dim); margin-bottom:4px;}
+.empty .s{font-size:12px;}
+
+.tabs2{display:flex; gap:6px; background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:4px; margin-bottom:12px;}
+.tabs2 .t2{flex:1; text-align:center; padding:8px 4px; border-radius:9px; font-size:12.5px; font-weight:700; color:var(--text-dim);}
+.tabs2 .t2.active{background:var(--panel3); color:var(--text);}
+
+textarea, input.field{width:100%; background:var(--panel3); border:1px solid var(--line); border-radius:12px; color:var(--text);
+  padding:11px 12px; font-size:13.5px; resize:vertical;}
+textarea::placeholder, input.field::placeholder{color:var(--text-faint);}
+.field-label{font-size:11.5px; color:var(--text-faint); margin:10px 2px 5px;}
+
+.badge{font-size:10px; font-weight:700; padding:3px 8px; border-radius:100px; background:var(--panel3); color:var(--text-dim);}
+.badge.new{background:rgba(226,96,122,.18); color:var(--danger);}
+.badge.ok{background:rgba(82,196,142,.18); color:var(--success);}
+
+/* Bottom nav */
+.navbar{position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; background:rgba(15,18,32,.92); backdrop-filter:blur(14px);
+  border-top:1px solid var(--line); padding:8px 6px calc(6px + env(safe-area-inset-bottom));}
+.nav-btn{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; background:none; border:none; color:var(--text-faint); padding:6px 2px; border-radius:10px;}
+.nav-btn .ic{font-size:19px;}
+.nav-btn .lb{font-size:9.5px; font-weight:700;}
+.nav-btn.active{color:var(--brass-bright);}
+
+/* Toast */
+.toast{position:fixed; left:50%; bottom:92px; transform:translate(-50%,20px); background:var(--panel3); border:1px solid var(--line);
+  color:var(--text); padding:11px 18px; border-radius:100px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; z-index:80; transition:.25s;}
+.toast.show{opacity:1; transform:translate(-50%,0);}
+.toast.err{border-color:rgba(226,96,122,.5); color:#ffd7dd;}
+.toast.ok{border-color:rgba(82,196,142,.5); color:#d3ffe9;}
+
+/* Modal */
+.modal-bg{position:fixed; inset:0; background:rgba(4,6,12,.7); z-index:60; opacity:0; pointer-events:none; transition:.2s;}
+.modal-bg.show{opacity:1; pointer-events:auto;}
+.modal{position:fixed; left:12px; right:12px; bottom:12px; max-width:460px; margin:0 auto; background:var(--panel); border:1px solid var(--line);
+  border-radius:20px; padding:18px; z-index:61; transform:translateY(24px); opacity:0; pointer-events:none; transition:.22s; max-height:80vh; overflow:auto;}
+.modal.show{transform:translateY(0); opacity:1; pointer-events:auto;}
+.modal .mh{font-family:'Unbounded'; font-weight:700; font-size:15.5px; margin-bottom:10px;}
+
+.loading{display:flex; align-items:center; justify-content:center; padding:40px; color:var(--text-faint);}
+.spin{width:22px; height:22px; border-radius:50%; border:3px solid var(--panel3); border-top-color:var(--brass-bright); animation:sp 0.8s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+.rarity-dot{width:9px; height:9px; border-radius:50%; flex:none;}
+.rarity-dot.rare{background:var(--rare);} .rarity-dot.epic{background:var(--epic);} .rarity-dot.legendary{background:var(--legendary);}
+
+.game-card{background:linear-gradient(155deg, var(--panel2), var(--panel)); border:1px solid var(--line); border-radius:var(--radius); padding:15px; margin-bottom:10px;}
+.game-card .gt{font-family:'Unbounded'; font-weight:700; font-size:14.5px; margin-bottom:4px;}
+.game-card .gd{font-size:12px; color:var(--text-dim); margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><div class="brand-mark">á</div><div class="brand-name">áClub</div></div>
+  <div class="pills">
+    <div class="pill coin">🪙<span class="val mono" id="pillCoin">0</span></div>
+    <div class="pill shard">🔮<span class="val mono" id="pillShard">0</span></div>
+  </div>
+</div>
+
+<div class="content" id="screen"><div class="loading"><div class="spin"></div></div></div>
+
+<div class="navbar" id="navbar"></div>
+<div class="toast" id="toast"></div>
+<div class="modal-bg" id="modalBg"></div>
+<div class="modal" id="modal"></div>
+
+<script>
+// ============================================================
+// КОНФІГ
+// ============================================================
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzH8qt2_fUmnrLEw0Z56fsyMEH-D3uOgBSeTxwzUMCDTFDDoNBAowLTZqEGwSFo26ie9A/exec";
+const GAME_SECRET = "aclub2026runnertest";
+const RUNNER_URL = "https://unissx.github.io/aclub-games_test/runner/?v=1";
+const WORDLE_URL = "https://unissx.github.io/aclub-games_test/wordle/?v=13";
+const CIRCLE_URL = "https://unissx.github.io/aclub-games_test/wordle_circle/?v=3";
+
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { try { tg.ready(); tg.expand(); tg.setHeaderColor("#0A0C14"); tg.setBackgroundColor("#0A0C14"); } catch(e){} }
+
+function getUserId(){
+  const qs = new URLSearchParams(location.search);
+  if (qs.get("tgid")) return qs.get("tgid");
+  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) return String(tg.initDataUnsafe.user.id);
+  return null;
+}
+const USER_ID = getUserId();
+
+async function api(action, payload){
+  const body = { type:"web_action", userId: USER_ID, secret: GAME_SECRET, action, payload: payload || {} };
+  const res = await fetch(WEBAPP_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(body) });
+  return res.json();
+}
+async function apiRaw(type, payload){
+  const body = Object.assign({ type, userId: USER_ID, secret: GAME_SECRET }, payload || {});
+  const res = await fetch(WEBAPP_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(body) });
+  return res.json();
+}
+
+function fmt(n){ return (n ?? 0).toLocaleString("uk-UA"); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function toast(msg, kind){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (kind ? " " + kind : "");
+  clearTimeout(toast._h);
+  toast._h = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+function showModal(html){
+  document.getElementById("modal").innerHTML = html;
+  document.getElementById("modalBg").classList.add("show");
+  document.getElementById("modal").classList.add("show");
+}
+function closeModal(){
+  document.getElementById("modalBg").classList.remove("show");
+  document.getElementById("modal").classList.remove("show");
+}
+document.getElementById("modalBg").addEventListener("click", closeModal);
+
+// ============================================================
+// СТАН
+// ============================================================
+let DASH = null;
+let TAB = "home";
+let SHOP_SUB = "abank";
+const TABS = [
+  { id:"home",    ic:"🏠", lb:"Головна" },
+  { id:"games",   ic:"🎮", lb:"Ігри" },
+  { id:"shop",    ic:"🏪", lb:"Магазин" },
+  { id:"chests",  ic:"📦", lb:"Кейси" },
+  { id:"support", ic:"🆘", lb:"Підтримка" },
+];
+
+function renderNav(){
+  const isAdmin = DASH && (DASH.isAdmin || DASH.isMerchAdmin);
+  const tabs = TABS.concat(isAdmin ? [{ id:"admin", ic:"🔐", lb:"Адмін" }] : []);
+  document.getElementById("navbar").innerHTML = tabs.map(t => `
+    <button class="nav-btn ${TAB===t.id?'active':''}" data-nav="${t.id}">
+      <div class="ic">${t.ic}</div><div class="lb">${t.lb}</div>
+    </button>`).join("");
+  document.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", () => nav(b.getAttribute("data-nav"))));
+}
+
+function nav(tab){
+  TAB = tab;
+  renderNav();
+  render();
+}
+
+async function boot(){
+  if (!USER_ID) {
+    document.getElementById("screen").innerHTML = emptyBlock("🔒","Немає доступу","Відкрийте застосунок кнопкою в боті — так ми дізнаємось, хто ви.");
+    renderNav();
+    return;
+  }
+  await refreshDashboard();
+  renderNav();
+  render();
+}
+
+async function refreshDashboard(){
+  try {
+    const d = await api("dashboard");
+    if (d.ok) {
+      DASH = d;
+      document.getElementById("pillCoin").textContent = fmt(d.balance||0);
+      document.getElementById("pillShard").textContent = fmt(d.shards||0);
+    }
+  } catch(e) { toast("Немає з'єднання з сервером", "err"); }
+}
+
+function emptyBlock(icon, title, sub){
+  return `<div class="empty"><div class="ic">${icon}</div><div class="t">${esc(title)}</div><div class="s">${esc(sub)}</div></div>`;
+}
+function loadingBlock(){ return `<div class="loading"><div class="spin"></div></div>`; }
+
+function render(){
+  if (!DASH || !DASH.registered) {
+    document.getElementById("screen").innerHTML = emptyBlock("🤖","Ви ще не зареєстровані",
+      "Поверніться в чат з ботом і надішліть свій LDAP (наприклад AB120996RGN), щоб зареєструватись — після цього застосунок стане доступним.");
+    return;
+  }
+  if (TAB === "home") return renderHome();
+  if (TAB === "games") return renderGames();
+  if (TAB === "shop") return renderShop();
+  if (TAB === "chests") return renderChests();
+  if (TAB === "support") return renderSupport();
+  if (TAB === "admin") return renderAdmin();
+}
+
+// ============================================================
+// ГОЛОВНА
+// ============================================================
+function renderHome(){
+  const db = DASH.dailyBonus || {};
+  const streak = db.streak || 0;
+  const daysTo7 = streak >= 7 ? 0 : 7 - streak;
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `
+    <div class="h1">👋 Привіт, ${esc(DASH.name)}!</div>
+    <div class="stat-row">
+      <div class="stat-card coin"><div class="label">Баланс</div><div class="value mono">${fmt(DASH.balance)} 🪙</div></div>
+      <div class="stat-card shard"><div class="label">Осколки</div><div class="value mono">${fmt(DASH.shards)} 🔮</div></div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="row between">
+        <div class="display" style="font-weight:700; font-size:14px;">🎁 Щоденний бонус</div>
+        <div class="badge">${streak} 🔥 стрік</div>
+      </div>
+      <div class="progress" style="margin:10px 0 6px;"><div style="width:${Math.min(100, streak/7*100)}%"></div></div>
+      <div class="sub" style="margin:0 0 10px;">${streak>=7 ? 'Преміум-стрік активний — щодня +2 á-coin!' : `Ще ${daysTo7} дн. до бонусу ×2 щодня`}</div>
+      <button class="btn" id="btnDaily" ${db.claimedToday ? 'disabled' : ''}>${db.claimedToday ? '✅ Вже отримано сьогодні' : '🎁 Забрати бонус'}</button>
+    </div>
+
+    <div class="h2">Швидкі дії</div>
+    <div class="list">
+      <div class="item" data-nav="games" style="cursor:pointer">
+        <div class="ic">🎮</div><div class="txt"><div class="t">Заробити á-coin</div><div class="s">Ребус, Щасливчик, Runner, Wordle</div></div>
+        <div class="right">→</div>
+      </div>
+      <div class="item" id="goMyItems" style="cursor:pointer">
+        <div class="ic">🎁</div><div class="txt"><div class="t">Мої товари</div><div class="s">Куплені товари та мерч</div></div>
+        <div class="right">→</div>
+      </div>
+      <div class="item" data-nav="chests" style="cursor:pointer">
+        <div class="ic">🔮</div><div class="txt"><div class="t">Кейси та осколки</div><div class="s">Крафт, заряди, ефекти</div></div>
+        <div class="right">→</div>
+      </div>
+    </div>
+
+    <div class="h2">Історія<span class="hint" id="goHistory" style="cursor:pointer">вся історія →</span></div>
+    <div class="list" id="historyPreview">${loadingBlock()}</div>
+  `;
+  screen.querySelectorAll("[data-nav]").forEach(el => el.addEventListener("click", () => nav(el.getAttribute("data-nav"))));
+  document.getElementById("goMyItems").addEventListener("click", () => openMyItemsModal());
+  document.getElementById("goHistory").addEventListener("click", () => openHistoryModal());
+  document.getElementById("btnDaily").addEventListener("click", claimDaily);
+  loadHistoryPreview();
+}
+
+async function claimDaily(){
+  const btn = document.getElementById("btnDaily");
+  btn.disabled = true; btn.textContent = "⏳ Зачекайте, кубик у чаті...";
+  try {
+    const r = await api("daily_bonus_claim");
+    if (!r.ok) { toast(r.error || "Помилка", "err"); }
+    else { toast("Бонус нараховано! Перевірте чат з ботом 🎉", "ok"); await refreshDashboard(); }
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+  render();
+}
+
+async function loadHistoryPreview(){
+  try {
+    const r = await api("history_list");
+    const wrap = document.getElementById("historyPreview");
+    if (!wrap) return;
+    if (!r.ok) { wrap.innerHTML = emptyBlock("📭","Немає даних",""); return; }
+    const merged = [
+      ...r.income.slice(0,4).map(x => ({...x, sign:"+"})),
+      ...r.expense.slice(0,4).map(x => ({...x, sign:"-"}))
+    ];
+    if (!merged.length) { wrap.innerHTML = emptyBlock("📭","Історія порожня","Почніть грати, щоб тут щось з'явилось"); return; }
+    wrap.innerHTML = merged.slice(0,6).map(historyRow).join("");
+  } catch(e) {}
+}
+function historyRow(x){
+  const pos = x.sign === "+";
+  return `<div class="item">
+    <div class="ic">${pos?'🔹':'🔸'}</div>
+    <div class="txt"><div class="t">${esc(x.detail||x.type||'')}</div><div class="s">${esc(x.date||'')}</div></div>
+    <div class="right mono" style="color:${pos?'var(--success)':'var(--danger)'}; font-weight:700;">${pos?'+':'-'}${fmt(x.amount)}</div>
+  </div>`;
+}
+async function openHistoryModal(){
+  showModal(`<div class="mh">📈 Історія</div><div id="histFull">${loadingBlock()}</div>`);
+  try {
+    const r = await api("history_list");
+    const wrap = document.getElementById("histFull");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("📭","Помилка",""); return; }
+    const merged = [
+      ...r.income.map(x => ({...x, sign:"+"})),
+      ...r.expense.map(x => ({...x, sign:"-"}))
+    ];
+    wrap.innerHTML = merged.length ? `<div class="list">${merged.map(historyRow).join("")}</div>` : emptyBlock("📭","Порожньо","");
+  } catch(e){}
+}
+
+// ============================================================
+// МОЇ ТОВАРИ (модалка, доступна з Головної та Магазину)
+// ============================================================
+async function openMyItemsModal(){
+  showModal(`<div class="mh">🎁 Мої товари</div><div id="myItemsWrap">${loadingBlock()}</div>`);
+  await loadMyItems();
+}
+async function loadMyItems(){
+  const wrap = document.getElementById("myItemsWrap");
+  if (!wrap) return;
+  try {
+    const r = await api("my_items");
+    if (!r.ok || !r.items.length) { wrap.innerHTML = emptyBlock("🎁","Поки що порожньо","Товари з магазину з'являться тут."); return; }
+    wrap.innerHTML = `<div class="list">` + r.items.map(it => {
+      const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
+      let statusTxt = "⏳ Очікує використання";
+      if (it.isMerch) {
+        const accepted = ["Прийнято","Відправлено"].includes(it.merchStatus);
+        statusTxt = accepted ? (it.merchStatus==="Відправлено"?"📬 Відправлено":"📬 Прийнято") : (it.isOrdered ? "✅ Дані вказано, очікує" : "⏳ Потрібно вказати доставку");
+      }
+      return `<div class="item" data-item-row="${it.row}" data-merch="${it.isMerch?1:0}" style="cursor:pointer">
+        <div class="ic">${it.isMerch?'📦':'🎁'}</div>
+        <div class="txt"><div class="t">${esc(shortName)}</div><div class="s">${esc(statusTxt)}</div></div>
+        <div class="right">→</div>
+      </div>`;
+    }).join("") + `</div><button class="btn secondary" style="margin-top:12px;" onclick="openMyMerchModal()">📦 Мій мерч — історія</button>`;
+    wrap.querySelectorAll("[data-item-row]").forEach(el => {
+      el.addEventListener("click", () => openItemDetail(parseInt(el.getAttribute("data-item-row")), el.getAttribute("data-merch")==="1", r.items.find(x=>x.row==el.getAttribute("data-item-row"))));
+    });
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+
+function openItemDetail(row, isMerch, it){
+  const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
+  let body = "";
+  if (isMerch) {
+    const accepted = ["Прийнято","Відправлено"].includes(it.merchStatus);
+    if (accepted) {
+      body = `<div class="sub">Статус: 📬 ${it.merchStatus==="Відправлено"?"Відправлено — посилка в дорозі":"Прийнято адміністратором"}</div>
+        <div class="sub">По питаннях доставки: @tashkevych</div>`;
+    } else {
+      body = `<div class="sub" style="margin-bottom:10px;">${it.isOrdered ? "Дані доставки вказано, очікує підтвердження адміном." : "Потрібно вказати дані доставки."}</div>
+        <button class="btn" onclick="openMerchForm(${row}, '${esc(shortName).replace(/'/g,"\\'")}')">📦 ${it.isOrdered?'Редагувати':'Вказати'} дані доставки</button>
+        <button class="btn danger" style="margin-top:8px;" onclick="cancelItem(${row})">❌ Скасувати замовлення</button>`;
+    }
+  } else {
+    body = `<div class="sub" style="margin-bottom:10px;">Для використання зверніться до СС особисто 💚</div>
+      <button class="btn danger" onclick="cancelItem(${row})">❌ Скасувати покупку</button>`;
+  }
+  showModal(`<div class="mh">🎁 ${esc(shortName)}</div>${body}`);
+}
+
+async function cancelItem(row){
+  if (!confirm("Скасувати покупку? Кошти повернуться на баланс.")) return;
+  try {
+    const r = await api("item_cancel", { row });
+    if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
+    toast("Покупку скасовано, кошти повернено", "ok");
+    await refreshDashboard();
+    closeModal();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+function openMerchForm(row, itemName){
+  showModal(`
+    <div class="mh">📦 Дані доставки — ${esc(itemName)}</div>
+    <div class="field-label">ПІБ отримувача</div><input class="field" id="mf_name" placeholder="Іван Іваненко">
+    <div class="field-label">Місто</div><input class="field" id="mf_city" placeholder="Київ">
+    <div class="field-label">Відділення / поштомат</div><input class="field" id="mf_branch" placeholder="№12">
+    <div class="field-label">Телефон</div><input class="field" id="mf_phone" placeholder="+380...">
+    <div class="field-label">Коментар (необов'язково)</div><textarea class="field" id="mf_comment" rows="2"></textarea>
+    <button class="btn" style="margin-top:14px;" onclick="submitMerchForm(${row})">✅ Оформити замовлення</button>
+  `);
+}
+async function submitMerchForm(row){
+  const p = {
+    row, name: document.getElementById("mf_name").value, city: document.getElementById("mf_city").value,
+    branch: document.getElementById("mf_branch").value, phone: document.getElementById("mf_phone").value,
+    comment: document.getElementById("mf_comment").value
+  };
+  if (!p.name || !p.phone) { toast("Вкажіть хоча б ПІБ і телефон", "err"); return; }
+  try {
+    const r = await api("merch_submit", p);
+    if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
+    toast("Замовлення оформлено! 🎉", "ok");
+    closeModal();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+async function openMyMerchModal(){
+  showModal(`<div class="mh">📦 Мій мерч</div><div id="myMerchWrap">${loadingBlock()}</div>`);
+  try {
+    const r = await api("my_merch");
+    const wrap = document.getElementById("myMerchWrap");
+    if (!r.ok || !r.orders.length) { wrap.innerHTML = emptyBlock("📦","Замовлень немає",""); return; }
+    wrap.innerHTML = `<div class="list">` + r.orders.map(m => {
+      const icon = m.status==="Відправлено"?"✅":(m.status||"").includes("Скасован")?"❌":m.status==="Прийнято"?"📬":"⏳";
+      return `<div class="item"><div class="ic">${icon}</div><div class="txt"><div class="t">${esc(m.item)}</div>
+        <div class="s">${esc(m.date)} · ${esc(m.status)} ${m.city?('· '+esc(m.city)+' відд.'+esc(m.branch)):''}</div></div></div>`;
+    }).join("") + `</div>`;
+  } catch(e) {}
+}
+
+// ============================================================
+// ІГРИ
+// ============================================================
+function openExternal(url){
+  const full = url + "&tgid=" + encodeURIComponent(USER_ID);
+  if (tg && tg.openLink) tg.openLink(full); else window.open(full, "_blank");
+}
+
+function renderGames(){
+  const rebus = DASH.rebus || {};
+  const lucky = DASH.lucky || { used:0, cap:3 };
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `
+    <div class="h1">🎮 Заробити á-coin</div>
+
+    <div class="game-card">
+      <div class="gt">🧩 Ребус дня</div>
+      <div class="gd">${rebus.active ? (rebus.answered ? "Ви вже відповіли — чекайте результатів." : "Розгадайте ребус і введіть відповідь одним словом.") : "На сьогодні ребусу поки немає."}</div>
+      ${rebus.active ? `<div class="card" style="margin-bottom:10px; background:var(--panel3); border:none;">${esc(rebus.text)}</div>` : ""}
+      ${rebus.active && !rebus.answered ? `
+        <input class="field" id="rebusAnswer" placeholder="Ваша відповідь..." style="margin-bottom:8px;">
+        <div class="btn-row">
+          <button class="btn secondary sm" onclick="getRebusHint()">💡 Підказка</button>
+          <button class="btn sm" onclick="submitRebusAnswer()">✍️ Відповісти</button>
+        </div>` : ""}
+    </div>
+
+    <div class="game-card">
+      <div class="gt">🎰 Щасливчик</div>
+      <div class="gd">Вгадайте число від 1 до 6 і отримайте +${DASH.lucky && DASH.lucky.reward || 3} á-coin миттєво. Спроба ${lucky.used}/${lucky.cap}.</div>
+      <div id="luckyPicker" class="btn-row" style="flex-wrap:wrap; gap:6px;">
+        ${[1,2,3,4,5,6].map(n => `<button class="btn secondary sm" style="flex:1 1 27%;" onclick="rollLucky(${n})" ${lucky.used>=lucky.cap?'disabled':''}>${n}</button>`).join("")}
+      </div>
+    </div>
+
+    <div class="game-card">
+      <div class="gt">🏃 áClub Runner</div>
+      <div class="gd">Біжи через перешкоди, збирай яблука, потрапляй у топ тижневого турніру.</div>
+      <button class="btn" onclick="openExternal('${RUNNER_URL}')">🎮 Грати</button>
+    </div>
+
+    <div class="game-card">
+      <div class="gt">🔤 Вгадай слово</div>
+      <div class="gd">Класичний Wordle українською — 6 спроб, нагорода за швидкість.</div>
+      <button class="btn" onclick="openExternal('${WORDLE_URL}')">🔤 Грати</button>
+    </div>
+
+    <div class="game-card">
+      <div class="gt">🔵 Слова по колу</div>
+      <div class="gd">Знаходьте слова, з'єднуючи літери по колу.</div>
+      <button class="btn" onclick="openExternal('${CIRCLE_URL}')">🔵 Грати</button>
+    </div>
+  `;
+}
+
+async function submitRebusAnswer(){
+  const val = document.getElementById("rebusAnswer").value.trim();
+  if (!val) { toast("Введіть відповідь", "err"); return; }
+  try {
+    const r = await api("rebus_answer", { answer: val });
+    if (!r.ok) { toast(r.error === "already_answered" ? "Ви вже відповіли" : "Помилка", "err"); return; }
+    toast(`Відповідь прийнято! Приз до +${r.prize} á після закриття ребусу`, "ok");
+    await refreshDashboard(); renderGames();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function getRebusHint(){
+  try {
+    let r = await api("rebus_hint", { confirm:false });
+    if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
+    if (r.needConfirm) {
+      if (!confirm("Підказка зменшує приз вдвічі. Продовжити?")) return;
+      r = await api("rebus_hint", { confirm:true });
+      if (!r.ok) { toast("Помилка", "err"); return; }
+    }
+    showModal(`<div class="mh">💡 Підказка</div><div class="sub">${esc(r.hint)}</div>`);
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function rollLucky(guess){
+  document.querySelectorAll("#luckyPicker button").forEach(b => b.disabled = true);
+  toast("Кидаємо кубик у чаті з ботом 🎲 — зачекайте...", "ok");
+  try {
+    const r = await api("lucky_roll", { guess });
+    if (!r.ok) { toast(r.error === "no_attempts_left" ? "Спроби вичерпано на сьогодні" : "Помилка", "err"); await refreshDashboard(); renderGames(); return; }
+    toast(r.isWin ? `🎉 Випало ${r.diceVal}! +${r.reward} á-coin` : `Випало ${r.diceVal}. Спробуйте ще`, r.isWin?"ok":undefined);
+    await refreshDashboard(); renderGames();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+// ============================================================
+// МАГАЗИН
+// ============================================================
+function renderShop(){
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `
+    <div class="h1">🏪 Магазин</div>
+    <div class="tabs2">
+      <div class="t2 ${SHOP_SUB==='abank'?'active':''}" data-sub="abank">🎁 áBank Shop</div>
+      <div class="t2 ${SHOP_SUB==='runner'?'active':''}" data-sub="runner">🏃 Runner</div>
+      <div class="t2 ${SHOP_SUB==='wordle'?'active':''}" data-sub="wordle">🔤 Wordle</div>
+    </div>
+    <div id="shopBody">${loadingBlock()}</div>
+  `;
+  screen.querySelectorAll("[data-sub]").forEach(el => el.addEventListener("click", () => { SHOP_SUB = el.getAttribute("data-sub"); renderShop(); }));
+  if (SHOP_SUB === "abank") loadShopAbank();
+  else if (SHOP_SUB === "runner") loadUpgrades("runner");
+  else loadUpgrades("wordle");
+}
+
+async function loadShopAbank(){
+  const wrap = document.getElementById("shopBody");
+  try {
+    const r = await api("shop_list");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    wrap.innerHTML = `<div class="list">` + r.items.map(it => `
+      <div class="card">
+        <div class="row between"><div style="font-weight:700; font-size:13.5px;">${it.type==='merch'?'📦':'🎁'} ${esc(it.name)}</div>
+        <div class="mono" style="color:var(--brass-bright); font-weight:700;">${it.price} 🪙</div></div>
+        <div class="sub" style="margin:6px 0 10px;">${esc(it.desc)}</div>
+        <button class="btn sm" ${r.balance < it.price ? 'disabled' : ''} onclick="buyShopItem('${it.id}', ${it.price})">
+          ${r.balance < it.price ? 'Недостатньо á-coin' : 'Купити'}
+        </button>
+      </div>`).join("") + `</div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+async function buyShopItem(id, price){
+  if (!confirm(`Придбати за ${price} á-coin?`)) return;
+  try {
+    const r = await api("shop_buy", { itemId:id });
+    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+    toast("Придбано! Перевірте «Мої товари»", "ok");
+    await refreshDashboard(); loadShopAbank();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+async function loadUpgrades(kind){
+  const wrap = document.getElementById("shopBody");
+  try {
+    const r = await api(kind === "runner" ? "upgrades_runner_get" : "upgrades_wordle_get");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    const entries = Object.entries(r.upgrades);
+    wrap.innerHTML = `<div class="list">` + entries.map(([key, upg]) => {
+      const maxLevel = upg.maxLevel || 5;
+      const cur = r.current[key] || 0;
+      const maxed = cur >= maxLevel;
+      const price = !maxed ? upg.prices[cur] : 0;
+      const effect = cur > 0 ? upg.effects[cur-1] : (key==='lives' ? "1 життя (базово)" : "не куплено");
+      return `<div class="card">
+        <div class="row between"><div style="font-weight:700; font-size:13.5px;">${esc(upg.name)}</div><div class="badge">${cur}/${maxLevel}</div></div>
+        <div class="sub" style="margin:6px 0;">${esc(upg.desc)}</div>
+        <div class="progress" style="margin-bottom:8px;"><div style="width:${cur/maxLevel*100}%"></div></div>
+        <div class="sub" style="margin:0 0 10px;">Зараз: ${esc(effect)}${!maxed?` · Далі: ${esc(upg.effects[cur])} — ${price} 🪙`:''}</div>
+        <button class="btn sm" ${maxed || r.balance < price ? 'disabled' : ''} onclick="buyUpgrade('${kind}','${key}')">
+          ${maxed ? '✅ Максимум' : (r.balance < price ? 'Недостатньо á-coin' : `Купити рів. ${cur+1} — ${price} 🪙`)}
+        </button>
+      </div>`;
+    }).join("") + `</div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+async function buyUpgrade(kind, key){
+  try {
+    const r = await api(kind === "runner" ? "upgrades_runner_buy" : "upgrades_wordle_buy", { key });
+    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+    toast("Апгрейд придбано!", "ok");
+    await refreshDashboard(); loadUpgrades(kind);
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+// ============================================================
+// КЕЙСИ / ОСКОЛКИ
+// ============================================================
+const CHEST_META = {
+  avangard:{icon:"💰"}, singularity:{icon:"⚡️"}, ultimatum:{icon:"🏃"},
+  requiem:{icon:"🌒"}, collapse:{icon:"🔤"}, absolut:{icon:"👑"}
+};
+function dropLabel(d){
+  if (d.label) return d.label;
+  if (d.type === "coins") return d.amount + " á-coin";
+  if (d.type === "shard") return d.amount + " осколок";
+  return d.type;
+}
+let CHESTS_STATE = null;
+
+async function renderChests(){
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `<div class="h1">📦 Кейси та осколки</div><div id="chestsBody">${loadingBlock()}</div>`;
+  try {
+    const r = await apiRaw("get_inventory");
+    if (!r.ok) { document.getElementById("chestsBody").innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    CHESTS_STATE = r;
+    paintChests();
+  } catch(e) { document.getElementById("chestsBody").innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+function paintChests(){
+  const r = CHESTS_STATE;
+  const wrap = document.getElementById("chestsBody");
+  const eff = r.effects || {};
+  wrap.innerHTML = `
+    <div class="h2">Кейси</div>
+    <div class="list">${(r.chests||[]).map(c => {
+      const meta = CHEST_META[c.id] || {icon:"🎁"};
+      const locked = r.balance < c.cost;
+      return `<div class="item" data-chest="${c.id}" style="cursor:pointer">
+        <div class="ic">${meta.icon}</div>
+        <div class="txt"><div class="t">${esc(c.name)}</div><div class="s">${esc(c.desc)}</div></div>
+        <div class="right mono" style="color:${locked?'var(--text-faint)':'var(--brass-bright)'}; font-weight:700;">${c.cost} 🪙</div>
+      </div>`;
+    }).join("")}</div>
+
+    <div class="h2">Заряди</div>
+    <div class="list">
+      <div class="item"><div class="ic">💡</div><div class="txt"><div class="t">Безкоштовна підказка</div><div class="s">Ребус — приз не зменшується</div></div><div class="right mono">${eff.freeHint||0}</div></div>
+      <div class="item"><div class="ic">🎲</div><div class="txt"><div class="t">Бонус-спроба</div><div class="s">+1 спроба у «Щасливчику»</div></div><div class="right mono">${eff.diceBonus||0}</div></div>
+      <div class="item"><div class="ic">🛡</div><div class="txt"><div class="t">Імунітет стріку</div><div class="s">Спрацьовує автоматично</div></div><div class="right mono">${eff.streakImmunity||0}</div></div>
+      <div class="item"><div class="ic">⚡️</div><div class="txt"><div class="t">x3 щоденний бонус</div><div class="s">${eff.x3Active?('Діє до '+fmtDate(eff.x3Until)):'Не активний'}</div></div><div class="right">${eff.x3Active?'<span class="badge ok">АКТИВНО</span>':'<span class="mono">0</span>'}</div></div>
+      <div class="item"><div class="ic">👑</div><div class="txt"><div class="t">VIP-години (банк)</div><div class="s">Активація — окремим етапом</div></div><div class="right mono">${eff.vipBankedHours||0}</div></div>
+    </div>
+
+    <div class="h2">Крафт з осколків <span class="hint">🔮 ${fmt(r.shards)}</span></div>
+    <div class="btn-row" style="flex-wrap:wrap;">
+      ${(r.craftRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${r.shards<rc.cost?'disabled':''} onclick="craftItem('${rc.id}')">${esc(rc.name)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
+    </div>
+
+    <div class="h2">Предмети з кейсів</div>
+    <div class="list">${(r.items&&r.items.length) ? r.items.map(it => {
+      const rarity = /Legendary/.test(it.name) ? "legendary" : /Epic/.test(it.name) ? "epic" : "rare";
+      return `<div class="item"><div class="rarity-dot ${rarity}"></div><div class="txt"><div class="t">${esc(it.name)}</div><div class="s">${esc(it.comment||"")}</div></div><div class="right badge">${esc(it.status==="Не використано"?"В обробці":it.status)}</div></div>`;
+    }).join("") : emptyBlock("🎒","Поки що порожньо","Відкривайте кейси або крафтіть із осколків")}</div>
+  `;
+  wrap.querySelectorAll("[data-chest]").forEach(el => el.addEventListener("click", () => openChestSheet(el.getAttribute("data-chest"))));
+}
+function fmtDate(iso){
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString("uk-UA",{day:"2-digit",month:"2-digit"}) + " " + d.toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
+}
+function openChestSheet(chestId){
+  const c = CHESTS_STATE.chests.find(x => x.id === chestId);
+  if (!c) return;
+  const locked = CHESTS_STATE.balance < c.cost;
+  const meta = CHEST_META[c.id] || {icon:"🎁"};
+  showModal(`
+    <div class="mh">${meta.icon} ${esc(c.name)}</div>
+    <div class="sub" style="margin-bottom:10px;">${esc(c.desc)}</div>
+    <div class="list" style="margin-bottom:14px;">${c.drops.map(d => `
+      <div class="item"><div class="ic mono" style="font-size:12px;">${d.chance}%</div><div class="txt"><div class="t">${esc(dropLabel(d))}</div></div></div>
+    `).join("")}</div>
+    <button class="btn" ${locked?'disabled':''} onclick="openChest('${c.id}')">${locked?'Недостатньо á-coin':('🎁 Відкрити — '+c.cost+' 🪙')}</button>
+  `);
+}
+async function openChest(chestId){
+  closeModal();
+  toast("Відкриваємо кейс...", "ok");
+  try {
+    const r = await apiRaw("chest_open", { chestId });
+    if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
+    showModal(`<div class="mh">🎉 ${esc(r.chest.name)} відкрито!</div><div class="sub">${esc(r.resultText).replace(/\*/g,'')}</div>`);
+    await refreshDashboard();
+    renderChests();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function craftItem(rarity){
+  if (!confirm("Витратити осколки на крафт?")) return;
+  try {
+    const r = await apiRaw("craft_item", { rarity });
+    if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
+    toast("Крафт виконано! Предмет — у «Мої товари»", "ok");
+    await refreshDashboard();
+    renderChests();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+// ============================================================
+// ПІДТРИМКА
+// ============================================================
+let SUPPORT_TYPE = "Питання";
+function renderSupport(){
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `
+    <div class="h1">🆘 Підтримка</div>
+    <div class="tabs2">
+      <div class="t2 ${SUPPORT_TYPE==='Питання'?'active':''}" data-st="Питання">❓ Питання</div>
+      <div class="t2 ${SUPPORT_TYPE==='Технічна заявка'?'active':''}" data-st="Технічна заявка">🐞 Технічна заявка</div>
+    </div>
+    <div class="card">
+      <textarea class="field" id="supportQ" rows="4" placeholder="${SUPPORT_TYPE==='Технічна заявка' ? 'Опишіть проблему детально...' : 'Опишіть ваше питання...'}"></textarea>
+      <button class="btn" style="margin-top:10px;" onclick="askSupport()">📨 Надіслати</button>
+      <div class="sub" style="margin-top:8px;">${SUPPORT_TYPE==='Технічна заявка' ? 'Якщо потрібно прикріпити фото/відео — надішліть його прямо в чат з ботом після цього.' : ''}</div>
+    </div>
+    <div id="supportAnswer"></div>
+    <div class="h2">Мої звернення<span class="hint" id="refreshTickets" style="cursor:pointer">оновити</span></div>
+    <div class="list" id="myTickets">${loadingBlock()}</div>
+  `;
+  screen.querySelectorAll("[data-st]").forEach(el => el.addEventListener("click", () => { SUPPORT_TYPE = el.getAttribute("data-st"); renderSupport(); }));
+  document.getElementById("refreshTickets").addEventListener("click", loadMyTickets);
+  loadMyTickets();
+}
+async function askSupport(){
+  const q = document.getElementById("supportQ").value.trim();
+  if (!q) { toast("Введіть текст", "err"); return; }
+  try {
+    const r = await api("support_ask", { question:q, ticketType:SUPPORT_TYPE });
+    if (!r.ok) { toast(r.error === "has_open_ticket" ? "У вас вже є необроблене звернення" : "Помилка", "err"); return; }
+    const wrap = document.getElementById("supportAnswer");
+    if (r.faqMatch) {
+      wrap.innerHTML = `<div class="card"><div style="font-weight:700; margin-bottom:6px;">🤖 Відповідь:</div><div class="sub" style="margin:0 0 10px;">${esc(r.answer)}</div>
+        <div class="btn-row"><button class="btn secondary sm" onclick="cancelSupport()">✅ Дякую, допомогло</button><button class="btn sm" onclick="escalateSupport()">📨 До адміна</button></div></div>`;
+    } else {
+      wrap.innerHTML = `<div class="card"><div class="sub" style="margin:0 0 10px;">Автоматичної відповіді не знайдено. Передати адміну?</div>
+        <div class="btn-row"><button class="btn secondary sm" onclick="cancelSupport()">❌ Скасувати</button><button class="btn sm" onclick="escalateSupport()">📨 Так, передати</button></div></div>`;
+    }
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function escalateSupport(){
+  try {
+    const r = await api("support_escalate");
+    if (!r.ok) { toast("Помилка", "err"); return; }
+    toast(`Заявку №${r.ticketId} передано адміну`, "ok");
+    document.getElementById("supportAnswer").innerHTML = "";
+    document.getElementById("supportQ").value = "";
+    loadMyTickets();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function cancelSupport(){
+  await api("support_cancel");
+  document.getElementById("supportAnswer").innerHTML = "";
+  document.getElementById("supportQ").value = "";
+}
+async function loadMyTickets(){
+  const wrap = document.getElementById("myTickets");
+  if (!wrap) return;
+  try {
+    const r = await api("support_my_tickets");
+    if (!r.ok || !r.tickets.length) { wrap.innerHTML = emptyBlock("📭","Звернень немає",""); return; }
+    wrap.innerHTML = r.tickets.map(t => `
+      <div class="item"><div class="ic">${t.type==='Технічна заявка'?'🐞':'❓'}</div>
+        <div class="txt"><div class="t">№${t.ticketId} · ${esc(t.status)}</div><div class="s">${esc(t.question).slice(0,60)}</div></div>
+        <div class="right badge ${t.status==='Нове'?'new':(t.status==='Закрито'?'ok':'')}">${esc(t.status)}</div></div>`).join("");
+  } catch(e) {}
+}
+
+// ============================================================
+// АДМІНКА
+// ============================================================
+let ADMIN_SUB = "state";
+function renderAdmin(){
+  const screen = document.getElementById("screen");
+  const tabs = [
+    ["state","📊 Огляд"], ["rebus","🧩 Ребус"], ["tournament","🏆 Турнір"],
+    ["award","💰 Нарахування"], ["admins","👤 Адміни"], ["support","📨 Звернення"], ["merch","📦 Мерч"]
+  ];
+  screen.innerHTML = `
+    <div class="h1">🔐 Адмін-панель</div>
+    <div class="tabs2" style="flex-wrap:wrap; gap:4px;">
+      ${tabs.map(([id,lb]) => `<div class="t2" style="flex:1 1 30%;" data-asub="${id}">${lb}</div>`).join("")}
+    </div>
+    <div id="adminBody">${loadingBlock()}</div>
+  `;
+  screen.querySelectorAll("[data-asub]").forEach(el => {
+    if (el.getAttribute("data-asub") === ADMIN_SUB) el.classList.add("active");
+    el.addEventListener("click", () => { ADMIN_SUB = el.getAttribute("data-asub"); renderAdmin(); });
+  });
+  const loaders = { state:loadAdminState, rebus:loadAdminRebus, tournament:loadAdminTournament, award:loadAdminAward, admins:loadAdminAdmins, support:loadAdminSupport, merch:loadAdminMerch };
+  (loaders[ADMIN_SUB] || loadAdminState)();
+}
+
+async function loadAdminState(){
+  const wrap = document.getElementById("adminBody");
+  try {
+    const r = await api("admin_state");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    wrap.innerHTML = `
+      <div class="stat-row"><div class="stat-card"><div class="label">Ребус</div><div class="value" style="font-size:14px;">${r.rebusActive?'✅ Активний':'😴 Немає'}</div></div>
+      <div class="stat-card"><div class="label">Турнір</div><div class="value" style="font-size:14px;">${r.tournamentActive?'✅ Активний':'😴 Немає'}</div></div></div>
+      <div class="stat-row" style="margin-top:10px;"><div class="stat-card"><div class="label">Нові звернення</div><div class="value mono">${r.newTickets}</div></div>
+      <div class="stat-card"><div class="label">Нові замовл. мерчу</div><div class="value mono">${r.merchNew}</div></div></div>
+      ${r.rebusText ? `<div class="card" style="margin-top:12px;"><div class="sub">${esc(r.rebusText)}</div></div>` : ""}
+    `;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+
+async function loadAdminRebus(){
+  const wrap = document.getElementById("adminBody");
+  try {
+    const r = await api("admin_state");
+    wrap.innerHTML = `
+      <div class="card">
+        <div class="sub" style="margin-bottom:12px;">${r.rebusActive ? ('Активний: ' + esc(r.rebusText||'')) : 'Немає активного ребусу.'}</div>
+        <div class="btn-row">
+          <button class="btn secondary sm" onclick="adminAction('admin_rebus_publish', null, 'Ребус опубліковано')">📢 Опублікувати</button>
+          <button class="btn sm" onclick="adminAction('admin_rebus_close', null, 'Ребус закрито, призи нараховано')">🔒 Закрити + підсумки</button>
+        </div>
+      </div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
+}
+
+async function loadAdminTournament(){
+  const wrap = document.getElementById("adminBody");
+  const r = await api("admin_state").catch(()=>({ok:false}));
+  wrap.innerHTML = `
+    <div class="card">
+      <div class="sub" style="margin-bottom:12px;">${r.ok && r.tournamentActive ? 'Турнір зараз активний.' : 'Турнір неактивний.'}</div>
+      <div class="btn-row">
+        <button class="btn secondary sm" onclick="adminAction('admin_tournament_start', null, 'Турнір стартував')">🏆 Запустити</button>
+        <button class="btn sm" onclick="adminAction('admin_tournament_close', null, 'Турнір закрито, призи нараховано')">🏁 Закрити</button>
+      </div>
+    </div>
+    <div class="h2">Лідерборд на дату</div>
+    <div class="card">
+      <div class="field-label">Дата й час (напр. 2026-07-03T20:00)</div>
+      <input class="field" type="datetime-local" id="lbCutoff">
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn secondary sm" onclick="adminLeaderboardGet()">👁 Показати</button>
+        <button class="btn danger sm" onclick="adminLeaderboardRollback()">⏪ Відкат (вилучити пізніші)</button>
+      </div>
+      <div class="sub" id="lbResult" style="margin-top:10px; white-space:pre-wrap;"></div>
+    </div>
+  `;
+}
+async function adminLeaderboardGet(){
+  const v = document.getElementById("lbCutoff").value;
+  if (!v) { toast("Вкажіть дату", "err"); return; }
+  const r = await api("admin_leaderboard_get", { cutoffIso: new Date(v).toISOString() });
+  document.getElementById("lbResult").textContent = r.ok ? (r.text || "Немає даних на цю дату") : "Помилка";
+}
+async function adminLeaderboardRollback(){
+  const v = document.getElementById("lbCutoff").value;
+  if (!v) { toast("Вкажіть дату", "err"); return; }
+  if (!confirm("Вилучити всі результати ПІСЛЯ цієї дати? Дію не можна скасувати.")) return;
+  const r = await api("admin_leaderboard_rollback", { cutoffIso: new Date(v).toISOString() });
+  if (r.ok) toast(`Вилучено результатів: ${r.excluded}`, "ok"); else toast("Помилка", "err");
+}
+
+function loadAdminAward(){
+  const wrap = document.getElementById("adminBody");
+  wrap.innerHTML = `
+    <div class="card">
+      <div class="field-label">💰 Нарахування á-coin (LDAP кількість, по рядку)</div>
+      <textarea class="field" id="awardCoins" rows="3" placeholder="AB120996RGN 50\nAB110996RGN -10"></textarea>
+      <button class="btn sm" style="margin-top:8px;" onclick="submitAward('coins')">Нарахувати á-coin</button>
+    </div>
+    <div class="card" style="margin-top:10px;">
+      <div class="field-label">🔮 Нарахування осколків (LDAP кількість, по рядку)</div>
+      <textarea class="field" id="awardShards" rows="3" placeholder="AB120996RGN 20"></textarea>
+      <button class="btn sm" style="margin-top:8px;" onclick="submitAward('shards')">Нарахувати осколки</button>
+    </div>
+    <div class="sub" id="awardResult" style="margin-top:10px; white-space:pre-wrap;"></div>
+  `;
+}
+async function submitAward(kind){
+  const text = document.getElementById(kind==='coins'?'awardCoins':'awardShards').value.trim();
+  if (!text) { toast("Введіть хоча б один рядок", "err"); return; }
+  const r = await api(kind==='coins' ? 'admin_manual_award' : 'admin_manual_award_shards', { text });
+  if (!r.ok) { toast("Помилка", "err"); return; }
+  toast("Готово, перевірте чат", "ok");
+  if (r.results) document.getElementById("awardResult").textContent = r.results.join("\n");
+}
+
+async function loadAdminAdmins(){
+  const wrap = document.getElementById("adminBody");
+  try {
+    const r = await api("admin_admins_list");
+    wrap.innerHTML = `
+      <div class="card">
+        <div class="field-label">Telegram ID нового адміна</div>
+        <input class="field" id="newAdminId" placeholder="707696805">
+        <button class="btn sm" style="margin-top:8px;" onclick="addAdminId()">➕ Додати</button>
+      </div>
+      <div class="list" style="margin-top:10px;">${r.admins.map(a => `
+        <div class="item"><div class="ic">${a.type==='MAIN_ADMIN'?'👑':'🛡'}</div>
+        <div class="txt"><div class="t">${esc(a.ldap||a.id)}</div><div class="s">${esc(a.id)} · ${a.type==='MAIN_ADMIN'?'Головний':'Адмін'}</div></div>
+        <button class="btn danger sm" style="width:auto; padding:7px 10px;" onclick="removeAdminId('${a.id}')">🗑</button></div>
+      `).join("")}</div>
+    `;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
+}
+async function addAdminId(){
+  const tgId = document.getElementById("newAdminId").value.trim();
+  if (!tgId) return;
+  const r = await api("admin_admin_add", { tgId });
+  if (r.ok) { toast("Адміна додано", "ok"); loadAdminAdmins(); } else toast("Помилка", "err");
+}
+async function removeAdminId(tgId){
+  if (!confirm("Видалити адміна " + tgId + "?")) return;
+  const r = await api("admin_admin_remove", { tgId });
+  if (r.ok) { toast("Видалено", "ok"); loadAdminAdmins(); } else toast("Помилка", "err");
+}
+
+async function loadAdminSupport(){
+  const wrap = document.getElementById("adminBody");
+  try {
+    const r = await api("admin_support_list");
+    if (!r.ok || !r.tickets.length) { wrap.innerHTML = emptyBlock("✅","Немає відкритих звернень",""); return; }
+    wrap.innerHTML = `<div class="list">` + r.tickets.map(t => `
+      <div class="item" style="cursor:pointer" onclick="openAdminTicket(${t.row})">
+        <div class="ic">${t.type==='Технічна заявка'?'🐞':'❓'}</div>
+        <div class="txt"><div class="t">№${t.ticketId} · ${esc(t.name)}</div><div class="s">${esc(t.question).slice(0,50)}</div></div>
+        <div class="right badge ${t.takenBy?'':'new'}">${t.takenBy?('в роботі: '+esc(t.takenByName)):'нове'}</div>
+      </div>`).join("") + `</div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
+}
+async function openAdminTicket(row){
+  const r = await api("admin_support_ticket", { row });
+  if (!r.ok) { toast("Помилка", "err"); return; }
+  const t = r.ticket;
+  showModal(`
+    <div class="mh">${t.type==='Технічна заявка'?'🐞':'❓'} Заявка №${t.ticketId}</div>
+    <div class="sub">👤 ${esc(t.name)} · LDAP ${esc(t.ldap||'—')}</div>
+    <div class="sub" style="margin:8px 0;">${esc(t.question)}</div>
+    <textarea class="field" id="ticketReply" rows="3" placeholder="Відповідь..."></textarea>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn secondary sm" onclick="adminTicketClose(${row})">🔒 Закрити без відповіді</button>
+      <button class="btn sm" onclick="adminTicketReply(${row})">✍️ Відповісти</button>
+    </div>
+  `);
+}
+async function adminTicketReply(row){
+  const answer = document.getElementById("ticketReply").value.trim();
+  if (!answer) { toast("Введіть відповідь", "err"); return; }
+  const r = await api("admin_support_reply", { row, answer });
+  if (r.ok) { toast("Відповідь надіслано", "ok"); closeModal(); loadAdminSupport(); } else toast("Помилка", "err");
+}
+async function adminTicketClose(row){
+  const r = await api("admin_support_close", { row });
+  if (r.ok) { toast("Закрито", "ok"); closeModal(); loadAdminSupport(); } else toast("Помилка", "err");
+}
+
+async function loadAdminMerch(){
+  const wrap = document.getElementById("adminBody");
+  try {
+    const r = await api("admin_merch_list", { onlyNew:true });
+    if (!r.ok || !r.orders.length) { wrap.innerHTML = emptyBlock("✅","Нових замовлень немає",""); return; }
+    wrap.innerHTML = `<div class="list">` + r.orders.map(m => `
+      <div class="card">
+        <div style="font-weight:700; font-size:13px;">${esc(m.name)}</div>
+        <div class="sub" style="margin:4px 0;">🎁 ${esc(m.item)}<br>👥 ${esc(m.recipient||m.name)} · ${esc(m.city)} відд.${esc(m.branch)} · 📱 ${esc(m.phone)}</div>
+        <div class="btn-row">
+          <button class="btn secondary sm" onclick="adminMerchAct('accept', ${m.row})">✅ Прийнято</button>
+          <button class="btn secondary sm" onclick="adminMerchAct('sent', ${m.row})">📬 Відправлено</button>
+          <button class="btn danger sm" onclick="adminMerchAct('cancel', ${m.row})">❌</button>
+        </div>
+      </div>`).join("") + `</div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
+}
+async function adminMerchAct(kind, row){
+  const action = { accept:"admin_merch_accept", sent:"admin_merch_sent", cancel:"admin_merch_cancel" }[kind];
+  const r = await api(action, { row });
+  if (r.ok) { toast("Готово", "ok"); loadAdminMerch(); } else toast("Помилка", "err");
+}
+
+async function adminAction(action, payload, okMsg){
+  try {
+    const r = await api(action, payload || {});
+    if (!r.ok) { toast("Помилка", "err"); return; }
+    toast(okMsg || "Готово", "ok");
+    renderAdmin();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+// ============================================================
+// СТАРТ
+// ============================================================
+boot();
+</script>
+</body>
+</html>
