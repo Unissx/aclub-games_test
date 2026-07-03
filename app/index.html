@@ -209,11 +209,12 @@ let DASH = null;
 let TAB = "home";
 let SHOP_SUB = "abank";
 const TABS = [
-  { id:"home",    ic:"🏠", lb:"Головна" },
-  { id:"games",   ic:"🎮", lb:"Ігри" },
-  { id:"shop",    ic:"🏪", lb:"Магазин" },
-  { id:"chests",  ic:"📦", lb:"Кейси" },
-  { id:"support", ic:"🆘", lb:"Підтримка" },
+  { id:"home",      ic:"🏠", lb:"Головна" },
+  { id:"games",     ic:"🎮", lb:"Ігри" },
+  { id:"shop",      ic:"🏪", lb:"Магазин" },
+  { id:"chests",    ic:"📦", lb:"Кейси" },
+  { id:"inventory", ic:"🎒", lb:"Інвентар" },
+  { id:"support",   ic:"🆘", lb:"Підтримка" },
 ];
 
 function renderNav(){
@@ -269,6 +270,7 @@ function render(){
   if (TAB === "games") return renderGames();
   if (TAB === "shop") return renderShop();
   if (TAB === "chests") return renderChests();
+  if (TAB === "inventory") return renderInventory();
   if (TAB === "support") return renderSupport();
   if (TAB === "admin") return renderAdmin();
 }
@@ -281,9 +283,15 @@ function renderHome(){
   const streak = db.streak || 0;
   const daysTo7 = streak >= 7 ? 0 : 7 - streak;
   const vip = DASH.vip || {};
+  const badges = [];
+  if (DASH.isMainAdmin) badges.push('<span class="badge" style="background:linear-gradient(155deg,#F2A93B,#B15EF0); color:#1a0f2e; font-weight:800;">⭐ ГОЛОВНИЙ АДМІН</span>');
+  else if (DASH.isAdmin) badges.push('<span class="badge" style="background:var(--epic); color:#fff; font-weight:800;">🛡 АДМІН</span>');
+  if (DASH.isMerchAdmin) badges.push('<span class="badge" style="background:var(--rare); color:#fff; font-weight:800;">📦 МЕРЧ-АДМІН</span>');
+  if (vip.active) badges.push('<span class="badge ok" style="font-weight:800;">👑 VIP</span>');
   const screen = document.getElementById("screen");
   screen.innerHTML = `
-    <div class="h1" style="display:flex; align-items:center; gap:8px;">👋 Привіт, ${esc(DASH.name)}!${vip.active ? '<span class="badge ok">👑 VIP</span>' : ''}</div>
+    <div class="h1">👋 Привіт, ${esc(DASH.name)}!</div>
+    ${badges.length ? `<div class="row" style="flex-wrap:wrap; gap:6px; margin:-6px 2px 12px;">${badges.join("")}</div>` : ""}
     <div class="stat-row">
       <div class="stat-card coin"><div class="label">Баланс</div><div class="value mono">${fmt(DASH.balance)} 🪙</div></div>
       <div class="stat-card shard"><div class="label">Осколки</div><div class="value mono">${fmt(DASH.shards)} 🔮</div></div>
@@ -310,7 +318,11 @@ function renderHome(){
         <div class="right">→</div>
       </div>
       <div class="item" data-nav="chests" style="cursor:pointer">
-        <div class="ic">🔮</div><div class="txt"><div class="t">Кейси та осколки</div><div class="s">Крафт, заряди, ефекти</div></div>
+        <div class="ic">📦</div><div class="txt"><div class="t">Кейси</div><div class="s">Купити кейс, крафт з осколків</div></div>
+        <div class="right">→</div>
+      </div>
+      <div class="item" data-nav="inventory" style="cursor:pointer">
+        <div class="ic">🎒</div><div class="txt"><div class="t">Інвентар</div><div class="s">VIP, заряди, предмети з кейсів</div></div>
         <div class="right">→</div>
       </div>
     </div>
@@ -438,6 +450,7 @@ async function selfUseItem(row){
     closeModal();
     if (document.getElementById("myItemsWrap")) loadMyItems();
     if (TAB === "chests") renderChests();
+    if (TAB === "inventory") renderInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 
@@ -769,21 +782,19 @@ let CHEST_ITEMS_STATE = [];
 
 async function renderChests(){
   const screen = document.getElementById("screen");
-  screen.innerHTML = `<div class="h1">📦 Кейси та осколки</div><div id="chestsBody">${loadingBlock()}</div>`;
+  screen.innerHTML = `<div class="h1">📦 Кейси</div><div id="chestsBody">${loadingBlock()}</div>`;
   try {
-    const [r, myItems] = await Promise.all([apiRaw("get_inventory"), api("my_items")]);
+    const r = await apiRaw("get_inventory");
     if (!r.ok) { document.getElementById("chestsBody").innerHTML = emptyBlock("⚠️","Помилка",""); return; }
     CHESTS_STATE = r;
-    CHEST_ITEMS_STATE = (myItems.ok ? myItems.items : []).filter(it => !it.isMerch && /^Кейс:|^Крафт:/.test(it.name||""));
     paintChests();
   } catch(e) { document.getElementById("chestsBody").innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
 }
 function paintChests(){
   const r = CHESTS_STATE;
   const wrap = document.getElementById("chestsBody");
-  const eff = r.effects || {};
-  const vip = (DASH && DASH.vip) || { active:false, until:null, bankedHours: eff.vipBankedHours||0 };
   wrap.innerHTML = `
+    <div class="sub" style="margin:-6px 2px 12px;">Купуйте кейси за á-coin — все, що випаде, з'явиться у вкладці «Інвентар».</div>
     <div class="h2">Кейси</div>
     <div class="list">${(r.chests||[]).map(c => {
       const meta = CHEST_META[c.id] || {icon:"🎁"};
@@ -795,6 +806,34 @@ function paintChests(){
       </div>`;
     }).join("")}</div>
 
+    <div class="h2">Крафт з осколків <span class="hint">🔮 ${fmt(r.shards)}</span></div>
+    <div class="btn-row" style="flex-wrap:wrap;">
+      ${(r.craftRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${r.shards<rc.cost?'disabled':''} onclick="craftItem('${rc.id}')">${esc(rc.name)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
+    </div>
+  `;
+  wrap.querySelectorAll("[data-chest]").forEach(el => el.addEventListener("click", () => openChestSheet(el.getAttribute("data-chest"))));
+}
+
+// ============================================================
+// ІНВЕНТАР — усе, що випало (заряди, VIP-години, предмети)
+// ============================================================
+async function renderInventory(){
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `<div class="h1">🎒 Інвентар</div><div id="invBody">${loadingBlock()}</div>`;
+  try {
+    const [r, myItems] = await Promise.all([apiRaw("get_inventory"), api("my_items")]);
+    if (!r.ok) { document.getElementById("invBody").innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    CHESTS_STATE = r;
+    CHEST_ITEMS_STATE = (myItems.ok ? myItems.items : []).filter(it => !it.isMerch && /^Кейс:|^Крафт:/.test(it.name||""));
+    paintInventory();
+  } catch(e) { document.getElementById("invBody").innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+function paintInventory(){
+  const r = CHESTS_STATE;
+  const wrap = document.getElementById("invBody");
+  const eff = r.effects || {};
+  const vip = (DASH && DASH.vip) || { active:false, until:null, bankedHours: eff.vipBankedHours||0 };
+  wrap.innerHTML = `
     <div class="h2">👑 VIP-статус</div>
     <div class="card">
       <div class="row between">
@@ -806,7 +845,7 @@ function paintChests(){
         <div class="btn-row">
           <input class="field" id="vipHoursInput" type="number" min="1" max="${vip.bankedHours}" value="${Math.min(vip.bankedHours,24)}" style="flex:1;">
           <button class="btn sm" style="flex:1;" onclick="activateVipHours()">👑 Активувати</button>
-        </div>` : `<div class="sub">Відкривайте кейс «Абсолют», щоб накопичити години.</div>`}
+        </div>` : `<div class="sub">Відкривайте кейс «Абсолют» у «Кейсах», щоб накопичити години.</div>`}
       <div class="sub" style="margin-top:8px; font-size:11px;">VIP дає: максимальну прокачку в іграх, пріоритет у підтримці, безкоштовну підказку в ребусі, зміну відповіді в ребусі, +1 спробу в «Щасливчику».</div>
     </div>
 
@@ -818,15 +857,9 @@ function paintChests(){
       <div class="item"><div class="ic">⚡️</div><div class="txt"><div class="t">x3 щоденний бонус</div><div class="s">${eff.x3Active?('Діє до '+fmtDate(eff.x3Until)):'Не активний'}</div></div><div class="right">${eff.x3Active?'<span class="badge ok">АКТИВНО</span>':'<span class="mono">0</span>'}</div></div>
     </div>
 
-    <div class="h2">Крафт з осколків <span class="hint">🔮 ${fmt(r.shards)}</span></div>
-    <div class="btn-row" style="flex-wrap:wrap;">
-      ${(r.craftRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${r.shards<rc.cost?'disabled':''} onclick="craftItem('${rc.id}')">${esc(rc.name)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
-    </div>
-
     <div class="h2">Предмети з кейсів <span class="hint">тапніть, щоб використати</span></div>
     <div class="list" id="chestItemsList">${chestItemsListHtml()}</div>
   `;
-  wrap.querySelectorAll("[data-chest]").forEach(el => el.addEventListener("click", () => openChestSheet(el.getAttribute("data-chest"))));
   wrap.querySelectorAll("[data-chest-item]").forEach(el => {
     const row = parseInt(el.getAttribute("data-chest-item"));
     el.addEventListener("click", () => openItemDetail(row, false, CHEST_ITEMS_STATE.find(x => x.row === row)));
@@ -852,7 +885,7 @@ async function activateVipHours(){
     if (!r.ok) { toast(r.error === "insufficient_hours" ? "Недостатньо годин у банку" : "Помилка", "err"); return; }
     toast("VIP активовано! 👑", "ok");
     await refreshDashboard();
-    renderChests();
+    renderInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 function fmtDate(iso){
@@ -1084,17 +1117,26 @@ async function submitAward(kind){
 
 async function loadAdminAdmins(){
   const wrap = document.getElementById("adminBody");
+  if (!DASH.isMainAdmin) {
+    wrap.innerHTML = emptyBlock("🔒","Доступно лише Головному адміну","Керувати списком адмінів може тільки Головний адмін.");
+    return;
+  }
   try {
     const r = await api("admin_admins_list");
     wrap.innerHTML = `
       <div class="card">
-        <div class="field-label">Telegram ID нового адміна</div>
+        <div class="field-label">Telegram ID</div>
         <input class="field" id="newAdminId" placeholder="707696805">
-        <button class="btn sm" style="margin-top:8px;" onclick="addAdminId()">➕ Додати</button>
+        <div class="field-label">Роль</div>
+        <select class="field" id="newAdminType">
+          <option value="ADMIN">🛡 Адмін</option>
+          <option value="MAIN_ADMIN">⭐ Головний адмін</option>
+        </select>
+        <button class="btn sm" style="margin-top:8px;" onclick="addAdminId()">➕ Надати права</button>
       </div>
       <div class="list" style="margin-top:10px;">${r.admins.map(a => `
-        <div class="item"><div class="ic">${a.type==='MAIN_ADMIN'?'👑':'🛡'}</div>
-        <div class="txt"><div class="t">${esc(a.ldap||a.id)}</div><div class="s">${esc(a.id)} · ${a.type==='MAIN_ADMIN'?'Головний':'Адмін'}</div></div>
+        <div class="item"><div class="ic">${a.type==='MAIN_ADMIN'?'⭐':'🛡'}</div>
+        <div class="txt"><div class="t">${esc(a.ldap||a.id)}</div><div class="s">${esc(a.id)} · ${a.type==='MAIN_ADMIN'?'Головний адмін':'Адмін'}</div></div>
         <button class="btn danger sm" style="width:auto; padding:7px 10px;" onclick="removeAdminId('${a.id}')">🗑</button></div>
       `).join("")}</div>
     `;
@@ -1102,14 +1144,16 @@ async function loadAdminAdmins(){
 }
 async function addAdminId(){
   const tgId = document.getElementById("newAdminId").value.trim();
+  const type = document.getElementById("newAdminType").value;
   if (!tgId) return;
-  const r = await api("admin_admin_add", { tgId });
-  if (r.ok) { toast("Адміна додано", "ok"); loadAdminAdmins(); } else toast("Помилка", "err");
+  const r = await api("admin_admin_add", { tgId, type });
+  if (r.ok) { toast("Права надано", "ok"); loadAdminAdmins(); } else toast(r.error === "forbidden_not_main_admin" ? "Лише Головний адмін може це робити" : "Помилка", "err");
 }
 async function removeAdminId(tgId){
-  if (!confirm("Видалити адміна " + tgId + "?")) return;
+  if (!confirm("Забрати права адміна в " + tgId + "?")) return;
   const r = await api("admin_admin_remove", { tgId });
-  if (r.ok) { toast("Видалено", "ok"); loadAdminAdmins(); } else toast("Помилка", "err");
+  if (r.ok) { toast("Права забрано", "ok"); loadAdminAdmins(); }
+  else toast(r.error === "last_main_admin" ? "Не можна видалити останнього Головного адміна" : "Помилка", "err");
 }
 
 async function loadAdminSupport(){
