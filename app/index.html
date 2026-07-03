@@ -403,12 +403,9 @@ async function openHistoryModal(){
 // ============================================================
 // МОЇ ТОВАРИ (модалка, доступна з Головної та Магазину)
 // ============================================================
-async function openMyItemsModal(){
-  showModal(`<div class="mh">🎁 Мої товари</div><div id="myItemsWrap">${loadingBlock()}</div>`);
-  await loadMyItems();
-}
-async function loadMyItems(){
-  const wrap = document.getElementById("myItemsWrap");
+async function loadMyItems(containerId){
+  containerId = containerId || "myItemsWrap";
+  const wrap = document.getElementById(containerId);
   if (!wrap) return;
   try {
     const r = await api("my_items");
@@ -464,7 +461,8 @@ async function selfUseItem(row){
     if (!r.ok) { toast(r.error === "already_used" ? "Вже використано" : "Помилка", "err"); return; }
     toast("Використано! ✅", "ok");
     closeModal();
-    if (document.getElementById("myItemsWrap")) loadMyItems();
+    if (document.getElementById("myItemsWrap")) loadMyItems("myItemsWrap");
+    else if (TAB === "shop" && SHOP_SUB === "items") loadMyItems("shopBody");
     if (TAB === "inventory") renderInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
@@ -707,17 +705,38 @@ function renderShop(){
   const screen = document.getElementById("screen");
   screen.innerHTML = `
     <div class="h1">🏪 Магазин</div>
-    <div class="tabs2">
-      <div class="t2 ${SHOP_SUB==='abank'?'active':''}" data-sub="abank">🎁 áBank Shop</div>
-      <div class="t2 ${SHOP_SUB==='runner'?'active':''}" data-sub="runner">🏃 Runner</div>
-      <div class="t2 ${SHOP_SUB==='wordle'?'active':''}" data-sub="wordle">🔤 Wordle</div>
+    <div class="tabs2" style="flex-wrap:wrap; gap:4px;">
+      <div class="t2" style="flex:1 1 30%;" data-sub="abank">🎁 áBank</div>
+      <div class="t2" style="flex:1 1 30%;" data-sub="chests">📦 Кейси</div>
+      <div class="t2" style="flex:1 1 30%;" data-sub="runner">🏃 Runner</div>
+      <div class="t2" style="flex:1 1 30%;" data-sub="wordle">🔤 Wordle</div>
+      <div class="t2" style="flex:1 1 30%;" data-sub="items">🎽 Мої товари</div>
     </div>
     <div id="shopBody">${loadingBlock()}</div>
   `;
-  screen.querySelectorAll("[data-sub]").forEach(el => el.addEventListener("click", () => { SHOP_SUB = el.getAttribute("data-sub"); renderShop(); }));
+  screen.querySelectorAll("[data-sub]").forEach(el => {
+    if (el.getAttribute("data-sub") === SHOP_SUB) el.classList.add("active");
+    el.addEventListener("click", () => { SHOP_SUB = el.getAttribute("data-sub"); renderShop(); });
+  });
   if (SHOP_SUB === "abank") loadShopAbank();
+  else if (SHOP_SUB === "chests") loadShopChests();
   else if (SHOP_SUB === "runner") loadUpgrades("runner");
-  else loadUpgrades("wordle");
+  else if (SHOP_SUB === "wordle") loadUpgrades("wordle");
+  else loadMyItems("shopBody");
+}
+
+// ── Кейси (покупка — потрапляє у слот в «Інвентарі») ──
+async function loadShopChests(){
+  const wrap = document.getElementById("shopBody");
+  try {
+    const [r, slotsRes] = await Promise.all([apiRaw("get_inventory"), api("chest_slots_get")]);
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    CHESTS_STATE = r;
+    CHEST_SLOTS_STATE = slotsRes.ok ? slotsRes.slots : [];
+    wrap.innerHTML = `<div class="sub" style="margin:-2px 2px 10px;">Куплений кейс потрапляє у слот в «Інвентарі» — там же його розблоковуєте.</div>
+      <div class="list" id="buyChestList">${buyChestListHtml()}</div>`;
+    wrap.querySelectorAll("[data-buy-chest]").forEach(el => el.addEventListener("click", () => openBuyChestSheet(el.getAttribute("data-buy-chest"))));
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
 }
 
 let SHOP_CACHE = {};
@@ -840,6 +859,7 @@ async function loadInventoryData(){
 }
 function paintInventory(){
   const wrap = document.getElementById("invBody");
+  if (!wrap) return;
   if (!CHESTS_STATE) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); return; }
   const eff = CHESTS_STATE.effects || {};
   const vip = (DASH && DASH.vip) || { active:false, until:null, bankedHours: eff.vipBankedHours||0 };
@@ -857,11 +877,8 @@ function paintInventory(){
     </div>
 
     <div class="h2">📦 Кейси-слоти <span class="hint">${CHEST_SLOTS_STATE.length}/${CHEST_SLOTS_MAX_CLIENT}</span></div>
-    <div class="sub" style="margin:-6px 2px 10px;">Розблоковується лише 1 кейс одночасно. Безкоштовні кейси падають з ігор (Runner — кожні 1000 очок, інші — за перемогу).</div>
+    <div class="sub" style="margin:-6px 2px 10px;">Розблоковується лише 1 кейс одночасно. Безкоштовні кейси падають з ігор (Runner — кожні 1000 очок, інші — за перемогу). Купити ще — вкладка «Магазин» → «Кейси».</div>
     <div id="chestSlotsGrid">${slotsSectionHtml()}</div>
-
-    <div class="h2">Купити кейс</div>
-    <div class="list" id="buyChestList">${buyChestListHtml()}</div>
 
     <div class="h2">Заряди</div>
     <div class="list">
@@ -876,14 +893,10 @@ function paintInventory(){
       ${(CHESTS_STATE.craftRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${CHESTS_STATE.shards<rc.cost?'disabled':''} onclick="craftItem('${rc.id}')">${esc(rc.name)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
     </div>
 
-    <div class="h2">Мої товари</div>
-    <button class="btn secondary" onclick="openMyItemsModal()">🎁 Товари з магазину та мерч</button>
-
     <div class="h2">Предмети з кейсів <span class="hint">тапніть, щоб використати</span></div>
     <div class="list" id="chestItemsList">${chestItemsListHtml()}</div>
   `;
   wrap.querySelectorAll("[data-chest-group]").forEach(el => el.addEventListener("click", () => openItemGroup(el.getAttribute("data-chest-group"))));
-  wrap.querySelectorAll("[data-buy-chest]").forEach(el => el.addEventListener("click", () => openBuyChestSheet(el.getAttribute("data-buy-chest"))));
   startSlotTicker();
 }
 
@@ -1030,7 +1043,8 @@ async function buyChest(chestId){
     if (!r.ok) { toast(r.error === "inventory_full" ? "Інвентар кейсів заповнений" : (r.error==="insufficient_funds" ? "Недостатньо á-coin" : "Помилка"), "err"); return; }
     toast("Кейс додано в інвентар! 📦", "ok");
     closeModal();
-    await refreshDashboard(); await loadInventoryData(); paintInventory();
+    await refreshDashboard();
+    await loadShopChests();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 
