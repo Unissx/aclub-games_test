@@ -128,8 +128,9 @@ textarea::placeholder, input.field::placeholder{color:var(--text-faint);}
 .game-card .gd{font-size:12px; color:var(--text-dim); margin-bottom:10px;}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://telegram.org">
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -157,7 +158,7 @@ const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzH8qt2_fUmnrLEw0Z56
 const GAME_SECRET = "aclub2026runnertest";
 const RUNNER_URL = "https://unissx.github.io/aclub-games_test/runner/?v=1";
 const WORDLE_URL = "https://unissx.github.io/aclub-games_test/wordle/?v=13";
-const CIRCLE_URL = "https://unissx.github.io/aclub-games_test/wordle_circle/?v=3";
+const CIRCLE_URL = "https://unissx.github.io/aclub-games_test/circle/?v=4";
 
 const tg = window.Telegram && window.Telegram.WebApp;
 if (tg) { try { tg.ready(); tg.expand(); tg.setHeaderColor("#0A0C14"); tg.setBackgroundColor("#0A0C14"); } catch(e){} }
@@ -719,21 +720,30 @@ function renderShop(){
   else loadUpgrades("wordle");
 }
 
+let SHOP_CACHE = {};
+
 async function loadShopAbank(){
-  const wrap = document.getElementById("shopBody");
+  const cached = SHOP_CACHE.abank;
+  if (cached) paintShopAbank(cached);
   try {
     const r = await api("shop_list");
-    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
-    wrap.innerHTML = `<div class="list">` + r.items.map(it => `
-      <div class="card">
-        <div class="row between"><div style="font-weight:700; font-size:13.5px;">${it.type==='merch'?'📦':'🎁'} ${esc(it.name)}</div>
-        <div class="mono" style="color:var(--brass-bright); font-weight:700;">${it.price} 🪙</div></div>
-        <div class="sub" style="margin:6px 0 10px;">${esc(it.desc)}</div>
-        <button class="btn sm" ${r.balance < it.price ? 'disabled' : ''} onclick="buyShopItem('${it.id}', ${it.price})">
-          ${r.balance < it.price ? 'Недостатньо á-coin' : 'Купити'}
-        </button>
-      </div>`).join("") + `</div>`;
-  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+    if (!r.ok) { if (!cached) document.getElementById("shopBody").innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    SHOP_CACHE.abank = r;
+    paintShopAbank(r);
+  } catch(e) { if (!cached) document.getElementById("shopBody").innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+function paintShopAbank(r){
+  const wrap = document.getElementById("shopBody");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="list">` + r.items.map(it => `
+    <div class="card">
+      <div class="row between"><div style="font-weight:700; font-size:13.5px;">${it.type==='merch'?'📦':'🎁'} ${esc(it.name)}</div>
+      <div class="mono" style="color:var(--brass-bright); font-weight:700;">${it.price} 🪙</div></div>
+      <div class="sub" style="margin:6px 0 10px;">${esc(it.desc)}</div>
+      <button class="btn sm" ${r.balance < it.price ? 'disabled' : ''} onclick="buyShopItem('${it.id}', ${it.price})">
+        ${r.balance < it.price ? 'Недостатньо á-coin' : 'Купити'}
+      </button>
+    </div>`).join("") + `</div>`;
 }
 async function buyShopItem(id, price){
   if (!confirm(`Придбати за ${price} á-coin?`)) return;
@@ -741,39 +751,48 @@ async function buyShopItem(id, price){
     const r = await api("shop_buy", { itemId:id });
     if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
     toast("Придбано! Перевірте «Мої товари»", "ok");
+    SHOP_CACHE.abank = null;
     await refreshDashboard(); loadShopAbank();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 
 async function loadUpgrades(kind){
-  const wrap = document.getElementById("shopBody");
+  const cached = SHOP_CACHE[kind];
+  if (cached) paintUpgrades(kind, cached);
   try {
     const r = await api(kind === "runner" ? "upgrades_runner_get" : "upgrades_wordle_get");
-    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
-    const entries = Object.entries(r.upgrades);
-    wrap.innerHTML = `<div class="list">` + entries.map(([key, upg]) => {
-      const maxLevel = upg.maxLevel || 5;
-      const cur = r.current[key] || 0;
-      const maxed = cur >= maxLevel;
-      const price = !maxed ? upg.prices[cur] : 0;
-      const effect = cur > 0 ? upg.effects[cur-1] : (key==='lives' ? "1 життя (базово)" : "не куплено");
-      return `<div class="card">
-        <div class="row between"><div style="font-weight:700; font-size:13.5px;">${esc(upg.name)}</div><div class="badge">${cur}/${maxLevel}</div></div>
-        <div class="sub" style="margin:6px 0;">${esc(upg.desc)}</div>
-        <div class="progress" style="margin-bottom:8px;"><div style="width:${cur/maxLevel*100}%"></div></div>
-        <div class="sub" style="margin:0 0 10px;">Зараз: ${esc(effect)}${!maxed?` · Далі: ${esc(upg.effects[cur])} — ${price} 🪙`:''}</div>
-        <button class="btn sm" ${maxed || r.balance < price ? 'disabled' : ''} onclick="buyUpgrade('${kind}','${key}')">
-          ${maxed ? '✅ Максимум' : (r.balance < price ? 'Недостатньо á-coin' : `Купити рів. ${cur+1} — ${price} 🪙`)}
-        </button>
-      </div>`;
-    }).join("") + `</div>`;
-  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+    if (!r.ok) { if (!cached) document.getElementById("shopBody").innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    SHOP_CACHE[kind] = r;
+    paintUpgrades(kind, r);
+  } catch(e) { if (!cached) document.getElementById("shopBody").innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+function paintUpgrades(kind, r){
+  const wrap = document.getElementById("shopBody");
+  if (!wrap) return;
+  const entries = Object.entries(r.upgrades);
+  wrap.innerHTML = `<div class="list">` + entries.map(([key, upg]) => {
+    const maxLevel = upg.maxLevel || 5;
+    const cur = r.current[key] || 0;
+    const maxed = cur >= maxLevel;
+    const price = !maxed ? upg.prices[cur] : 0;
+    const effect = cur > 0 ? upg.effects[cur-1] : (key==='lives' ? "1 життя (базово)" : "не куплено");
+    return `<div class="card">
+      <div class="row between"><div style="font-weight:700; font-size:13.5px;">${esc(upg.name)}</div><div class="badge">${cur}/${maxLevel}</div></div>
+      <div class="sub" style="margin:6px 0;">${esc(upg.desc)}</div>
+      <div class="progress" style="margin-bottom:8px;"><div style="width:${cur/maxLevel*100}%"></div></div>
+      <div class="sub" style="margin:0 0 10px;">Зараз: ${esc(effect)}${!maxed?` · Далі: ${esc(upg.effects[cur])} — ${price} 🪙`:''}</div>
+      <button class="btn sm" ${maxed || r.balance < price ? 'disabled' : ''} onclick="buyUpgrade('${kind}','${key}')">
+        ${maxed ? '✅ Максимум' : (r.balance < price ? 'Недостатньо á-coin' : `Купити рів. ${cur+1} — ${price} 🪙`)}
+      </button>
+    </div>`;
+  }).join("") + `</div>`;
 }
 async function buyUpgrade(kind, key){
   try {
     const r = await api(kind === "runner" ? "upgrades_runner_buy" : "upgrades_wordle_buy", { key });
     if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
     toast("Апгрейд придбано!", "ok");
+    SHOP_CACHE[kind] = null;
     await refreshDashboard(); loadUpgrades(kind);
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
@@ -803,8 +822,13 @@ const CHEST_SLOTS_MAX_CLIENT = 4;
 async function renderInventory(){
   const screen = document.getElementById("screen");
   screen.innerHTML = `<div class="h1">🎒 Інвентар</div><div id="invBody">${loadingBlock()}</div>`;
-  await loadInventoryData();
-  paintInventory();
+  if (CHESTS_STATE) {
+    paintInventory();               // миттєво з кешу
+    loadInventoryData().then(paintInventory); // тихе оновлення у фоні
+  } else {
+    await loadInventoryData();
+    paintInventory();
+  }
 }
 async function loadInventoryData(){
   try {
