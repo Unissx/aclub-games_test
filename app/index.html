@@ -212,7 +212,6 @@ const TABS = [
   { id:"home",      ic:"🏠", lb:"Головна" },
   { id:"games",     ic:"🎮", lb:"Ігри" },
   { id:"shop",      ic:"🏪", lb:"Магазин" },
-  { id:"chests",    ic:"📦", lb:"Кейси" },
   { id:"inventory", ic:"🎒", lb:"Інвентар" },
   { id:"support",   ic:"🆘", lb:"Підтримка" },
 ];
@@ -269,7 +268,6 @@ function render(){
   if (TAB === "home") return renderHome();
   if (TAB === "games") return renderGames();
   if (TAB === "shop") return renderShop();
-  if (TAB === "chests") return renderChests();
   if (TAB === "inventory") return renderInventory();
   if (TAB === "support") return renderSupport();
   if (TAB === "admin") return renderAdmin();
@@ -313,16 +311,8 @@ function renderHome(){
         <div class="ic">🎮</div><div class="txt"><div class="t">Заробити á-coin</div><div class="s">Ребус, Щасливчик, Runner, Wordle</div></div>
         <div class="right">→</div>
       </div>
-      <div class="item" id="goMyItems" style="cursor:pointer">
-        <div class="ic">🎁</div><div class="txt"><div class="t">Мої товари</div><div class="s">Куплені товари та мерч</div></div>
-        <div class="right">→</div>
-      </div>
-      <div class="item" data-nav="chests" style="cursor:pointer">
-        <div class="ic">📦</div><div class="txt"><div class="t">Кейси</div><div class="s">Купити кейс, крафт з осколків</div></div>
-        <div class="right">→</div>
-      </div>
       <div class="item" data-nav="inventory" style="cursor:pointer">
-        <div class="ic">🎒</div><div class="txt"><div class="t">Інвентар</div><div class="s">VIP, заряди, предмети з кейсів</div></div>
+        <div class="ic">🎒</div><div class="txt"><div class="t">Інвентар</div><div class="s">Кейси, VIP, заряди, товари, мерч</div></div>
         <div class="right">→</div>
       </div>
     </div>
@@ -331,7 +321,6 @@ function renderHome(){
     <div class="list" id="historyPreview">${loadingBlock()}</div>
   `;
   screen.querySelectorAll("[data-nav]").forEach(el => el.addEventListener("click", () => nav(el.getAttribute("data-nav"))));
-  document.getElementById("goMyItems").addEventListener("click", () => openMyItemsModal());
   document.getElementById("goHistory").addEventListener("click", () => openHistoryModal());
   document.getElementById("btnDaily").addEventListener("click", claimDaily);
   loadHistoryPreview();
@@ -449,7 +438,6 @@ async function selfUseItem(row){
     toast("Використано! ✅", "ok");
     closeModal();
     if (document.getElementById("myItemsWrap")) loadMyItems();
-    if (TAB === "chests") renderChests();
     if (TAB === "inventory") renderInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
@@ -765,73 +753,45 @@ async function buyUpgrade(kind, key){
 }
 
 // ============================================================
-// КЕЙСИ / ОСКОЛКИ
+// ІНВЕНТАР — кейси-слоти (реальний таймер), VIP, заряди,
+// товари з магазину/мерч, предмети з кейсів. Усе в одному місці.
 // ============================================================
 const CHEST_META = {
   avangard:{icon:"💰"}, singularity:{icon:"⚡️"}, ultimatum:{icon:"🏃"},
-  requiem:{icon:"🌒"}, collapse:{icon:"🔤"}, absolut:{icon:"👑"}
+  requiem:{icon:"🌒"}, collapse:{icon:"🔤"}, absolut:{icon:"👑"},
+  silver:{icon:"🥈"}, gold:{icon:"🥇"}, epic:{icon:"💜"}, legendary:{icon:"🧡"}
 };
 function dropLabel(d){
   if (d.label) return d.label;
   if (d.type === "coins") return d.amount + " á-coin";
   if (d.type === "shard") return d.amount + " осколок";
+  if (d.type === "vipHours") return d.amount + " год. VIP (у банк)";
   return d.type;
 }
 let CHESTS_STATE = null;
 let CHEST_ITEMS_STATE = [];
+let CHEST_SLOTS_STATE = [];
+let SLOT_TICK_TIMER = null;
+const CHEST_SLOTS_MAX_CLIENT = 4;
 
-async function renderChests(){
-  const screen = document.getElementById("screen");
-  screen.innerHTML = `<div class="h1">📦 Кейси</div><div id="chestsBody">${loadingBlock()}</div>`;
-  try {
-    const r = await apiRaw("get_inventory");
-    if (!r.ok) { document.getElementById("chestsBody").innerHTML = emptyBlock("⚠️","Помилка",""); return; }
-    CHESTS_STATE = r;
-    paintChests();
-  } catch(e) { document.getElementById("chestsBody").innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
-}
-function paintChests(){
-  const r = CHESTS_STATE;
-  const wrap = document.getElementById("chestsBody");
-  wrap.innerHTML = `
-    <div class="sub" style="margin:-6px 2px 12px;">Купуйте кейси за á-coin — все, що випаде, з'явиться у вкладці «Інвентар».</div>
-    <div class="h2">Кейси</div>
-    <div class="list">${(r.chests||[]).map(c => {
-      const meta = CHEST_META[c.id] || {icon:"🎁"};
-      const locked = r.balance < c.cost;
-      return `<div class="item" data-chest="${c.id}" style="cursor:pointer">
-        <div class="ic">${meta.icon}</div>
-        <div class="txt"><div class="t">${esc(c.name)}</div><div class="s">${esc(c.desc)}</div></div>
-        <div class="right mono" style="color:${locked?'var(--text-faint)':'var(--brass-bright)'}; font-weight:700;">${c.cost} 🪙</div>
-      </div>`;
-    }).join("")}</div>
-
-    <div class="h2">Крафт з осколків <span class="hint">🔮 ${fmt(r.shards)}</span></div>
-    <div class="btn-row" style="flex-wrap:wrap;">
-      ${(r.craftRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${r.shards<rc.cost?'disabled':''} onclick="craftItem('${rc.id}')">${esc(rc.name)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
-    </div>
-  `;
-  wrap.querySelectorAll("[data-chest]").forEach(el => el.addEventListener("click", () => openChestSheet(el.getAttribute("data-chest"))));
-}
-
-// ============================================================
-// ІНВЕНТАР — усе, що випало (заряди, VIP-години, предмети)
-// ============================================================
 async function renderInventory(){
   const screen = document.getElementById("screen");
   screen.innerHTML = `<div class="h1">🎒 Інвентар</div><div id="invBody">${loadingBlock()}</div>`;
+  await loadInventoryData();
+  paintInventory();
+}
+async function loadInventoryData(){
   try {
-    const [r, myItems] = await Promise.all([apiRaw("get_inventory"), api("my_items")]);
-    if (!r.ok) { document.getElementById("invBody").innerHTML = emptyBlock("⚠️","Помилка",""); return; }
-    CHESTS_STATE = r;
+    const [r, myItems, slotsRes] = await Promise.all([apiRaw("get_inventory"), api("my_items"), api("chest_slots_get")]);
+    CHESTS_STATE = r.ok ? r : null;
     CHEST_ITEMS_STATE = (myItems.ok ? myItems.items : []).filter(it => !it.isMerch && /^Кейс:|^Крафт:/.test(it.name||""));
-    paintInventory();
-  } catch(e) { document.getElementById("invBody").innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+    CHEST_SLOTS_STATE = slotsRes.ok ? slotsRes.slots : [];
+  } catch(e) { CHESTS_STATE = null; }
 }
 function paintInventory(){
-  const r = CHESTS_STATE;
   const wrap = document.getElementById("invBody");
-  const eff = r.effects || {};
+  if (!CHESTS_STATE) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); return; }
+  const eff = CHESTS_STATE.effects || {};
   const vip = (DASH && DASH.vip) || { active:false, until:null, bankedHours: eff.vipBankedHours||0 };
   wrap.innerHTML = `
     <div class="h2">👑 VIP-статус</div>
@@ -840,14 +800,18 @@ function paintInventory(){
         <div style="font-weight:700; font-size:13.5px;">${vip.active ? '✅ VIP активний' : '😴 VIP не активний'}</div>
         <div class="badge ${vip.active?'ok':''}">${vip.active ? ('до '+fmtDate(vip.until)) : 'немає'}</div>
       </div>
-      <div class="sub" style="margin:8px 0;">У банку: <b>${vip.bankedHours} год.</b> (випадають з кейсу «Абсолют»)</div>
+      <div class="sub" style="margin:8px 0;">У банку: <b>${vip.bankedHours} год.</b></div>
       ${vip.bankedHours > 0 ? `
-        <div class="btn-row">
-          <input class="field" id="vipHoursInput" type="number" min="1" max="${vip.bankedHours}" value="${Math.min(vip.bankedHours,24)}" style="flex:1;">
-          <button class="btn sm" style="flex:1;" onclick="activateVipHours()">👑 Активувати</button>
-        </div>` : `<div class="sub">Відкривайте кейс «Абсолют» у «Кейсах», щоб накопичити години.</div>`}
+        <button class="btn" onclick="activateVipHours(${vip.bankedHours})">👑 Активувати ${vip.bankedHours} год.</button>` : `<div class="sub">Години падають з кейсів (Абсолют, Золота/Епічна/Легендарна скриня).</div>`}
       <div class="sub" style="margin-top:8px; font-size:11px;">VIP дає: максимальну прокачку в іграх, пріоритет у підтримці, безкоштовну підказку в ребусі, зміну відповіді в ребусі, +1 спробу в «Щасливчику».</div>
     </div>
+
+    <div class="h2">📦 Кейси-слоти <span class="hint">${CHEST_SLOTS_STATE.length}/${CHEST_SLOTS_MAX_CLIENT}</span></div>
+    <div class="sub" style="margin:-6px 2px 10px;">Розблоковується лише 1 кейс одночасно. Безкоштовні кейси падають з ігор (Runner — кожні 1000 очок, інші — за перемогу).</div>
+    <div id="chestSlotsGrid">${slotsSectionHtml()}</div>
+
+    <div class="h2">Купити кейс</div>
+    <div class="list" id="buyChestList">${buyChestListHtml()}</div>
 
     <div class="h2">Заряди</div>
     <div class="list">
@@ -857,46 +821,148 @@ function paintInventory(){
       <div class="item"><div class="ic">⚡️</div><div class="txt"><div class="t">x3 щоденний бонус</div><div class="s">${eff.x3Active?('Діє до '+fmtDate(eff.x3Until)):'Не активний'}</div></div><div class="right">${eff.x3Active?'<span class="badge ok">АКТИВНО</span>':'<span class="mono">0</span>'}</div></div>
     </div>
 
+    <div class="h2">Крафт з осколків <span class="hint">🔮 ${fmt(CHESTS_STATE.shards)}</span></div>
+    <div class="btn-row" style="flex-wrap:wrap;">
+      ${(CHESTS_STATE.craftRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${CHESTS_STATE.shards<rc.cost?'disabled':''} onclick="craftItem('${rc.id}')">${esc(rc.name)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
+    </div>
+
+    <div class="h2">Мої товари</div>
+    <button class="btn secondary" onclick="openMyItemsModal()">🎁 Товари з магазину та мерч</button>
+
     <div class="h2">Предмети з кейсів <span class="hint">тапніть, щоб використати</span></div>
     <div class="list" id="chestItemsList">${chestItemsListHtml()}</div>
   `;
-  wrap.querySelectorAll("[data-chest-item]").forEach(el => {
-    const row = parseInt(el.getAttribute("data-chest-item"));
-    el.addEventListener("click", () => openItemDetail(row, false, CHEST_ITEMS_STATE.find(x => x.row === row)));
-  });
+  wrap.querySelectorAll("[data-chest-group]").forEach(el => el.addEventListener("click", () => openItemGroup(el.getAttribute("data-chest-group"))));
+  wrap.querySelectorAll("[data-buy-chest]").forEach(el => el.addEventListener("click", () => openBuyChestSheet(el.getAttribute("data-buy-chest"))));
+  startSlotTicker();
 }
-function chestItemsListHtml(){
-  if (!CHEST_ITEMS_STATE.length) return emptyBlock("🎒","Поки що порожньо","Відкривайте кейси або крафтіть із осколків");
-  return CHEST_ITEMS_STATE.map(it => {
-    const rarity = /Legendary/.test(it.name) ? "legendary" : /Epic/.test(it.name) ? "epic" : "rare";
-    const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
-    return `<div class="item" data-chest-item="${it.row}" style="cursor:pointer">
-      <div class="rarity-dot ${rarity}"></div>
-      <div class="txt"><div class="t">${esc(shortName)}</div><div class="s">${esc(it.comment||"")}</div></div>
-      <div class="right badge ${it.status==='Не використано'?'new':'ok'}">${it.status==='Не використано'?'Використати →':'Використано'}</div>
+
+// ── Слоти кейсів ──
+function fmtSecs(sec){
+  if (sec<=0) return "готово!";
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+  if (h>0) return `${h}г ${m}хв`;
+  if (m>0) return `${m}хв ${s}с`;
+  return `${s}с`;
+}
+function slotsSectionHtml(){
+  const slots = CHEST_SLOTS_STATE;
+  const cells = [];
+  for (let i=0;i<CHEST_SLOTS_MAX_CLIENT;i++){
+    const s = slots[i];
+    if (!s) { cells.push(`<div class="card" style="text-align:center; opacity:.5;"><div style="font-size:24px;">➕</div><div class="sub" style="margin-top:4px;">Порожньо</div></div>`); continue; }
+    const meta = CHEST_META[s.chestId] || {icon:"🎁"};
+    let body;
+    if (s.status === "Очікує") {
+      const anyUnlocking = slots.some(x=>x.status==="Розблоковується");
+      body = `<div class="btn-row" style="margin-top:8px;">
+        <button class="btn secondary sm" ${anyUnlocking?'disabled':''} onclick="chestSlotStart(${s.row})">🔓 Почати</button>
+        <button class="btn danger sm" style="flex:none; width:auto; padding:9px 11px;" onclick="chestSlotDispose(${s.row},'${s.kind}')">${s.kind==='paid'?'♻️':'💰'}</button>
+      </div>`;
+    } else if (s.status === "Розблоковується" && !s.ready) {
+      body = `<div class="sub mono" style="text-align:center; font-size:14px; margin:6px 0 8px;">⏳ ${fmtSecs(s.secondsLeft)}</div>
+        <div class="btn-row">
+          <button class="btn secondary sm" onclick="openRushModal(${s.row})">⚡</button>
+          <button class="btn danger sm" style="flex:none; width:auto; padding:9px 11px;" onclick="chestSlotDispose(${s.row},'${s.kind}')">${s.kind==='paid'?'♻️':'💰'}</button>
+        </div>`;
+    } else {
+      body = `<button class="btn sm" style="margin-top:8px;" onclick="chestSlotOpen(${s.row})">🎁 Відкрити!</button>`;
+    }
+    cells.push(`<div class="card" style="text-align:center;">
+      <div style="font-size:24px;">${meta.icon}</div>
+      <div style="font-weight:700; font-size:11.5px; margin-top:4px; line-height:1.3;">${esc(s.name)}</div>
+      ${body}
+    </div>`);
+  }
+  return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">${cells.join("")}</div>`;
+}
+function startSlotTicker(){
+  if (SLOT_TICK_TIMER) clearInterval(SLOT_TICK_TIMER);
+  SLOT_TICK_TIMER = setInterval(() => {
+    if (TAB !== "inventory") { clearInterval(SLOT_TICK_TIMER); SLOT_TICK_TIMER = null; return; }
+    CHEST_SLOTS_STATE.forEach(s => {
+      if (s.status === "Розблоковується" && s.secondsLeft > 0) {
+        s.secondsLeft -= 1;
+        if (s.secondsLeft <= 0) s.ready = true;
+      }
+    });
+    const grid = document.getElementById("chestSlotsGrid");
+    if (grid) grid.innerHTML = slotsSectionHtml();
+  }, 1000);
+}
+async function chestSlotStart(row){
+  try {
+    const r = await api("chest_slot_start", { row });
+    if (!r.ok) { toast(r.error === "another_unlocking" ? "Спочатку завершіть поточне розкриття" : "Помилка", "err"); return; }
+    toast("Розблокування розпочато! 🔓", "ok");
+    await loadInventoryData(); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+function chestSlotDispose(row, kind){
+  if (kind === "paid") {
+    if (!confirm("Розібрати кейс на осколки? Шанс отримати 1 осколок — 50%.")) return;
+    disposeChestSlot(row, "dismantle");
+  } else {
+    if (!confirm("Продати кейс боту за фіксовану ціну á-coin?")) return;
+    disposeChestSlot(row, "sell");
+  }
+}
+async function disposeChestSlot(row, mode){
+  try {
+    const r = await api(mode === "dismantle" ? "chest_slot_dismantle" : "chest_slot_sell", { row });
+    if (!r.ok) { toast("Помилка", "err"); return; }
+    if (mode === "dismantle") toast(r.won ? "🔮 +1 осколок!" : "Нічого не випало", r.won?"ok":undefined);
+    else toast(`Продано за ${r.price} á-coin`, "ok");
+    await refreshDashboard(); await loadInventoryData(); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+function openRushModal(row){
+  showModal(`
+    <div class="mh">⚡ Прискорити розкриття</div>
+    <div class="sub" style="margin-bottom:10px;">1 á-coin = 2 години. Баланс: ${fmt(DASH.balance)} 🪙</div>
+    <input class="field" id="rushAcoin" type="number" min="1" placeholder="Кількість á-coin" style="margin-bottom:10px;">
+    <button class="btn" onclick="submitRush(${row})">⚡ Прискорити</button>
+  `);
+}
+async function submitRush(row){
+  const acoin = parseInt(document.getElementById("rushAcoin").value);
+  if (!acoin || acoin<=0) { toast("Вкажіть кількість", "err"); return; }
+  try {
+    const r = await api("chest_slot_rush", { row, acoin });
+    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+    toast(`Витрачено ${r.spent} á-coin`, "ok");
+    closeModal();
+    await refreshDashboard(); await loadInventoryData(); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function chestSlotOpen(row){
+  try {
+    const r = await api("chest_slot_open", { row });
+    if (!r.ok) { toast(r.error === "not_ready" ? "Ще не готово" : "Помилка", "err"); return; }
+    showModal(`<div class="mh">🎉 ${esc(r.chestName)} відкрито!</div><div class="sub">${esc(r.resultText).replace(/\*/g,'')}</div>`);
+    await refreshDashboard(); await loadInventoryData(); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+// ── Покупка кейсу (додається у слот, не відкривається миттєво) ──
+function buyChestListHtml(){
+  const r = CHESTS_STATE;
+  if (!r) return "";
+  return (r.chests||[]).map(c => {
+    const meta = CHEST_META[c.id] || {icon:"🎁"};
+    const locked = r.balance < c.cost;
+    return `<div class="item" data-buy-chest="${c.id}" style="cursor:pointer">
+      <div class="ic">${meta.icon}</div>
+      <div class="txt"><div class="t">${esc(c.name)}</div><div class="s">${esc(c.desc)}</div></div>
+      <div class="right mono" style="color:${locked?'var(--text-faint)':'var(--brass-bright)'}; font-weight:700;">${c.cost} 🪙</div>
     </div>`;
   }).join("");
 }
-async function activateVipHours(){
-  const hours = parseInt(document.getElementById("vipHoursInput").value);
-  if (!hours || hours <= 0) { toast("Вкажіть кількість годин", "err"); return; }
-  try {
-    const r = await api("vip_activate", { hours });
-    if (!r.ok) { toast(r.error === "insufficient_hours" ? "Недостатньо годин у банку" : "Помилка", "err"); return; }
-    toast("VIP активовано! 👑", "ok");
-    await refreshDashboard();
-    renderInventory();
-  } catch(e) { toast("Помилка з'єднання", "err"); }
-}
-function fmtDate(iso){
-  if (!iso) return "";
-  const d = new Date(iso);
-  return d.toLocaleDateString("uk-UA",{day:"2-digit",month:"2-digit"}) + " " + d.toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
-}
-function openChestSheet(chestId){
+function openBuyChestSheet(chestId){
   const c = CHESTS_STATE.chests.find(x => x.id === chestId);
   if (!c) return;
   const locked = CHESTS_STATE.balance < c.cost;
+  const full = CHEST_SLOTS_STATE.length >= CHEST_SLOTS_MAX_CLIENT;
   const meta = CHEST_META[c.id] || {icon:"🎁"};
   showModal(`
     <div class="mh">${meta.icon} ${esc(c.name)}</div>
@@ -904,28 +970,76 @@ function openChestSheet(chestId){
     <div class="list" style="margin-bottom:14px;">${c.drops.map(d => `
       <div class="item"><div class="ic mono" style="font-size:12px;">${d.chance}%</div><div class="txt"><div class="t">${esc(dropLabel(d))}</div></div></div>
     `).join("")}</div>
-    <button class="btn" ${locked?'disabled':''} onclick="openChest('${c.id}')">${locked?'Недостатньо á-coin':('🎁 Відкрити — '+c.cost+' 🪙')}</button>
+    ${full ? `<div class="sub" style="margin-bottom:8px; color:var(--danger);">Інвентар кейсів заповнений (${CHEST_SLOTS_MAX_CLIENT}/${CHEST_SLOTS_MAX_CLIENT})</div>` : ""}
+    <button class="btn" ${(locked||full)?'disabled':''} onclick="buyChest('${c.id}')">${full?'Немає місця':(locked?'Недостатньо á-coin':('🛒 Купити — '+c.cost+' 🪙'))}</button>
   `);
 }
-async function openChest(chestId){
-  closeModal();
-  toast("Відкриваємо кейс...", "ok");
+async function buyChest(chestId){
   try {
-    const r = await apiRaw("chest_open", { chestId });
-    if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
-    showModal(`<div class="mh">🎉 ${esc(r.chest.name)} відкрито!</div><div class="sub">${esc(r.resultText).replace(/\*/g,'')}</div>`);
-    await refreshDashboard();
-    renderChests();
+    const r = await api("chest_buy", { chestId });
+    if (!r.ok) { toast(r.error === "inventory_full" ? "Інвентар кейсів заповнений" : (r.error==="insufficient_funds" ? "Недостатньо á-coin" : "Помилка"), "err"); return; }
+    toast("Кейс додано в інвентар! 📦", "ok");
+    closeModal();
+    await refreshDashboard(); await loadInventoryData(); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+// ── Предмети з кейсів (самообслуговування) ──
+function chestItemsListHtml(){
+  if (!CHEST_ITEMS_STATE.length) return emptyBlock("🎒","Поки що порожньо","Відкривайте кейси або крафтіть із осколків");
+  const groups = {};
+  CHEST_ITEMS_STATE.forEach(it => {
+    const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
+    if (!groups[shortName]) groups[shortName] = { name: shortName, comment: it.comment, items: [] };
+    groups[shortName].items.push(it);
+  });
+  return Object.values(groups).map(g => {
+    const available = g.items.filter(x => x.status === "Не використано");
+    const rarity = /Legendary/.test(g.name) ? "legendary" : /Epic/.test(g.name) ? "epic" : "rare";
+    const countLabel = g.items.length > 1 ? ` ×${g.items.length}` : "";
+    const statusLabel = available.length > 0 ? `Доступно: ${available.length} — тапніть, щоб використати` : "Усе використано";
+    return `<div class="item" data-chest-group="${esc(g.name)}" style="cursor:pointer">
+      <div class="rarity-dot ${rarity}"></div>
+      <div class="txt"><div class="t">${esc(g.name)}${countLabel}</div><div class="s">${esc(statusLabel)}</div></div>
+      <div class="right badge ${available.length>0?'new':'ok'}">${available.length>0?'→':'✓'}</div>
+    </div>`;
+  }).join("");
+}
+function openItemGroup(name){
+  const items = CHEST_ITEMS_STATE.filter(it => (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim() === name);
+  showModal(`
+    <div class="mh">🎁 ${esc(name)} <span class="hint">×${items.length}</span></div>
+    <div class="list">${items.map(it => `
+      <div class="item">
+        <div class="txt"><div class="t">${it.status==='Не використано' ? '⏳ Не використано' : '✅ Використано'}</div><div class="s">${esc(it.comment||'')}</div></div>
+        ${it.status==='Не використано' ? `<button class="btn sm" style="width:auto; padding:8px 14px;" onclick="selfUseItem(${it.row})">Використати</button>` : ''}
+      </div>
+    `).join("")}</div>
+  `);
+}
+async function activateVipHours(hours){
+  hours = parseInt(hours);
+  if (!hours || hours <= 0) { toast("Немає годин для активації", "err"); return; }
+  try {
+    const r = await api("vip_activate", { hours });
+    if (!r.ok) { toast(r.error === "insufficient_hours" ? "Недостатньо годин у банку" : "Помилка", "err"); return; }
+    toast(`VIP активовано на ${hours} год.! 👑`, "ok");
+    await refreshDashboard();
+    paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+function fmtDate(iso){
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString("uk-UA",{day:"2-digit",month:"2-digit"}) + " " + d.toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
 }
 async function craftItem(rarity){
   if (!confirm("Витратити осколки на крафт?")) return;
   try {
     const r = await apiRaw("craft_item", { rarity });
     if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
-    toast("Крафт виконано! Предмет — у «Мої товари»", "ok");
-    await refreshDashboard();
-    renderChests();
+    toast("Крафт виконано! Дивіться нижче в «Предмети з кейсів»", "ok");
+    await refreshDashboard(); await loadInventoryData(); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 
