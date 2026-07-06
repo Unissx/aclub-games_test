@@ -594,6 +594,11 @@ function closeGameFrame(){
   const el = document.getElementById("gameFrameOverlay");
   if (el) el.remove();
 }
+// Fallback для випадку, коли гра у iframe — на іншому домені (постMessage
+// працює навіть cross-origin, на відміну від прямого виклику window.parent.fn()).
+window.addEventListener("message", (e) => {
+  if (e && e.data && e.data.type === "closeGameFrame") closeGameFrame();
+});
 
 // Підтягуємо рівні апгрейдів (максимум, якщо VIP активний) і передаємо
 // їх у query-параметрах, які Runner читає сам при старті.
