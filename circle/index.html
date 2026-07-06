@@ -82,7 +82,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   <!-- WIN -->
   <div class="ov hide" id="ovWin">
     <div class="ov-title">✅ РІВЕНЬ<br>ПРОЙДЕНО!</div>
-    <div id="winCoins" style="font-family:'Press Start 2P',monospace;font-size:clamp(16px,5vw,22px);color:#ffd740;text-shadow:0 0 16px rgba(255,215,64,.6);">+1 🪙</div>
+    <div id="winCoins" style="font-family:'Press Start 2P',monospace;font-size:clamp(16px,5vw,22px);color:#ffd740;text-shadow:0 0 16px rgba(255,215,64,.6);">+1 💰</div>
     <div id="winWords" style="font-size:11px;color:#5b7090;"></div>
     <button class="btn" onclick="nextLevel()" style="padding:10px 22px;font-size:10px;">▶ ДАЛІ</button>
     <button class="btn btn-sec" onclick="closeGame()" style="padding:8px 18px;font-size:10px;">✕ ВИЙТИ</button>
@@ -93,10 +93,10 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
     <div style="font-size:32px">💡</div>
     <div class="ov-title" style="color:#ffd740;font-size:clamp(9px,2.5vw,12px);">ПІДКАЗКИ<br>ЗАКІНЧИЛИСЬ</div>
     <div style="font-size:12px;color:#5b7090;text-align:center;line-height:1.7;">
-      Купити 1 підказку за <b style="color:#ffd740">1 🪙</b>?<br>
+      Купити 1 підказку за <b style="color:#ffd740">1 💰</b>?<br>
       <span id="hintTimerMsg" style="color:#00e676;font-size:11px;"></span>
     </div>
-    <button class="btn" onclick="buyHint()" id="buyHintBtn" style="background:linear-gradient(135deg,#ffd740,#e6a800);color:#050d1a;padding:10px 22px;font-size:10px;">💰 КУПИТИ 1 🪙</button>
+    <button class="btn" onclick="buyHint()" id="buyHintBtn" style="background:linear-gradient(135deg,#ffd740,#e6a800);color:#050d1a;padding:10px 22px;font-size:10px;">💰 КУПИТИ 1 💰</button>
     <button class="btn btn-sec" onclick="closeOverlay('ovBuyHint')" style="padding:8px 18px;font-size:10px;">✕ ЗАКРИТИ</button>
   </div>
 
@@ -104,7 +104,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   <div class="head hide" id="gameHead">
     <div class="htitle">⭕️ СЛОВА ПО КОЛУ</div>
     <div class="badges">
-      <span class="badge bc">🪙 <span id="coinCount">0</span></span>
+      <span class="badge bc">💰 <span id="coinCount">0</span></span>
       <span class="badge bl">⭐ <span id="lvlNum">1</span></span>
       <span class="badge bh" id="hintBtn" onclick="useHint()">💡 <span id="hintCount">3</span></span>
     </div>
@@ -118,7 +118,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
     <div class="bonus-dot" id="bd2"></div>
     <div class="bonus-dot" id="bd3"></div>
     <div class="bonus-dot" id="bd4"></div>
-    <span class="bonus-label">🪙</span>
+    <span class="bonus-label">💰</span>
   </div>
   <div class="cir-wrap hide" id="cirWrap"><canvas id="cirCv"></canvas></div>
 
@@ -547,7 +547,7 @@ function checkWord(){
     // Кожні 5 бонусних слів = +1 монета
     if(bonusWordCount%5===0){
       coins++;$i('coinCount').textContent=coins;
-      toast('🪙 +1 монета за 5 бонусних слів!',2500);
+      toast('💰 +1 монета за 5 бонусних слів!',2500);
       sendBonusResult();
     }
   }
@@ -599,7 +599,7 @@ function showBuyHint(){
     const canBuy=coins>=1;
     $i('buyHintBtn').disabled=!canBuy;
     $i('buyHintBtn').style.opacity=canBuy?'1':'0.4';
-    $i('buyHintBtn').textContent=canBuy?`💰 КУПИТИ за 1 🪙 (є: ${coins})`:'❌ Недостатньо монет (є: '+coins+')';
+    $i('buyHintBtn').textContent=canBuy?`💰 КУПИТИ за 1 💰 (є: ${coins})`:'❌ Недостатньо монет (є: '+coins+')';
   });
 }
 
@@ -645,7 +645,7 @@ function showWin(){
   show('ovWin');
   // Синхронізуємо баланс з сервером після нарахування монети
   sendResult().then(()=>syncBalance().then(()=>{
-    $i('winCoins').textContent='+1 🪙 (всього: '+coins+')';
+    $i('winCoins').textContent='+1 💰 (всього: '+coins+')';
   }));
 }
 function nextLevel(){level++;hide('ovWin');loadLevel();}
@@ -657,7 +657,7 @@ async function sendResult(){
   const url=GAS+'?type=circle_result&userId='+u+'&level='+level+'&score='+curWords.length+'&elapsed='+el+'&secret='+SECRET+'&_t='+Date.now();
   for(let i=0;i<3;i++){
     try{const r=await fetch(url);const d=await r.json();
-      if(d.ok){if(d.coins!==undefined){coins=d.coins;$i('coinCount').textContent=coins;$i('winCoins').textContent='+1 🪙 (всього: '+coins+')';}return;}
+      if(d.ok){if(d.coins!==undefined){coins=d.coins;$i('coinCount').textContent=coins;$i('winCoins').textContent='+1 💰 (всього: '+coins+')';}return;}
     }catch(e){}
     await new Promise(r=>setTimeout(r,2000));
   }
