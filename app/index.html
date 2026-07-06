@@ -7,7 +7,7 @@
 <style>
 :root{
   --void:#0A0C14; --panel:#14182A; --panel2:#1C2136; --panel3:#232A45;
-  --line:#262C47; --brass:#D9A94E; --brass-bright:#F2C879; --shard:#8B7CF6;
+  --line:#262C47; --brass:#0FA968; --brass-bright:#3FE0A0; --shard:#8B7CF6;
   --text:#F3F1EA; --text-dim:#8890AA; --text-faint:#5B6280;
   --rare:#4E8FE0; --epic:#B15EF0; --legendary:#F2A93B;
   --success:#52C48E; --danger:#E2607A; --radius:16px;
@@ -22,16 +22,16 @@ input,textarea{font-family:inherit;}
 
 body::before{
   content:""; position:fixed; top:0; left:0; right:0; bottom:0; z-index:0; pointer-events:none;
-  background: radial-gradient(ellipse 600px 300px at 50% -10%, rgba(217,169,78,0.10), transparent 60%);
+  background: radial-gradient(ellipse 600px 300px at 50% -10%, rgba(15,169,104,0.10), transparent 60%);
 }
 
 /* Topbar */
 .topbar{position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between;
   padding:14px 16px 10px; gap:10px; background:linear-gradient(180deg, var(--void) 60%, rgba(10,12,20,.85) 85%, transparent);}
 .brand{display:flex; align-items:center; gap:8px;}
-.brand-mark{width:30px; height:30px; border-radius:9px; background:linear-gradient(155deg, var(--brass-bright), var(--brass) 60%, #9c7530);
-  display:flex; align-items:center; justify-content:center; font-family:'Unbounded'; font-weight:800; font-size:15px; color:#241a05;
-  box-shadow:0 2px 8px rgba(217,169,78,.35), inset 0 1px 0 rgba(255,255,255,.4);}
+.brand-mark{width:30px; height:30px; border-radius:9px; background:linear-gradient(155deg, var(--brass-bright), var(--brass) 60%, #0a5c3d);
+  display:flex; align-items:center; justify-content:center; font-family:'Unbounded'; font-weight:800; font-size:15px; color:#04231a;
+  box-shadow:0 2px 8px rgba(15,169,104,.35), inset 0 1px 0 rgba(255,255,255,.4);}
 .brand-name{font-family:'Unbounded'; font-weight:700; font-size:14.5px;}
 .pills{display:flex; gap:6px;}
 .pill{display:flex; align-items:center; gap:5px; background:var(--panel2); border:1px solid var(--line); border-radius:100px; padding:6px 11px 6px 8px;}
@@ -54,7 +54,7 @@ body::before{
 .stat-card .value{font-family:'Space Mono'; font-weight:700; font-size:20px;}
 .stat-card.coin .value{color:var(--brass-bright);} .stat-card.shard .value{color:var(--shard);}
 
-.btn{display:block; width:100%; text-align:center; border:none; border-radius:13px; padding:13px; font-weight:700; font-size:14px; color:#241a05;
+.btn{display:block; width:100%; text-align:center; border:none; border-radius:13px; padding:13px; font-weight:700; font-size:14px; color:#04231a;
   background:linear-gradient(155deg, var(--brass-bright), var(--brass)); transition:transform .1s;}
 .btn:active{transform:scale(.97);}
 .btn.secondary{background:var(--panel3); color:var(--text); border:1px solid var(--line);}
