@@ -137,7 +137,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
     <div class="title">áCLUB<br>ВГАДАЙ СЛОВО</div>
     <div class="subtitle" id="lengthLabel">слово з 5 літер · 6 спроб</div>
     <div class="badges-row">
-      <div class="coin-badge" id="rewardHint">🪙 завантаження...</div>
+      <div class="coin-badge" id="rewardHint">💰 завантаження...</div>
       <div class="timer-badge" id="timerBadge">⏱ 3:00</div>
     </div>
     <div class="badges-row">
@@ -177,7 +177,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
 </div>
 
 <div class="ov hide" id="ovLoading">
-  <div class="ov-emoji">🪙</div>
+  <div class="ov-emoji">💰</div>
   <div class="ov-title">ЗАВАНТАЖЕННЯ...</div>
 </div>
 
@@ -186,7 +186,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   <div class="ov-title">СПРОБИ ЗАКІНЧИЛИСЬ</div>
   <div class="ov-text">Нові спроби з'являться через:</div>
   <div class="ov-timer"><b id="cooldownTimer">--:--:--</b></div>
-  <div class="ov-text">Гра оновлюється кожні 12 годин — заходь знову! 🪙</div>
+  <div class="ov-text">Гра оновлюється кожні 12 годин — заходь знову! 💰</div>
 </div>
 
 <div class="ov hide" id="ovError">
@@ -463,8 +463,8 @@ function updateGameBadges() {
   const nextAttemptNum = Math.min(MAX_ATTEMPTS, attempts.length + 1);
   const maxReward = realIsBonusAttempt ? 1 : Math.ceil((REWARD_BY_ATTEMPT[nextAttemptNum] || 1) * REWARD_MULT);
   $('rewardHint').textContent = realIsBonusAttempt
-    ? `🪙 фіксована нагорода = 1 á-coin`
-    : `🪙 спроба ${nextAttemptNum} = ${maxReward} á-coin`;
+    ? `💰 фіксована нагорода = 1 á-coin`
+    : `💰 спроба ${nextAttemptNum} = ${maxReward} á-coin`;
 
   const bonusBadge = $('bonusBadge');
   if (realIsBonusAttempt) {
@@ -801,7 +801,7 @@ async function endGame(won, isTimeout) {
   const statusEl = won ? $('winSaveStatus') : $('loseSaveStatus');
   if (saved && saved.ok) {
     resultSent = true;
-    statusEl.textContent = won ? '✅ Збережено! 🪙' : '✅ Результат збережено.';
+    statusEl.textContent = won ? '✅ Збережено! 💰' : '✅ Результат збережено.';
     if (!won && saved.attemptsLeft > 0) {
       $('retryBtn').classList.remove('hide');
       statusEl.textContent += ' У тебе ще є спроба!';
