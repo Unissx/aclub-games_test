@@ -126,6 +126,29 @@ textarea::placeholder, input.field::placeholder{color:var(--text-faint);}
 .game-card{background:linear-gradient(155deg, var(--panel2), var(--panel)); border:1px solid var(--line); border-radius:var(--radius); padding:15px; margin-bottom:10px;}
 .game-card .gt{font-family:'Unbounded'; font-weight:700; font-size:14.5px; margin-bottom:4px;}
 .game-card .gd{font-size:12px; color:var(--text-dim); margin-bottom:10px;}
+
+/* Анімація відкриття кейсу */
+.chest-open-wrap{position:relative; display:flex; justify-content:center; align-items:flex-end; height:96px; margin-bottom:6px;}
+.chest-lid-anim{transform-origin:50px 26px; animation:chestLidOpen .45s ease-out .1s both;}
+@keyframes chestLidOpen{
+  0%{transform:rotate(0deg) translateY(0);}
+  100%{transform:rotate(-38deg) translateY(-5px);}
+}
+.chest-glow{position:absolute; left:50%; top:8px; width:70px; height:70px; margin-left:-35px; border-radius:50%;
+  background:radial-gradient(circle, rgba(242,200,121,.55), transparent 70%); opacity:0; animation:chestGlow .6s ease-out .25s both;}
+@keyframes chestGlow{0%{opacity:0; transform:scale(.4);} 60%{opacity:1;} 100%{opacity:0; transform:scale(1.6);}}
+.chest-spark{position:absolute; top:30px; left:50%; font-size:16px; opacity:0; animation:chestSpark .7s ease-out .3s both;}
+@keyframes chestSpark{
+  0%{opacity:0; transform:translate(-50%,0) scale(.4);}
+  30%{opacity:1;}
+  100%{opacity:0; transform:translate(var(--dx,-30px),-50px) scale(1.1) rotate(20deg);}
+}
+.reward-pop{animation:rewardPop .5s cubic-bezier(.34,1.56,.64,1) .5s both;}
+@keyframes rewardPop{
+  0%{transform:scale(.3) translateY(12px); opacity:0;}
+  60%{transform:scale(1.12) translateY(-5px); opacity:1;}
+  100%{transform:scale(1) translateY(0); opacity:1;}
+}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -837,23 +860,45 @@ const CHEST_META = {
   legendary:   { icon:"🧡", base:"#5c3410", lid:"#F2A93B", accent:"#a35a12", gem:"#ffdca0" },
 };
 // Один шаблон 2D-скрині, розфарбований під кожен тип — узгоджено
-// виглядає і в Магазині, і в слотах Інвентаря.
-function chestArtSvg(chestId, size){
+// виглядає і в Магазині, і в слотах Інвентаря. animated=true —
+// кришка окремою групою з CSS-анімацією відкриття.
+function chestArtSvg(chestId, size, animated){
   size = size || 44;
   const m = CHEST_META[chestId] || { base:"#333a52", lid:"#8890AA", accent:"#232a45", gem:"#F3F1EA" };
+  const lid = `
+    <path d="M8,40 Q8,15 50,15 Q92,15 92,40 Z" fill="${m.lid}"/>
+    <path d="M8,40 Q8,15 50,15 Q92,15 92,40 L92,29 Q92,21 50,21 Q8,21 8,29 Z" fill="#fff" opacity="0.18"/>
+    <rect x="43" y="11" width="14" height="30" rx="2" fill="${m.accent}"/>`;
   return `<svg viewBox="0 0 100 82" width="${size}" height="${Math.round(size*0.82)}" xmlns="http://www.w3.org/2000/svg">
     <ellipse cx="50" cy="76" rx="36" ry="4" fill="#000" opacity="0.28"/>
     <rect x="10" y="40" width="80" height="32" rx="7" fill="${m.base}"/>
     <rect x="10" y="40" width="80" height="9" fill="${m.accent}" opacity="0.55"/>
     <rect x="10" y="60" width="80" height="6" fill="${m.accent}" opacity="0.4"/>
-    <path d="M8,40 Q8,15 50,15 Q92,15 92,40 Z" fill="${m.lid}"/>
-    <path d="M8,40 Q8,15 50,15 Q92,15 92,40 L92,29 Q92,21 50,21 Q8,21 8,29 Z" fill="#fff" opacity="0.18"/>
-    <rect x="43" y="11" width="14" height="30" rx="2" fill="${m.accent}"/>
+    ${animated ? `<g class="chest-lid-anim">${lid}</g>` : lid}
     <rect x="42" y="35" width="16" height="19" rx="3" fill="${m.accent}"/>
     <circle cx="50" cy="42" r="3.4" fill="${m.gem}"/>
     <rect x="48.6" y="42" width="2.8" height="7" fill="${m.gem}"/>
   </svg>`;
 }
+
+// Повна сценка відкриття кейсу для модалки: кришка прочиняється,
+// спалах + пара іскор, і з невеликою затримкою — сам приз "виринає".
+function chestOpenSceneHtml(chestId, chestName, resultText){
+  const sparks = ["✨","⭐","💫"].map((s,i) => {
+    const dx = [-34, 30, -14][i], delay = 0.28 + i*0.06;
+    return `<div class="chest-spark" style="--dx:${dx}px; animation-delay:${delay}s; left:${45+i*8}%;">${s}</div>`;
+  }).join("");
+  return `
+    <div class="chest-open-wrap">
+      <div class="chest-glow"></div>
+      ${sparks}
+      ${chestArtSvg(chestId, 76, true)}
+    </div>
+    <div class="mh reward-pop" style="text-align:center;">🎉 ${esc(chestName)} відкрито!</div>
+    <div class="sub reward-pop" style="text-align:center;">${esc(resultText).replace(/\*/g,'')}</div>
+  `;
+}
+
 function dropLabel(d){
   if (d.label) return d.label;
   if (d.type === "coins") return d.amount + " á-coin";
@@ -1056,7 +1101,7 @@ async function chestSlotOpen(row){
   try {
     const r = await api("chest_slot_open", { row });
     if (!r.ok) { toast(r.error === "not_ready" ? "Ще не готово" : "Помилка", "err"); return; }
-    showModal(`<div class="mh">🎉 ${esc(r.chestName)} відкрито!</div><div class="sub">${esc(r.resultText).replace(/\*/g,'')}</div>`);
+    showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText));
     await refreshDashboard(); await loadInventoryData(); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
@@ -1095,7 +1140,7 @@ async function buyChest(chestId){
   try {
     const r = await apiRaw("chest_open", { chestId });
     if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
-    showModal(`<div class="mh">🎉 ${esc(r.chest.name)} відкрито!</div><div class="sub">${esc(r.resultText).replace(/\*/g,'')}</div>`);
+    showModal(chestOpenSceneHtml(r.chest.id, r.chest.name, r.resultText));
     await refreshDashboard();
     await loadShopChests();
   } catch(e) { toast("Помилка з'єднання", "err"); }
@@ -1172,7 +1217,7 @@ async function claimVipDaily(kind){
       toast(msg, "err"); return;
     }
     if (kind === "avangard") {
-      showModal(`<div class="mh">🎉 «Авангард» відкрито!</div><div class="sub">${esc(r.resultText).replace(/\*/g,'')}</div>`);
+      showModal(chestOpenSceneHtml(r.chestId || "avangard", r.chestName || "«Авангард»", r.resultText));
     } else {
       toast("Кейс додано в слот! 🥈", "ok");
     }
