@@ -161,7 +161,7 @@ textarea::placeholder, input.field::placeholder{color:var(--text-faint);}
 <div class="topbar">
   <div class="brand"><div class="brand-mark">á</div><div class="brand-name">áClub</div></div>
   <div class="pills">
-    <div class="pill coin">🪙<span class="val mono" id="pillCoin">0</span></div>
+    <div class="pill coin">💰<span class="val mono" id="pillCoin">0</span></div>
     <div class="pill shard">🔮<span class="val mono" id="pillShard">0</span></div>
   </div>
 </div>
@@ -361,7 +361,7 @@ function renderHome(){
     <div class="h1">👋 Привіт, ${esc(DASH.name)}!</div>
     ${badges.length ? `<div class="row" style="flex-wrap:wrap; gap:6px; margin:-6px 2px 12px;">${badges.join("")}</div>` : ""}
     <div class="stat-row">
-      <div class="stat-card coin"><div class="label">Баланс</div><div class="value mono">${fmt(DASH.balance)} 🪙</div></div>
+      <div class="stat-card coin"><div class="label">Баланс</div><div class="value mono">${fmt(DASH.balance)} 💰</div></div>
       <div class="stat-card shard"><div class="label">Осколки</div><div class="value mono">${fmt(DASH.shards)} 🔮</div></div>
     </div>
 
@@ -807,7 +807,7 @@ function paintShopAbank(r){
   wrap.innerHTML = `<div class="list">` + r.items.map(it => `
     <div class="card">
       <div class="row between"><div style="font-weight:700; font-size:13.5px;">${it.type==='merch'?'📦':'🎁'} ${esc(it.name)}</div>
-      <div class="mono" style="color:var(--brass-bright); font-weight:700;">${it.price} 🪙</div></div>
+      <div class="mono" style="color:var(--brass-bright); font-weight:700;">${it.price} 💰</div></div>
       <div class="sub" style="margin:6px 0 10px;">${esc(it.desc)}</div>
       <button class="btn sm" ${r.balance < it.price ? 'disabled' : ''} onclick="buyShopItem('${it.id}', ${it.price})">
         ${r.balance < it.price ? 'Недостатньо á-coin' : 'Купити'}
@@ -846,9 +846,9 @@ function paintUpgrades(kind, r){
       <div class="row between"><div style="font-weight:700; font-size:13.5px;">${esc(upg.name)}</div><div class="badge">${cur}/${maxLevel}</div></div>
       <div class="sub" style="margin:6px 0;">${esc(upg.desc)}</div>
       <div class="progress" style="margin-bottom:8px;"><div style="width:${cur/maxLevel*100}%"></div></div>
-      <div class="sub" style="margin:0 0 10px;">Зараз: ${esc(effect)}${!maxed?` · Далі: ${esc(upg.effects[cur])} — ${price} 🪙`:''}</div>
+      <div class="sub" style="margin:0 0 10px;">Зараз: ${esc(effect)}${!maxed?` · Далі: ${esc(upg.effects[cur])} — ${price} 💰`:''}</div>
       <button class="btn sm" ${maxed || r.balance < price ? 'disabled' : ''} onclick="buyUpgrade('${kind}','${key}')">
-        ${maxed ? '✅ Максимум' : (r.balance < price ? 'Недостатньо á-coin' : `Купити рів. ${cur+1} — ${price} 🪙`)}
+        ${maxed ? '✅ Максимум' : (r.balance < price ? 'Недостатньо á-coin' : `Купити рів. ${cur+1} — ${price} 💰`)}
       </button>
     </div>`;
   }).join("") + `</div>`;
@@ -979,7 +979,7 @@ function paintInventory(){
       <button class="btn sm" style="width:auto; padding:8px 12px;" onclick="activateVipTicket(${t.row})">Активувати</button></div>
     `).join("")}</div>` : ""}
     <div class="btn-row" style="flex-wrap:wrap;">
-      ${Object.entries(VIP_TICKET_DEFS).map(([id,t]) => `<button class="btn secondary sm" style="flex:1 1 45%;" ${CHESTS_STATE.balance<t.price?'disabled':''} onclick="buyVipTicket('${id}')">${esc(t.label)}<br><span class="mono">${t.price} 🪙</span></button>`).join("")}
+      ${Object.entries(VIP_TICKET_DEFS).map(([id,t]) => `<button class="btn secondary sm" style="flex:1 1 45%;" ${CHESTS_STATE.balance<t.price?'disabled':''} onclick="buyVipTicket('${id}')">${esc(t.label)}<br><span class="mono">${t.price} 💰</span></button>`).join("")}
     </div>
 
     <div class="h2">🎁 Щоденні VIP-бонуси</div>
@@ -1101,7 +1101,7 @@ async function disposeChestSlot(row, mode){
 function openRushModal(row){
   showModal(`
     <div class="mh">⚡ Прискорити розкриття</div>
-    <div class="sub" style="margin-bottom:10px;">1 á-coin = 2 години. Баланс: ${fmt(DASH.balance)} 🪙</div>
+    <div class="sub" style="margin-bottom:10px;">1 á-coin = 2 години. Баланс: ${fmt(DASH.balance)} 💰</div>
     <input class="field" id="rushAcoin" type="number" min="1" placeholder="Кількість á-coin" style="margin-bottom:10px;">
     <button class="btn" onclick="submitRush(${row})">⚡ Прискорити</button>
   `);
@@ -1136,7 +1136,7 @@ function buyChestListHtml(){
     return `<div class="item" data-buy-chest="${c.id}" style="cursor:pointer">
       <div style="flex:none;">${chestArtSvg(c.id, 34)}</div>
       <div class="txt"><div class="t">${esc(c.name)}</div><div class="s">${esc(c.desc)}</div></div>
-      <div class="right mono" style="color:${locked?'var(--text-faint)':'var(--brass-bright)'}; font-weight:700;">${c.cost} 🪙</div>
+      <div class="right mono" style="color:${locked?'var(--text-faint)':'var(--brass-bright)'}; font-weight:700;">${c.cost} 💰</div>
     </div>`;
   }).join("");
 }
@@ -1151,7 +1151,7 @@ function openBuyChestSheet(chestId){
     <div class="list" style="margin-bottom:14px;">${c.drops.map(d => `
       <div class="item"><div class="ic mono" style="font-size:12px;">${d.chance}%</div><div class="txt"><div class="t">${esc(dropLabel(d))}</div></div></div>
     `).join("")}</div>
-    <button class="btn" ${locked?'disabled':''} onclick="buyChest('${c.id}')">${locked?'Недостатньо á-coin':('🎁 Відкрити зараз — '+c.cost+' 🪙')}</button>
+    <button class="btn" ${locked?'disabled':''} onclick="buyChest('${c.id}')">${locked?'Недостатньо á-coin':('🎁 Відкрити зараз — '+c.cost+' 💰')}</button>
   `);
 }
 async function buyChest(chestId){
