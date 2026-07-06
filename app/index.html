@@ -742,11 +742,10 @@ function renderShop(){
 async function loadShopChests(){
   const wrap = document.getElementById("shopBody");
   try {
-    const [r, slotsRes] = await Promise.all([apiRaw("get_inventory"), api("chest_slots_get")]);
+    const r = await apiRaw("get_inventory");
     if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
     CHESTS_STATE = r;
-    CHEST_SLOTS_STATE = slotsRes.ok ? slotsRes.slots : [];
-    wrap.innerHTML = `<div class="sub" style="margin:-2px 2px 10px;">Куплений кейс потрапляє у слот в «Інвентарі» — там же його розблоковуєте.</div>
+    wrap.innerHTML = `<div class="sub" style="margin:-2px 2px 10px;">Кейс відкривається одразу після покупки.</div>
       <div class="list" id="buyChestList">${buyChestListHtml()}</div>`;
     wrap.querySelectorAll("[data-buy-chest]").forEach(el => el.addEventListener("click", () => openBuyChestSheet(el.getAttribute("data-buy-chest"))));
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
@@ -849,12 +848,20 @@ async function renderInventory(){
   await loadInventoryData();
   paintInventory();
 }
+let VIP_TICKETS_STATE = [];
+const VIP_TICKET_DEFS = {
+  "24h":  { hours:24,  price:20,  label:"24 години" },
+  "48h":  { hours:48,  price:35,  label:"48 годин" },
+  "week": { hours:168, price:100, label:"Тиждень" },
+  "month":{ hours:720, price:300, label:"Місяць" },
+};
 async function loadInventoryData(){
   try {
-    const [r, myItems, slotsRes] = await Promise.all([apiRaw("get_inventory"), api("my_items"), api("chest_slots_get")]);
+    const [r, myItems, slotsRes, ticketsRes] = await Promise.all([apiRaw("get_inventory"), api("my_items"), api("chest_slots_get"), api("vip_my_tickets")]);
     CHESTS_STATE = r.ok ? r : null;
     CHEST_ITEMS_STATE = (myItems.ok ? myItems.items : []).filter(it => !it.isMerch && /^Кейс:|^Крафт:/.test(it.name||""));
     CHEST_SLOTS_STATE = slotsRes.ok ? slotsRes.slots : [];
+    VIP_TICKETS_STATE = ticketsRes.ok ? ticketsRes.tickets : [];
   } catch(e) { CHESTS_STATE = null; }
 }
 function paintInventory(){
@@ -873,11 +880,31 @@ function paintInventory(){
       <div class="sub" style="margin:8px 0;">У банку: <b>${vip.bankedHours} год.</b></div>
       ${vip.bankedHours > 0 ? `
         <button class="btn" onclick="activateVipHours(${vip.bankedHours})">👑 Активувати ${vip.bankedHours} год.</button>` : `<div class="sub">Години падають з кейсів (Абсолют, Золота/Епічна/Легендарна скриня).</div>`}
-      <div class="sub" style="margin-top:8px; font-size:11px;">VIP дає: максимальну прокачку в іграх, пріоритет у підтримці, безкоштовну підказку в ребусі, зміну відповіді в ребусі, +1 спробу в «Щасливчику».</div>
+      <div class="sub" style="margin-top:8px; font-size:11px;">VIP дає: максимальну прокачку в іграх, пріоритет у підтримці, безкоштовну підказку в ребусі, зміну відповіді в ребусі, +1 спробу в «Щасливчику», щоденні бонуси нижче.</div>
+    </div>
+
+    <div class="h2">🎟 VIP-тикети</div>
+    <div class="sub" style="margin:-6px 2px 10px;">Активується одразу цілим тикетом (без розбиття на години), стакується з наявним VIP.</div>
+    ${VIP_TICKETS_STATE.length ? `<div class="list" style="margin-bottom:10px;">${VIP_TICKETS_STATE.map(t => `
+      <div class="item"><div class="ic">🎟</div><div class="txt"><div class="t">${esc((VIP_TICKET_DEFS[t.type]||{}).label || t.type)}</div><div class="s">Не активовано</div></div>
+      <button class="btn sm" style="width:auto; padding:8px 12px;" onclick="activateVipTicket(${t.row})">Активувати</button></div>
+    `).join("")}</div>` : ""}
+    <div class="btn-row" style="flex-wrap:wrap;">
+      ${Object.entries(VIP_TICKET_DEFS).map(([id,t]) => `<button class="btn secondary sm" style="flex:1 1 45%;" ${CHESTS_STATE.balance<t.price?'disabled':''} onclick="buyVipTicket('${id}')">${esc(t.label)}<br><span class="mono">${t.price} 🪙</span></button>`).join("")}
+    </div>
+
+    <div class="h2">🎁 Щоденні VIP-бонуси</div>
+    <div class="list">
+      <div class="item"><div class="ic">🥈</div><div class="txt"><div class="t">Безкоштовний Silver Chest</div><div class="s">Раз на добу, потрапляє в слот</div></div>
+        <button class="btn sm" style="width:auto; padding:8px 12px;" ${(!vip.active||vip.dailySilverClaimed)?'disabled':''} onclick="claimVipDaily('silver')">${vip.dailySilverClaimed?'Отримано':'Забрати'}</button></div>
+      <div class="item"><div class="ic">💰</div><div class="txt"><div class="t">Безкоштовний «Авангард»</div><div class="s">Раз на добу, відкривається одразу</div></div>
+        <button class="btn sm" style="width:auto; padding:8px 12px;" ${(!vip.active||vip.dailyAvangardClaimed)?'disabled':''} onclick="claimVipDaily('avangard')">${vip.dailyAvangardClaimed?'Отримано':'Забрати'}</button></div>
+      <div class="item"><div class="ic">⚡️</div><div class="txt"><div class="t">Миттєве розблокування</div><div class="s">1 раз на добу, для кейсу що розблоковується</div></div>
+        <div class="badge ${vip.dailyInstantUnlockClaimed?'ok':''}">${vip.dailyInstantUnlockClaimed?'Використано':(vip.active?'Доступно':'—')}</div></div>
     </div>
 
     <div class="h2">📦 Кейси-слоти <span class="hint">${CHEST_SLOTS_STATE.length}/${CHEST_SLOTS_MAX_CLIENT}</span></div>
-    <div class="sub" style="margin:-6px 2px 10px;">Розблоковується лише 1 кейс одночасно. Безкоштовні кейси падають з ігор (Runner — кожні 1000 очок, інші — за перемогу). Купити ще — вкладка «Магазин» → «Кейси».</div>
+    <div class="sub" style="margin:-6px 2px 10px;">Тут лише безкоштовні кейси з ігор (Runner — кожні 1000 очок). Розблоковується 1 одночасно. Платні кейси («Магазин» → «Кейси») відкриваються одразу після покупки, без слотів.</div>
     <div id="chestSlotsGrid">${slotsSectionHtml()}</div>
 
     <div class="h2">Заряди</div>
@@ -923,11 +950,14 @@ function slotsSectionHtml(){
         <button class="btn danger sm" style="flex:none; width:auto; padding:9px 11px;" onclick="chestSlotDispose(${s.row},'${s.kind}')">${s.kind==='paid'?'♻️':'💰'}</button>
       </div>`;
     } else if (s.status === "Розблоковується" && !s.ready) {
+      const vip = (DASH && DASH.vip) || {};
+      const canInstant = vip.active && !vip.dailyInstantUnlockClaimed;
       body = `<div class="sub mono" style="text-align:center; font-size:14px; margin:6px 0 8px;">⏳ ${fmtSecs(s.secondsLeft)}</div>
         <div class="btn-row">
           <button class="btn secondary sm" onclick="openRushModal(${s.row})">⚡</button>
           <button class="btn danger sm" style="flex:none; width:auto; padding:9px 11px;" onclick="chestSlotDispose(${s.row},'${s.kind}')">${s.kind==='paid'?'♻️':'💰'}</button>
-        </div>`;
+        </div>
+        ${canInstant ? `<button class="btn sm" style="margin-top:6px; background:linear-gradient(155deg,#F2A93B,#B15EF0); color:#1a0f2e;" onclick="claimVipInstantUnlock(${s.row})">👑 Миттєво (безкоштовно)</button>` : ""}`;
     } else {
       body = `<button class="btn sm" style="margin-top:8px;" onclick="chestSlotOpen(${s.row})">🎁 Відкрити!</button>`;
     }
@@ -1007,7 +1037,8 @@ async function chestSlotOpen(row){
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 
-// ── Покупка кейсу (додається у слот, не відкривається миттєво) ──
+// ── Покупка кейсу — платні кейси відкриваються МИТТЄВО (не через
+// слоти — слоти лише для безкоштовних кейсів з ігор) ──
 function buyChestListHtml(){
   const r = CHESTS_STATE;
   if (!r) return "";
@@ -1025,7 +1056,6 @@ function openBuyChestSheet(chestId){
   const c = CHESTS_STATE.chests.find(x => x.id === chestId);
   if (!c) return;
   const locked = CHESTS_STATE.balance < c.cost;
-  const full = CHEST_SLOTS_STATE.length >= CHEST_SLOTS_MAX_CLIENT;
   const meta = CHEST_META[c.id] || {icon:"🎁"};
   showModal(`
     <div class="mh">${meta.icon} ${esc(c.name)}</div>
@@ -1033,16 +1063,16 @@ function openBuyChestSheet(chestId){
     <div class="list" style="margin-bottom:14px;">${c.drops.map(d => `
       <div class="item"><div class="ic mono" style="font-size:12px;">${d.chance}%</div><div class="txt"><div class="t">${esc(dropLabel(d))}</div></div></div>
     `).join("")}</div>
-    ${full ? `<div class="sub" style="margin-bottom:8px; color:var(--danger);">Інвентар кейсів заповнений (${CHEST_SLOTS_MAX_CLIENT}/${CHEST_SLOTS_MAX_CLIENT})</div>` : ""}
-    <button class="btn" ${(locked||full)?'disabled':''} onclick="buyChest('${c.id}')">${full?'Немає місця':(locked?'Недостатньо á-coin':('🛒 Купити — '+c.cost+' 🪙'))}</button>
+    <button class="btn" ${locked?'disabled':''} onclick="buyChest('${c.id}')">${locked?'Недостатньо á-coin':('🎁 Відкрити зараз — '+c.cost+' 🪙')}</button>
   `);
 }
 async function buyChest(chestId){
+  closeModal();
+  toast("Відкриваємо кейс...", "ok");
   try {
-    const r = await api("chest_buy", { chestId });
-    if (!r.ok) { toast(r.error === "inventory_full" ? "Інвентар кейсів заповнений" : (r.error==="insufficient_funds" ? "Недостатньо á-coin" : "Помилка"), "err"); return; }
-    toast("Кейс додано в інвентар! 📦", "ok");
-    closeModal();
+    const r = await apiRaw("chest_open", { chestId });
+    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+    showModal(`<div class="mh">🎉 ${esc(r.chest.name)} відкрито!</div><div class="sub">${esc(r.resultText).replace(/\*/g,'')}</div>`);
     await refreshDashboard();
     await loadShopChests();
   } catch(e) { toast("Помилка з'єднання", "err"); }
@@ -1090,6 +1120,51 @@ async function activateVipHours(hours){
     toast(`VIP активовано на ${hours} год.! 👑`, "ok");
     await refreshDashboard();
     paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function buyVipTicket(ticketId){
+  const t = VIP_TICKET_DEFS[ticketId];
+  if (!confirm(`Придбати VIP-тикет «${t.label}» за ${t.price} á-coin?`)) return;
+  try {
+    const r = await api("vip_buy_ticket", { ticketId });
+    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+    toast("Тикет придбано! Активуйте, коли захочете", "ok");
+    await refreshDashboard(); await loadInventoryData(); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function activateVipTicket(row){
+  if (!confirm("Активувати цей VIP-тикет цілком прямо зараз?")) return;
+  try {
+    const r = await api("vip_activate_ticket", { row });
+    if (!r.ok) { toast("Помилка", "err"); return; }
+    toast("VIP активовано! 👑", "ok");
+    await refreshDashboard(); await loadInventoryData(); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function claimVipDaily(kind){
+  try {
+    const r = await api(kind === "silver" ? "vip_daily_silver" : "vip_daily_avangard");
+    if (!r.ok) {
+      const msg = r.error === "already_claimed" ? "Вже отримано сьогодні" : (r.error === "vip_required" ? "Потрібен активний VIP" : (r.error === "inventory_full" ? "Інвентар кейсів заповнений" : "Помилка"));
+      toast(msg, "err"); return;
+    }
+    if (kind === "avangard") {
+      showModal(`<div class="mh">🎉 «Авангард» відкрито!</div><div class="sub">${esc(r.resultText).replace(/\*/g,'')}</div>`);
+    } else {
+      toast("Кейс додано в слот! 🥈", "ok");
+    }
+    await refreshDashboard(); await loadInventoryData(); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function claimVipInstantUnlock(row){
+  try {
+    const r = await api("vip_daily_instant_unlock", { row });
+    if (!r.ok) {
+      const msg = r.error === "already_claimed" ? "Вже використано сьогодні" : (r.error === "vip_required" ? "Потрібен активний VIP" : "Помилка");
+      toast(msg, "err"); return;
+    }
+    toast("Розблоковано миттєво! 👑", "ok");
+    await refreshDashboard(); await loadInventoryData(); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 function fmtDate(iso){
