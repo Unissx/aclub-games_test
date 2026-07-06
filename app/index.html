@@ -825,10 +825,35 @@ async function buyUpgrade(kind, key){
 // товари з магазину/мерч, предмети з кейсів. Усе в одному місці.
 // ============================================================
 const CHEST_META = {
-  avangard:{icon:"💰"}, singularity:{icon:"⚡️"}, ultimatum:{icon:"🏃"},
-  requiem:{icon:"🌒"}, collapse:{icon:"🔤"}, absolut:{icon:"👑"},
-  silver:{icon:"🥈"}, gold:{icon:"🥇"}, epic:{icon:"💜"}, legendary:{icon:"🧡"}
+  avangard:    { icon:"💰", base:"#2f5233", lid:"#D9A94E", accent:"#8a6a1a", gem:"#F2C879" },
+  singularity: { icon:"⚡️", base:"#2d1f4d", lid:"#8B7CF6", accent:"#4a3b7a", gem:"#c9bdff" },
+  ultimatum:   { icon:"🏃", base:"#0d3b3f", lid:"#4E8FE0", accent:"#0a2a2d", gem:"#9fd0ff" },
+  requiem:     { icon:"🌒", base:"#241b3d", lid:"#6b4fa0", accent:"#1a1430", gem:"#b79bf0" },
+  collapse:    { icon:"🔤", base:"#4a2a10", lid:"#E8873A", accent:"#3a2008", gem:"#ffcf9e" },
+  absolut:     { icon:"👑", base:"#241a05", lid:"#F2C879", accent:"#9c7530", gem:"#fff3d0" },
+  silver:      { icon:"🥈", base:"#4a4a52", lid:"#C7CBD1", accent:"#8a8f99", gem:"#eef1f4" },
+  gold:        { icon:"🥇", base:"#6b4e12", lid:"#F2C879", accent:"#a9791e", gem:"#fff0c2" },
+  epic:        { icon:"💜", base:"#3a1f4d", lid:"#B15EF0", accent:"#6b2f8a", gem:"#e6c3ff" },
+  legendary:   { icon:"🧡", base:"#5c3410", lid:"#F2A93B", accent:"#a35a12", gem:"#ffdca0" },
 };
+// Один шаблон 2D-скрині, розфарбований під кожен тип — узгоджено
+// виглядає і в Магазині, і в слотах Інвентаря.
+function chestArtSvg(chestId, size){
+  size = size || 44;
+  const m = CHEST_META[chestId] || { base:"#333a52", lid:"#8890AA", accent:"#232a45", gem:"#F3F1EA" };
+  return `<svg viewBox="0 0 100 82" width="${size}" height="${Math.round(size*0.82)}" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="50" cy="76" rx="36" ry="4" fill="#000" opacity="0.28"/>
+    <rect x="10" y="40" width="80" height="32" rx="7" fill="${m.base}"/>
+    <rect x="10" y="40" width="80" height="9" fill="${m.accent}" opacity="0.55"/>
+    <rect x="10" y="60" width="80" height="6" fill="${m.accent}" opacity="0.4"/>
+    <path d="M8,40 Q8,15 50,15 Q92,15 92,40 Z" fill="${m.lid}"/>
+    <path d="M8,40 Q8,15 50,15 Q92,15 92,40 L92,29 Q92,21 50,21 Q8,21 8,29 Z" fill="#fff" opacity="0.18"/>
+    <rect x="43" y="11" width="14" height="30" rx="2" fill="${m.accent}"/>
+    <rect x="42" y="35" width="16" height="19" rx="3" fill="${m.accent}"/>
+    <circle cx="50" cy="42" r="3.4" fill="${m.gem}"/>
+    <rect x="48.6" y="42" width="2.8" height="7" fill="${m.gem}"/>
+  </svg>`;
+}
 function dropLabel(d){
   if (d.label) return d.label;
   if (d.type === "coins") return d.amount + " á-coin";
@@ -941,7 +966,6 @@ function slotsSectionHtml(){
   for (let i=0;i<CHEST_SLOTS_MAX_CLIENT;i++){
     const s = slots[i];
     if (!s) { cells.push(`<div class="card" style="text-align:center; opacity:.5;"><div style="font-size:24px;">➕</div><div class="sub" style="margin-top:4px;">Порожньо</div></div>`); continue; }
-    const meta = CHEST_META[s.chestId] || {icon:"🎁"};
     let body;
     if (s.status === "Очікує") {
       const anyUnlocking = slots.some(x=>x.status==="Розблоковується");
@@ -962,7 +986,7 @@ function slotsSectionHtml(){
       body = `<button class="btn sm" style="margin-top:8px;" onclick="chestSlotOpen(${s.row})">🎁 Відкрити!</button>`;
     }
     cells.push(`<div class="card" style="text-align:center;">
-      <div style="font-size:24px;">${meta.icon}</div>
+      <div style="display:flex; justify-content:center;">${chestArtSvg(s.chestId, 52)}</div>
       <div style="font-weight:700; font-size:11.5px; margin-top:4px; line-height:1.3;">${esc(s.name)}</div>
       ${body}
     </div>`);
@@ -1043,10 +1067,9 @@ function buyChestListHtml(){
   const r = CHESTS_STATE;
   if (!r) return "";
   return (r.chests||[]).map(c => {
-    const meta = CHEST_META[c.id] || {icon:"🎁"};
     const locked = r.balance < c.cost;
     return `<div class="item" data-buy-chest="${c.id}" style="cursor:pointer">
-      <div class="ic">${meta.icon}</div>
+      <div style="flex:none;">${chestArtSvg(c.id, 34)}</div>
       <div class="txt"><div class="t">${esc(c.name)}</div><div class="s">${esc(c.desc)}</div></div>
       <div class="right mono" style="color:${locked?'var(--text-faint)':'var(--brass-bright)'}; font-weight:700;">${c.cost} 🪙</div>
     </div>`;
@@ -1056,10 +1079,10 @@ function openBuyChestSheet(chestId){
   const c = CHESTS_STATE.chests.find(x => x.id === chestId);
   if (!c) return;
   const locked = CHESTS_STATE.balance < c.cost;
-  const meta = CHEST_META[c.id] || {icon:"🎁"};
   showModal(`
-    <div class="mh">${meta.icon} ${esc(c.name)}</div>
-    <div class="sub" style="margin-bottom:10px;">${esc(c.desc)}</div>
+    <div style="display:flex; justify-content:center; margin-bottom:8px;">${chestArtSvg(c.id, 84)}</div>
+    <div class="mh" style="text-align:center;">${esc(c.name)}</div>
+    <div class="sub" style="margin-bottom:10px; text-align:center;">${esc(c.desc)}</div>
     <div class="list" style="margin-bottom:14px;">${c.drops.map(d => `
       <div class="item"><div class="ic mono" style="font-size:12px;">${d.chance}%</div><div class="txt"><div class="t">${esc(dropLabel(d))}</div></div></div>
     `).join("")}</div>
