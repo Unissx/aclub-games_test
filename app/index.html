@@ -488,7 +488,12 @@ function openItemDetail(row, isMerch, it){
     }
   } else {
     const selfUse = /^Кейс:|^Крафт:/.test(it.name || "");
-    body = selfUse
+    const rarityMatch = (it.name || "").match(/^Крафт: предмет рівня (Rare|Epic|Legendary)$/);
+    body = rarityMatch
+      ? `<div class="sub" style="margin-bottom:10px;">Оберіть конкретний предмет цієї рідкості.</div>
+        <button class="btn" onclick="closeModal(); openCraftPicker(${row}, '${rarityMatch[1]}')">🎁 Обрати предмет</button>
+        <button class="btn danger" style="margin-top:8px;" onclick="cancelItem(${row})">❌ Скасувати</button>`
+      : selfUse
       ? `<div class="sub" style="margin-bottom:10px;">Предмет з кейсу/крафту — можна використати самостійно, без адміна.</div>
         <button class="btn" onclick="selfUseItem(${row})">✅ Використати</button>
         <button class="btn danger" style="margin-top:8px;" onclick="cancelItem(${row})">❌ Скасувати</button>`
@@ -1175,17 +1180,45 @@ function chestItemsListHtml(){
     </div>`;
   }).join("");
 }
+const CRAFT_ITEM_CATALOG_CLIENT = {
+  Rare: ["Жіночий скін у Runner", "Нестандартний чоловічий скін у Runner", "Візуал таймера"],
+  Epic: ["Зміна фону у «Вгадай слово»", "Набір скінів на перешкоди Runner", "Скін на птаха у Runner"],
+  Legendary: ["Погода у Runner", "Скін на боса", "Візуал клавіатури у «Вгадай слово»"],
+};
 function openItemGroup(name){
   const items = CHEST_ITEMS_STATE.filter(it => (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim() === name);
+  const rarityMatch = name.match(/^Крафт: предмет рівня (Rare|Epic|Legendary)$/);
   showModal(`
     <div class="mh">🎁 ${esc(name)} <span class="hint">×${items.length}</span></div>
     <div class="list">${items.map(it => `
       <div class="item">
         <div class="txt"><div class="t">${it.status==='Не використано' ? '⏳ Не використано' : '✅ Використано'}</div><div class="s">${esc(it.comment||'')}</div></div>
-        ${it.status==='Не використано' ? `<button class="btn sm" style="width:auto; padding:8px 14px;" onclick="selfUseItem(${it.row})">Використати</button>` : ''}
+        ${it.status==='Не використано' ? (rarityMatch
+          ? `<button class="btn sm" style="width:auto; padding:8px 14px;" onclick="openCraftPicker(${it.row}, '${rarityMatch[1]}')">Обрати предмет</button>`
+          : `<button class="btn sm" style="width:auto; padding:8px 14px;" onclick="selfUseItem(${it.row})">Використати</button>`) : ''}
       </div>
     `).join("")}</div>
   `);
+}
+function openCraftPicker(row, rarity){
+  const items = CRAFT_ITEM_CATALOG_CLIENT[rarity] || [];
+  showModal(`
+    <div class="mh">🎁 Оберіть предмет <span class="hint">${esc(rarity)}</span></div>
+    <div class="list">${items.map(it => `
+      <div class="item" style="cursor:pointer" onclick="pickCraftItem(${row}, '${esc(it).replace(/'/g,"\\'")}')">
+        <div class="txt"><div class="t">${esc(it)}</div></div><div class="right">→</div>
+      </div>
+    `).join("")}</div>
+  `);
+}
+async function pickCraftItem(row, itemName){
+  try {
+    const r = await api("craft_pick_item", { row, itemName });
+    if (!r.ok) { toast(r.error === "already_used" ? "Вже використано" : "Помилка", "err"); return; }
+    toast(`Отримано: ${itemName} ✅`, "ok");
+    closeModal();
+    if (TAB === "inventory") { await loadInventoryData(); paintInventory(); }
+  } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 async function activateVipHours(hours){
   hours = parseInt(hours);
