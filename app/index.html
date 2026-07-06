@@ -224,6 +224,13 @@ function toast(msg, kind){
   toast._h = setTimeout(() => t.classList.remove("show"), 2600);
 }
 
+// Якщо бекенд повернув server_error/fatal_error — показуємо реальний
+// текст помилки (detail), а не незрозумілий код на кшталт "server_error".
+function apiErrText(r){
+  if (r && (r.error === "server_error" || r.error === "fatal_error") && r.detail) return "Помилка сервера: " + r.detail;
+  return (r && r.error) || "Помилка";
+}
+
 // Показуємо реальний текст будь-якої необробленої JS-помилки — щоб
 // відрізняти "немає з'єднання з сервером" від справжнього бага в
 // самому застосунку (без цього обидва виглядали як той самий текст).
@@ -391,10 +398,10 @@ function renderHome(){
 
 async function claimDaily(){
   const btn = document.getElementById("btnDaily");
-  btn.disabled = true; btn.textContent = "⏳ Зачекайте, кубик у чаті...";
+  btn.disabled = true; btn.textContent = "⏳ Нараховуємо бонус...";
   try {
     const r = await api("daily_bonus_claim");
-    if (!r.ok) { toast(r.error || "Помилка", "err"); }
+    if (!r.ok) { toast(apiErrText(r), "err"); }
     else { toast("Бонус нараховано! Перевірте чат з ботом 🎉", "ok"); await refreshDashboard(); }
   } catch(e) { toast("Помилка з'єднання", "err"); }
   render();
