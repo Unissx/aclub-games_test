@@ -505,9 +505,19 @@ function updateTimerDisplay() {
 
 function calcTileSize() {
   const vw = Math.min(window.innerWidth, 480);
-  const vh = window.innerHeight;
-  const maxTileW = Math.floor((vw - 40 - (WORD_LEN - 1) * 7) / WORD_LEN);
-  const maxTileH = Math.floor((vh * 0.55 - 20 - (MAX_ATTEMPTS - 1) * 7) / MAX_ATTEMPTS);
+  // ВАЖЛИВО: раніше висота дошки рахувалась як "window.innerHeight * 0.55" —
+  // грубе припущення, яке НЕ враховує реальну висоту хедера (тут — ще й бейджі
+  // "Бонус"/"Підказка", яких немає в базовому режимі) та клавіатури, а також те,
+  // що гра може бути вбудована в iframe головного застосунку (з власним хедером
+  // "← Назад"), де реально доступної висоти менше, ніж повний viewport.
+  // .board-wrap має flex:1; min-height:0, тож його РЕАЛЬНИЙ розмір після рендеру
+  // вже коректно відображає весь простір, що лишився після хедера й клавіатури —
+  // тому рахуємо розмір тайла від нього, а не від vh. Це і прибирає "заліз на текст".
+  const wrap = document.querySelector('.board-wrap');
+  const availW = wrap && wrap.clientWidth ? wrap.clientWidth : vw;
+  const availH = wrap && wrap.clientHeight ? wrap.clientHeight : window.innerHeight * 0.55;
+  const maxTileW = Math.floor((Math.min(availW, vw) - 20 - (WORD_LEN - 1) * 7) / WORD_LEN);
+  const maxTileH = Math.floor((availH - 20 - (MAX_ATTEMPTS - 1) * 7) / MAX_ATTEMPTS);
   const tileSize = Math.max(34, Math.min(54, maxTileW, maxTileH));
   document.documentElement.style.setProperty('--tile-size', tileSize + 'px');
   return tileSize;
@@ -847,6 +857,16 @@ async function finishGame() {
         await fetch(url);
       } catch (e) {}
     }
+  }
+  // Гра може бути відкрита ДВОМА способами:
+  //  1) напряму як Telegram Mini App (кнопка в боті) — тоді tg.close() коректний;
+  //  2) вбудованою в iframe всередині головного застосунку (1.4_inventory.txt,
+  //     openGameFrame/closeGameFrame, хедер "← Назад"). Раніше в цьому випадку
+  //     ми все одно кликали tg.close(), і це закривало ВЕСЬ застосунок замість
+  //     повернення до меню ігор. Тому спочатку пробуємо закрити саме iframe.
+  if (window.self !== window.top) {
+    try { window.parent.closeGameFrame(); return; } catch (e) {}
+    try { window.parent.postMessage({ type: 'closeGameFrame' }, '*'); return; } catch (e) {}
   }
   if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.close) {
     window.Telegram.WebApp.close();
