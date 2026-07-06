@@ -973,7 +973,7 @@ function paintInventory(){
         <div class="badge ${vip.dailyInstantUnlockClaimed?'ok':''}">${vip.dailyInstantUnlockClaimed?'Використано':(vip.active?'Доступно':'—')}</div></div>
     </div>
 
-    <div class="h2">📦 Кейси-слоти <span class="hint">${CHEST_SLOTS_STATE.length}/${CHEST_SLOTS_MAX_CLIENT}</span></div>
+    <div class="h2">📦 Кейси-слоти <span class="hint">${CHEST_SLOTS_STATE.length}${(DASH && DASH.isAdmin) ? ' (без ліміту)' : ('/'+CHEST_SLOTS_MAX_CLIENT)}</span></div>
     <div class="sub" style="margin:-6px 2px 10px;">Тут лише безкоштовні кейси з ігор (Runner — кожні 1000 очок). Розблоковується 1 одночасно. Платні кейси («Магазин» → «Кейси») відкриваються одразу після покупки, без слотів.</div>
     <div id="chestSlotsGrid">${slotsSectionHtml()}</div>
 
@@ -1008,7 +1008,8 @@ function fmtSecs(sec){
 function slotsSectionHtml(){
   const slots = CHEST_SLOTS_STATE;
   const cells = [];
-  for (let i=0;i<CHEST_SLOTS_MAX_CLIENT;i++){
+  const totalCells = Math.max(CHEST_SLOTS_MAX_CLIENT, slots.length); // адмінам ліміт не застосовується — покажемо всі
+  for (let i=0;i<totalCells;i++){
     const s = slots[i];
     if (!s) { cells.push(`<div class="card" style="text-align:center; opacity:.5;"><div style="font-size:24px;">➕</div><div class="sub" style="margin-top:4px;">Порожньо</div></div>`); continue; }
     let body;
@@ -1075,7 +1076,7 @@ async function disposeChestSlot(row, mode){
     if (!r.ok) { toast("Помилка", "err"); return; }
     if (mode === "dismantle") toast(r.won ? "🔮 +1 осколок!" : "Нічого не випало", r.won?"ok":undefined);
     else toast(`Продано за ${r.price} á-coin`, "ok");
-    await refreshDashboard(); await loadInventoryData(); paintInventory();
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 function openRushModal(row){
@@ -1094,7 +1095,7 @@ async function submitRush(row){
     if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
     toast(`Витрачено ${r.spent} á-coin`, "ok");
     closeModal();
-    await refreshDashboard(); await loadInventoryData(); paintInventory();
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 async function chestSlotOpen(row){
@@ -1102,7 +1103,7 @@ async function chestSlotOpen(row){
     const r = await api("chest_slot_open", { row });
     if (!r.ok) { toast(r.error === "not_ready" ? "Ще не готово" : "Помилка", "err"); return; }
     showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText));
-    await refreshDashboard(); await loadInventoryData(); paintInventory();
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 
@@ -1197,7 +1198,7 @@ async function buyVipTicket(ticketId){
     const r = await api("vip_buy_ticket", { ticketId });
     if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
     toast("Тикет придбано! Активуйте, коли захочете", "ok");
-    await refreshDashboard(); await loadInventoryData(); paintInventory();
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 async function activateVipTicket(row){
@@ -1206,7 +1207,7 @@ async function activateVipTicket(row){
     const r = await api("vip_activate_ticket", { row });
     if (!r.ok) { toast("Помилка", "err"); return; }
     toast("VIP активовано! 👑", "ok");
-    await refreshDashboard(); await loadInventoryData(); paintInventory();
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 async function claimVipDaily(kind){
@@ -1221,7 +1222,7 @@ async function claimVipDaily(kind){
     } else {
       toast("Кейс додано в слот! 🥈", "ok");
     }
-    await refreshDashboard(); await loadInventoryData(); paintInventory();
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 async function claimVipInstantUnlock(row){
@@ -1232,7 +1233,7 @@ async function claimVipInstantUnlock(row){
       toast(msg, "err"); return;
     }
     toast("Розблоковано миттєво! 👑", "ok");
-    await refreshDashboard(); await loadInventoryData(); paintInventory();
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 function fmtDate(iso){
@@ -1246,7 +1247,7 @@ async function craftItem(rarity){
     const r = await apiRaw("craft_item", { rarity });
     if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
     toast("Крафт виконано! Дивіться нижче в «Предмети з кейсів»", "ok");
-    await refreshDashboard(); await loadInventoryData(); paintInventory();
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 
