@@ -340,6 +340,12 @@ function restoreGame(data) {
   keyStates = {};
 
   $('lengthLabel').textContent = `слово з ${WORD_LEN} літер · ${MAX_ATTEMPTS} спроб`;
+  // ВАЖЛИВО: updateGameBadges() має відпрацювати ДО calcKeySize()/buildBoard() —
+  // саме вона додає бейджі "Бонус"/"Підказка", які збільшують висоту хедера.
+  // Якщо викликати її ПІСЛЯ побудови дошки (як було раніше), дошка порахує
+  // свій розмір під ще "коротший" хедер, а потім хедер виросте — і дошка
+  // вилізе на текст зверху. У startGame() порядок був правильний, тут — ні.
+  updateGameBadges();
   calcKeySize();
   buildBoard();
   buildKeyboard();
@@ -358,7 +364,8 @@ function restoreGame(data) {
     }
     attempts.push(guess);
   });
-  updateGameBadges(); // викликаємо ПІСЛЯ відновлення спроб — бейдж покаже суму за наступну спробу
+  updateGameBadges(); // ще раз — щоб текст бейджа показував суму саме за НАСТУПНУ спробу
+                       // (бейдж вже показаний вище, тут лише оновлюємо цифри, висота не зміниться)
 
   showOverlay(null);
   showToast('Гру відновлено');
