@@ -1080,10 +1080,29 @@ function skinIconSvg(poolKey, itemName, size){
     case "letters": shape = `<text x="50" y="68" font-size="52" font-family="'Unbounded',sans-serif" font-weight="800" fill="${c1}" text-anchor="middle">A</text>`; break;
     default: shape = `<circle cx="50" cy="50" r="28" fill="${c1}"/>`;
   }
+  const gradId = 'g' + Math.abs(_hashHue(key + poolKey)).toString(36);
   return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="${gradId}h" cx="35%" cy="30%" r="75%">
+        <stop offset="0%" stop-color="${shadeColorCss(c2,18)}"/>
+        <stop offset="100%" stop-color="${shadeColorCss(c1,-10)}"/>
+      </radialGradient>
+      <linearGradient id="${gradId}b" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="${shadeColorCss(c1,16)}"/>
+        <stop offset="100%" stop-color="${shadeColorCss(c1,-18)}"/>
+      </linearGradient>
+    </defs>
     <rect x="2" y="2" width="96" height="96" rx="18" fill="${bg}"/>
-    ${shape}
+    <ellipse cx="50" cy="90" rx="26" ry="5" fill="#000" opacity=".25"/>
+    ${shape.replace(new RegExp(_escRe(c2),'g'), `url(#${gradId}h)`).replace(new RegExp(_escRe(c1),'g'), `url(#${gradId}b)`)}
   </svg>`;
+}
+function _escRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function shadeColorCss(hslStr, delta){
+  const m = hslStr.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
+  if(!m) return hslStr;
+  const h=parseFloat(m[1]), sat=parseFloat(m[2]), light=Math.max(0,Math.min(100,parseFloat(m[3])+delta));
+  return `hsl(${h},${sat}%,${light}%)`;
 }
 // Кеш каталогу пулів (щоб не смикати сервер щоразу) + пошук, якому
 // пулу належить конкретна назва — потрібно, щоб малювати правильну
