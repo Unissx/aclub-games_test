@@ -926,6 +926,7 @@ function renderShop(){
 // ── Кейси (покупка — потрапляє у слот в «Інвентарі») ──
 async function loadShopChests(){
   const wrap = document.getElementById("shopBody");
+  if (!wrap) return; // не на вкладці Магазину (наприклад, кейс купили з модалки в Інвентарі) — нічого оновлювати
   try {
     const r = await apiRaw("get_inventory");
     if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
@@ -1525,7 +1526,7 @@ async function buyChest(chestId){
     if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
     showModal(chestOpenSceneHtml(r.chest.id, r.chest.name, r.resultText));
     await refreshDashboard();
-    await loadShopChests();
+    await loadShopChests(); // no-op, якщо ми не на вкладці Магазину (наприклад, купили з Інвентаря)
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 
