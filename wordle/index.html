@@ -2751,6 +2751,18 @@ if (window.Telegram && window.Telegram.WebApp) {
   });
 }
 
+// ВАЖЛИВО: шрифти (Unbounded/Nunito) довантажуються асинхронно. Якщо
+// calcTileSize() відпрацював ДО того, як шрифт у хедері остаточно
+// підвантажився, реальна висота хедера потім може змінитись (font swap),
+// а розмір дошки вже порахований під старі метрики — дошка вилазить на
+// текст. Тому перераховуємо розмір ще раз, коли всі шрифти гарантовано
+// готові (document.fonts.ready).
+if (window.document && document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(() => {
+    if (WORD_LEN) { calcTileSize(); calcKeySize(); }
+  });
+}
+
 function getTg() {
   const fromHash = new URLSearchParams(window.location.hash.substring(1));
   const fromQuery = new URLSearchParams(window.location.search);
