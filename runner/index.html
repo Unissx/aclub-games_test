@@ -883,6 +883,7 @@ function getTg(){
 // Апгрейди читаються динамічно при старті гри
 let _upgrades={bird:0,shield:0,magnet:0,speed:0,lives:0};
 let SKIN_HUE=null, SKIN_SAT=70, SKIN_LIGHT=45; // колір екіпірованого скіна персонажа (з застосунку áClub), null = стандартний вигляд
+let BIRD_HUE=null, BIRD_SAT=70, BIRD_LIGHT=50; // колір екіпірованого скіна ПТАХА-помічника — окремо від персонажа
 function readUpgrades(){
   const fromQuery=new URLSearchParams(window.location.search);
   const fromHash=new URLSearchParams(window.location.hash.substring(1));
@@ -900,6 +901,16 @@ function readUpgrades(){
   const lightRaw=fromQuery.get('skinlight')||fromHash.get('skinlight');
   SKIN_SAT=(satRaw!==null && satRaw!=='') ? parseInt(satRaw) : 70;
   SKIN_LIGHT=(lightRaw!==null && lightRaw!=='') ? parseInt(lightRaw) : 45;
+
+  // Скін птаха-помічника — окремі параметри, ніяк не пов'язані з SKIN_HUE
+  // персонажа. Раніше такого механізму не було взагалі, тому екіпірування
+  // скіна птаха ніяк не відображалось у грі.
+  const bHueRaw=fromQuery.get('birdhue')||fromHash.get('birdhue');
+  BIRD_HUE=(bHueRaw!==null && bHueRaw!=='') ? parseInt(bHueRaw) : null;
+  const bSatRaw=fromQuery.get('birdsat')||fromHash.get('birdsat');
+  const bLightRaw=fromQuery.get('birdlight')||fromHash.get('birdlight');
+  BIRD_SAT=(bSatRaw!==null && bSatRaw!=='') ? parseInt(bSatRaw) : 70;
+  BIRD_LIGHT=(bLightRaw!==null && bLightRaw!=='') ? parseInt(bLightRaw) : 50;
 }
 
 const SHIELD_DUR  = [5*60, 7*60, 10*60, 15*60, 20*60, 30*60]; // індекс = рівень 0-5
@@ -1001,11 +1012,14 @@ function drawBirdHelper(){
   const flap=Math.sin(_birdAnim*.22)*s(10);
   const lvl=_upgrades.bird;
   ctx.save();
-  // Тіло
-  ctx.fillStyle=lvl>=3?'#ff9800':'#ffd740';
+  // Тіло — якщо екіпіровано скін птаха (BIRD_HUE), використовуємо його колір,
+  // інакше стандартний жовтий/жовтогарячий залежно від рівня.
+  const bodyColor = BIRD_HUE!=null ? `hsl(${BIRD_HUE},${BIRD_SAT}%,${BIRD_LIGHT}%)` : (lvl>=3?'#ff9800':'#ffd740');
+  const wingColor = BIRD_HUE!=null ? `hsl(${BIRD_HUE},${BIRD_SAT}%,${Math.max(10,BIRD_LIGHT-15)}%)` : (lvl>=3?'#ff6d00':'#ffcc02');
+  ctx.fillStyle=bodyColor;
   ctx.beginPath();ctx.ellipse(bx,by,s(14),s(9),0,0,Math.PI*2);ctx.fill();
   // Крила
-  ctx.fillStyle=lvl>=3?'#ff6d00':'#ffcc02';
+  ctx.fillStyle=wingColor;
   ctx.beginPath();ctx.moveTo(bx,by-s(3));ctx.quadraticCurveTo(bx-s(18),by-s(14)+flap,bx-s(22),by+s(2));ctx.quadraticCurveTo(bx-s(8),by+s(8),bx,by-s(3));ctx.fill();
   ctx.beginPath();ctx.moveTo(bx,by-s(3));ctx.quadraticCurveTo(bx+s(18),by-s(14)+flap,bx+s(22),by+s(2));ctx.quadraticCurveTo(bx+s(8),by+s(8),bx,by-s(3));ctx.fill();
   // Очі
@@ -1020,7 +1034,7 @@ function drawBirdHelper(){
   const prog=_birdTimer/BIRD_INTERVAL[lvl];
   ctx.strokeStyle='rgba(255,215,64,.2)';ctx.lineWidth=s(3);
   ctx.beginPath();ctx.arc(bx,by,s(22),-.5*Math.PI,1.5*Math.PI);ctx.stroke();
-  ctx.strokeStyle=lvl>=3?'#ff9800':'#ffd740';ctx.lineWidth=s(3);ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=6;
+  ctx.strokeStyle=bodyColor;ctx.lineWidth=s(3);ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=6;
   ctx.beginPath();ctx.arc(bx,by,s(22),-.5*Math.PI,-.5*Math.PI+prog*2*Math.PI);ctx.stroke();
   ctx.restore();
   // Лазер
