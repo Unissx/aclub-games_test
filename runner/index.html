@@ -161,11 +161,11 @@ const P={
       ctx.restore();}
     const lo=run*s(5),arm=this.onGround?Math.cos(this.af*Math.PI/2)*s(4):-s(3);
     const d=noApples;
-    const BC=d?'#ff1744':(SKIN_HUE!=null?`hsl(${SKIN_HUE},70%,45%)`:'#00c853'),
-          DC=d?'#c0003c':(SKIN_HUE!=null?`hsl(${SKIN_HUE},70%,25%)`:'#004d40'),
-          LC=d?'#ff6090':(SKIN_HUE!=null?`hsl(${SKIN_HUE},60%,55%)`:'#00a152'),
+    const BC=d?'#ff1744':(SKIN_HUE!=null?`hsl(${SKIN_HUE},${SKIN_SAT}%,${SKIN_LIGHT}%)`:'#00c853'),
+          DC=d?'#c0003c':(SKIN_HUE!=null?`hsl(${SKIN_HUE},${SKIN_SAT}%,${Math.max(10,SKIN_LIGHT-20)}%)`:'#004d40'),
+          LC=d?'#ff6090':(SKIN_HUE!=null?`hsl(${SKIN_HUE},${Math.max(0,SKIN_SAT-10)}%,${Math.min(90,SKIN_LIGHT+10)}%)`:'#00a152'),
           SK=d?'#ff6090':'#a5d6a7',
-          HC=d?'#c0003c':(SKIN_HUE!=null?`hsl(${SKIN_HUE},70%,45%)`:'#00c853');
+          HC=d?'#c0003c':(SKIN_HUE!=null?`hsl(${SKIN_HUE},${SKIN_SAT}%,${SKIN_LIGHT}%)`:'#00c853');
     ctx.fillStyle=LC;ctx.beginPath();ctx.roundRect(px+s(4),py+s(26),s(9),s(13)+lo,s(3));ctx.fill();
     ctx.beginPath();ctx.roundRect(px+s(15),py+s(26),s(9),s(13)-lo,s(3));ctx.fill();
     ctx.fillStyle=DC;ctx.beginPath();ctx.roundRect(px+s(2),py+s(37)+lo,s(13),s(4),s(2));ctx.fill();
@@ -882,7 +882,7 @@ function getTg(){
 
 // Апгрейди читаються динамічно при старті гри
 let _upgrades={bird:0,shield:0,magnet:0,speed:0,lives:0};
-let SKIN_HUE=null; // колір екіпірованого скіна персонажа (з застосунку áClub), null = стандартний вигляд
+let SKIN_HUE=null, SKIN_SAT=70, SKIN_LIGHT=45; // колір екіпірованого скіна персонажа (з застосунку áClub), null = стандартний вигляд
 function readUpgrades(){
   const fromQuery=new URLSearchParams(window.location.search);
   const fromHash=new URLSearchParams(window.location.hash.substring(1));
@@ -890,6 +890,16 @@ function readUpgrades(){
   _upgrades={bird:get('bird'),shield:get('shield'),magnet:get('magnet'),speed:get('uspeed'),lives:get('ulives')};
   const hueRaw=fromQuery.get('skinhue')||fromHash.get('skinhue');
   SKIN_HUE=(hueRaw!==null && hueRaw!=='') ? parseInt(hueRaw) : null;
+  // ВАЖЛИВО: раніше передавався лише hue, а saturation/lightness завжди були
+  // фіксовані (70%/45%) — тому різні скіни, які відрізнялись лише відтінком
+  // при тих самих sat/light, часто виглядали майже нерозрізнювано (особливо
+  // на темних/пастельних відтінках). Тепер застосунок може передавати й
+  // sat/light окремо для кожного конкретного скіна — це і робить їх реально
+  // помітно різними.
+  const satRaw=fromQuery.get('skinsat')||fromHash.get('skinsat');
+  const lightRaw=fromQuery.get('skinlight')||fromHash.get('skinlight');
+  SKIN_SAT=(satRaw!==null && satRaw!=='') ? parseInt(satRaw) : 70;
+  SKIN_LIGHT=(lightRaw!==null && lightRaw!=='') ? parseInt(lightRaw) : 45;
 }
 
 const SHIELD_DUR  = [5*60, 7*60, 10*60, 15*60, 20*60, 30*60]; // індекс = рівень 0-5
