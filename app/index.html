@@ -950,6 +950,72 @@ const CHEST_META = {
 // Один шаблон 2D-скрині, розфарбований під кожен тип — узгоджено
 // виглядає і в Магазині, і в слотах Інвентаря. animated=true —
 // кришка окремою групою з CSS-анімацією відкриття.
+// ============================================================
+// Візуал скінів: своя форма-силует під кожну категорію + свій
+// колір під кожну конкретну назву (з хешу тексту) — щоб усі ~96
+// скінів виглядали розрізнювано, без потреби малювати кожен окремо.
+// ============================================================
+function _hashHue(str){
+  let h = 0;
+  for (let i=0;i<str.length;i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
+  return h % 360;
+}
+function skinCategoryOf(poolKey){
+  if (!poolKey) return "generic";
+  if (poolKey.indexOf("character") >= 0) return "character";
+  if (poolKey === "runner_epic_bird") return "bird";
+  if (poolKey.indexOf("obstacles") >= 0) return "obstacles";
+  if (poolKey.indexOf("weather") >= 0) return "weather";
+  if (poolKey.indexOf("boss") >= 0) return "boss";
+  if (poolKey.indexOf("timer") >= 0) return "timer";
+  if (poolKey.indexOf("keyboard") >= 0) return "keyboard";
+  if (poolKey.indexOf("background") >= 0) return "background";
+  if (poolKey.indexOf("wheel") >= 0) return "wheel";
+  if (poolKey.indexOf("letters") >= 0) return "letters";
+  return "generic";
+}
+function skinIconSvg(poolKey, itemName, size){
+  size = size || 44;
+  const cat = skinCategoryOf(poolKey);
+  const hue = _hashHue(itemName || poolKey || "x");
+  const c1 = `hsl(${hue},62%,55%)`, c2 = `hsl(${hue},70%,74%)`, bg = `hsl(${hue},38%,16%)`;
+  let shape = "";
+  switch(cat){
+    case "character": shape = `<circle cx="50" cy="32" r="14" fill="${c2}"/><path d="M30,90 Q30,55 50,55 Q70,55 70,90 Z" fill="${c1}"/>`; break;
+    case "bird": shape = `<ellipse cx="48" cy="56" rx="26" ry="17" fill="${c1}"/><path d="M50,45 L76,29 L60,53 Z" fill="${c2}"/><circle cx="33" cy="49" r="4" fill="${bg}"/>`; break;
+    case "obstacles": shape = `<rect x="18" y="55" width="18" height="30" rx="3" fill="${c1}"/><rect x="43" y="38" width="18" height="47" rx="3" fill="${c2}"/><rect x="68" y="60" width="14" height="25" rx="3" fill="${c1}"/>`; break;
+    case "weather": shape = `<ellipse cx="44" cy="42" rx="25" ry="15" fill="${c2}"/><ellipse cx="64" cy="48" rx="17" ry="12" fill="${c1}"/><line x1="35" y1="68" x2="30" y2="84" stroke="${c1}" stroke-width="4" stroke-linecap="round"/><line x1="55" y1="68" x2="50" y2="84" stroke="${c1}" stroke-width="4" stroke-linecap="round"/>`; break;
+    case "boss": shape = `<circle cx="50" cy="52" r="27" fill="${c1}"/><path d="M22,42 L30,22 L38,42 M62,42 L70,22 L78,42" stroke="${c2}" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="40" cy="50" r="5" fill="${bg}"/><circle cx="60" cy="50" r="5" fill="${bg}"/>`; break;
+    case "timer": shape = `<circle cx="50" cy="56" r="27" fill="${c1}" stroke="${c2}" stroke-width="4"/><line x1="50" y1="56" x2="50" y2="40" stroke="${bg}" stroke-width="4" stroke-linecap="round"/><line x1="50" y1="56" x2="61" y2="56" stroke="${bg}" stroke-width="4" stroke-linecap="round"/><rect x="42" y="19" width="16" height="8" rx="3" fill="${c2}"/>`; break;
+    case "background": shape = `<rect x="13" y="17" width="74" height="57" rx="6" fill="${bg}" stroke="${c2}" stroke-width="3"/><circle cx="30" cy="34" r="6" fill="${c2}"/><path d="M13,64 L38,44 L55,59 L70,41 L87,64 Z" fill="${c1}"/>`; break;
+    case "keyboard": shape = `<rect x="13" y="36" width="74" height="38" rx="6" fill="${c1}"/>${[0,1,2,3].map(i=>`<rect x="${19+i*17}" y="44" width="12" height="9" rx="2" fill="${c2}"/><rect x="${19+i*17}" y="58" width="12" height="9" rx="2" fill="${c2}"/>`).join("")}`; break;
+    case "wheel": shape = `<circle cx="50" cy="50" r="30" fill="none" stroke="${c1}" stroke-width="8"/><circle cx="50" cy="50" r="9" fill="${c2}"/>`; break;
+    case "letters": shape = `<text x="50" y="68" font-size="52" font-family="'Unbounded',sans-serif" font-weight="800" fill="${c1}" text-anchor="middle">A</text>`; break;
+    default: shape = `<circle cx="50" cy="50" r="28" fill="${c1}"/>`;
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="2" width="96" height="96" rx="18" fill="${bg}"/>
+    ${shape}
+  </svg>`;
+}
+// Кеш каталогу пулів (щоб не смикати сервер щоразу) + пошук, якому
+// пулу належить конкретна назва — потрібно, щоб малювати правильну
+// іконку для вже отриманого предмета (де відома лише назва).
+let SKINS_CATALOG_CACHE = null;
+async function loadSkinsCatalog(){
+  if (SKINS_CATALOG_CACHE) return SKINS_CATALOG_CACHE;
+  try {
+    const r = await api("skins_catalog");
+    if (r.ok) SKINS_CATALOG_CACHE = r.pools;
+  } catch(e) {}
+  return SKINS_CATALOG_CACHE || [];
+}
+function findPoolKeyForItem(name, pools){
+  if (!name || !pools) return null;
+  for (const p of pools) { if (p.items.includes(name)) return p.key; }
+  return null;
+}
+
 function chestArtSvg(chestId, size, animated){
   size = size || 44;
   const m = CHEST_META[chestId] || { base:"#333a52", lid:"#8890AA", accent:"#232a45", gem:"#F3F1EA" };
@@ -1016,7 +1082,7 @@ const VIP_TICKET_DEFS = {
 };
 async function loadInventoryData(){
   try {
-    const [r, myItems, slotsRes, ticketsRes] = await Promise.all([apiRaw("get_inventory"), api("my_items"), api("chest_slots_get"), api("vip_my_tickets")]);
+    const [r, myItems, slotsRes, ticketsRes] = await Promise.all([apiRaw("get_inventory"), api("my_items"), api("chest_slots_get"), api("vip_my_tickets"), loadSkinsCatalog()]);
     CHESTS_STATE = r.ok ? r : null;
     CHEST_ITEMS_STATE = (myItems.ok ? myItems.items : []).filter(it => !it.isMerch && /^Кейс:|^Крафт:/.test(it.name||""));
     CHEST_SLOTS_STATE = slotsRes.ok ? slotsRes.slots : [];
@@ -1079,7 +1145,7 @@ function paintInventory(){
       ${(CHESTS_STATE.craftRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${CHESTS_STATE.shards<rc.cost?'disabled':''} onclick="craftItem('${rc.id}')">${esc(rc.name)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
     </div>
 
-    <div class="h2">Предмети з кейсів <span class="hint">тапніть, щоб використати</span></div>
+    <div class="h2">🎨 Мої скіни <span class="hint">тапніть, щоб обрати/використати</span></div>
     <div class="list" id="chestItemsList">${chestItemsListHtml()}</div>
   `;
   wrap.querySelectorAll("[data-chest-group]").forEach(el => el.addEventListener("click", () => openItemGroup(el.getAttribute("data-chest-group"))));
@@ -1245,23 +1311,28 @@ function chestItemsListHtml(){
     if (!groups[shortName]) groups[shortName] = { name: shortName, comment: it.comment, items: [] };
     groups[shortName].items.push(it);
   });
-  return Object.values(groups).map(g => {
-    const available = g.items.filter(x => x.status === "Не використано");
-    const rarity = /Legendary/.test(g.name) ? "legendary" : /Epic/.test(g.name) ? "epic" : "rare";
-    const countLabel = g.items.length > 1 ? ` ×${g.items.length}` : "";
-    const statusLabel = available.length > 0 ? `Доступно: ${available.length} — тапніть, щоб використати` : "Усе використано";
-    return `<div class="item" data-chest-group="${esc(g.name)}" style="cursor:pointer">
-      <div class="rarity-dot ${rarity}"></div>
-      <div class="txt"><div class="t">${esc(g.name)}${countLabel}</div><div class="s">${esc(statusLabel)}</div></div>
-      <div class="right badge ${available.length>0?'new':'ok'}">${available.length>0?'→':'✓'}</div>
-    </div>`;
-  }).join("");
+  const pools = SKINS_CATALOG_CACHE || [];
+  return `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:10px;">` +
+    Object.values(groups).map(g => {
+      const available = g.items.filter(x => x.status === "Не використано");
+      const poolKey = findPoolKeyForItem(g.name.replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,""), pools);
+      const countLabel = g.items.length > 1 ? `<div class="badge" style="position:absolute; top:-4px; right:-4px;">×${g.items.length}</div>` : "";
+      return `<div data-chest-group="${esc(g.name)}" style="cursor:pointer; text-align:center; position:relative;">
+        ${countLabel}
+        <div style="opacity:${available.length>0?1:.4};">${skinIconSvg(poolKey, g.name, 68)}</div>
+        <div class="sub" style="font-size:10px; margin-top:3px; line-height:1.25;">${esc(g.name.replace(/^Крафт: предмет рівня /,"").replace(/^Крафт: |^Кейс: /,""))}</div>
+        ${available.length>0 ? `<div class="badge new" style="margin-top:2px;">Обрати →</div>` : `<div class="badge ok" style="margin-top:2px;">Отримано</div>`}
+      </div>`;
+    }).join("") + `</div>`;
 }
 function openItemGroup(name){
   const items = CHEST_ITEMS_STATE.filter(it => (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim() === name);
   const rarityMatch = name.match(/^Крафт: предмет рівня (Rare|Epic|Legendary)$/);
+  const pools = SKINS_CATALOG_CACHE || [];
+  const poolKey = findPoolKeyForItem(name.replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,""), pools);
   showModal(`
-    <div class="mh">🎁 ${esc(name)} <span class="hint">×${items.length}</span></div>
+    <div style="display:flex; justify-content:center; margin-bottom:8px;">${skinIconSvg(poolKey, name, 84)}</div>
+    <div class="mh" style="text-align:center;">${esc(name)} <span class="hint">×${items.length}</span></div>
     <div class="list">${items.map(it => `
       <div class="item">
         <div class="txt"><div class="t">${it.status==='Не використано' ? '⏳ Не використано' : '✅ Використано'}</div><div class="s">${esc(it.comment||'')}</div></div>
@@ -1275,15 +1346,17 @@ function openItemGroup(name){
 async function openCraftPicker(row, rarity){
   showModal(`<div class="mh">🎁 Оберіть предмет <span class="hint">${esc(rarity)}</span></div>${loadingBlock()}`);
   try {
-    const r = await api("craft_catalog_get");
+    const [r, pools] = await Promise.all([api("craft_catalog_get"), loadSkinsCatalog()]);
     const items = (r.ok && r.catalog[rarity]) || [];
     showModal(`
       <div class="mh">🎁 Оберіть предмет <span class="hint">${esc(rarity)}</span></div>
-      <div class="list">${items.map(it => `
-        <div class="item" style="cursor:pointer" onclick="pickCraftItem(${row}, '${esc(it).replace(/'/g,"\\'")}')">
+      <div class="list">${items.map(it => {
+        const poolKey = findPoolKeyForItem(it, pools);
+        return `<div class="item" style="cursor:pointer" onclick="pickCraftItem(${row}, '${esc(it).replace(/'/g,"\\'")}')">
+          <div style="flex:none;">${skinIconSvg(poolKey, it, 36)}</div>
           <div class="txt"><div class="t">${esc(it)}</div></div><div class="right">→</div>
-        </div>
-      `).join("")}</div>
+        </div>`;
+      }).join("")}</div>
     `);
   } catch(e) { showModal(`<div class="mh">⚠️ Немає з'єднання</div>`); }
 }
@@ -1364,7 +1437,7 @@ async function craftItem(rarity){
   try {
     const r = await apiRaw("craft_item", { rarity });
     if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
-    toast("Крафт виконано! Дивіться нижче в «Предмети з кейсів»", "ok");
+    toast("Крафт виконано! Дивіться нижче в «Мої скіни»", "ok");
     await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
@@ -1471,6 +1544,7 @@ async function loadAdminSkins(){
       const r = await api("admin_skins_catalog");
       if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
       ADMIN_SKINS_CATALOG = r.pools;
+      SKINS_CATALOG_CACHE = r.pools; // той самий кеш, що й для іконок власних скінів
     }
     wrap.innerHTML = `
       <div class="card">
@@ -1482,26 +1556,41 @@ async function loadAdminSkins(){
           ${ADMIN_SKINS_CATALOG.map(p => `<option value="${p.key}">${esc(p.label)}</option>`).join("")}
         </select>
         <div class="field-label">Конкретний предмет</div>
-        <select class="field" id="skinGrantItem"></select>
+        <div class="row" style="gap:8px;">
+          <select class="field" id="skinGrantItem" onchange="updateSkinPreview()" style="flex:1;"></select>
+          <div id="skinPreview" style="flex:none;"></div>
+        </div>
         <button class="btn sm" style="margin-top:10px;" onclick="submitGrantSkin()">✅ Видати</button>
       </div>
 
       <div class="h2">Каталог усіх скінів <span class="hint">${ADMIN_SKINS_CATALOG.reduce((s,p)=>s+p.items.length,0)} шт.</span></div>
-      <div class="list">${ADMIN_SKINS_CATALOG.map(p => `
-        <div class="card">
-          <div style="font-weight:700; font-size:13px; margin-bottom:6px;">${esc(p.label)} <span class="badge">${p.items.length}</span></div>
-          <div class="sub" style="line-height:1.6;">${p.items.map(it => esc(it)).join(" · ")}</div>
+      ${ADMIN_SKINS_CATALOG.map(p => `
+        <div class="h2" style="font-size:13px; margin-top:14px;">${esc(p.label)} <span class="badge">${p.items.length}</span></div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(78px, 1fr)); gap:8px;">
+          ${p.items.map(it => `
+            <div style="text-align:center;">
+              ${skinIconSvg(p.key, it, 56)}
+              <div class="sub" style="font-size:10px; margin-top:2px; line-height:1.2;">${esc(it)}</div>
+            </div>
+          `).join("")}
         </div>
-      `).join("")}</div>
+      `).join("")}
     `;
     renderSkinItemSelect();
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+function updateSkinPreview(){
+  const poolKey = document.getElementById("skinGrantPool").value;
+  const itemName = document.getElementById("skinGrantItem").value;
+  const el = document.getElementById("skinPreview");
+  if (el) el.innerHTML = skinIconSvg(poolKey, itemName, 44);
 }
 function renderSkinItemSelect(){
   const poolKey = document.getElementById("skinGrantPool").value;
   const pool = ADMIN_SKINS_CATALOG.find(p => p.key === poolKey);
   const sel = document.getElementById("skinGrantItem");
   sel.innerHTML = (pool ? pool.items : []).map(it => `<option value="${esc(it)}">${esc(it)}</option>`).join("");
+  updateSkinPreview();
 }
 async function submitGrantSkin(){
   const ldap = document.getElementById("skinGrantLdap").value.trim();
