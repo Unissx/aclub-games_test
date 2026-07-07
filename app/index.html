@@ -622,12 +622,13 @@ window.addEventListener("message", (e) => {
 // Підтягуємо рівні апгрейдів (максимум, якщо VIP активний) і передаємо
 // їх у query-параметрах, які Runner читає сам при старті.
 async function playRunner(){
-  let params = { bird:0, shield:0, magnet:0, uspeed:0, ulives:0 };
+  let params = { bird:0, shield:0, magnet:0, uspeed:0, ulives:0, equippedCharacter:null };
   try {
     const r = await api("runner_launch_params");
     if (r.ok) params = r;
   } catch(e) {}
-  const url = RUNNER_URL + `&bird=${params.bird}&shield=${params.shield}&magnet=${params.magnet}&uspeed=${params.uspeed}&ulives=${params.ulives}`;
+  const hue = params.equippedCharacter ? _hashHue(params.equippedCharacter) : "";
+  const url = RUNNER_URL + `&bird=${params.bird}&shield=${params.shield}&magnet=${params.magnet}&uspeed=${params.uspeed}&ulives=${params.ulives}${hue!==""?`&skinhue=${hue}`:""}`;
   openGameFrame(url, "🏃 áClub Runner");
 }
 
@@ -977,15 +978,53 @@ function skinCategoryOf(poolKey){
 function skinIconSvg(poolKey, itemName, size){
   size = size || 44;
   const cat = skinCategoryOf(poolKey);
-  const hue = _hashHue(itemName || poolKey || "x");
-  const c1 = `hsl(${hue},62%,55%)`, c2 = `hsl(${hue},70%,74%)`, bg = `hsl(${hue},38%,16%)`;
+  const key = itemName || poolKey || "x";
+  const hue = _hashHue(key);
+  const variantIdx = _hashHue(key + "#v") ; // друге, незалежне число для вибору пози/дизайну
+  const c1 = `hsl(${hue},62%,55%)`, c2 = `hsl(${hue},70%,74%)`, c3 = `hsl(${hue},50%,38%)`, bg = `hsl(${hue},38%,16%)`;
   let shape = "";
   switch(cat){
-    case "character": shape = `<circle cx="50" cy="32" r="14" fill="${c2}"/><path d="M30,90 Q30,55 50,55 Q70,55 70,90 Z" fill="${c1}"/>`; break;
-    case "bird": shape = `<ellipse cx="48" cy="56" rx="26" ry="17" fill="${c1}"/><path d="M50,45 L76,29 L60,53 Z" fill="${c2}"/><circle cx="33" cy="49" r="4" fill="${bg}"/>`; break;
+    case "character": {
+      const variants = [
+        // 0: бізнес-кежуал — піджак + краватка
+        `<circle cx="50" cy="28" r="13" fill="${c2}"/><path d="M31,88 Q31,52 50,52 Q69,52 69,88 Z" fill="${c1}"/><path d="M46,52 L50,64 L54,52 Z" fill="${c3}"/><rect x="30" y="52" width="8" height="30" rx="2" fill="${c3}" opacity=".6"/><rect x="62" y="52" width="8" height="30" rx="2" fill="${c3}" opacity=".6"/>`,
+        // 1: спортивний біг — нахил уперед, зігнута нога
+        `<circle cx="42" cy="26" r="13" fill="${c2}"/><path d="M30,50 Q40,48 50,55 L66,46" stroke="${c1}" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50,55 L44,88 M50,55 L66,80" stroke="${c1}" stroke-width="9" fill="none" stroke-linecap="round"/>`,
+        // 2: скейтер — дошка під ногами
+        `<circle cx="50" cy="26" r="13" fill="${c2}"/><path d="M33,86 Q33,50 50,50 Q67,50 67,86 Z" fill="${c1}"/><rect x="22" y="86" width="56" height="9" rx="4" fill="${c3}"/><circle cx="32" cy="97" r="4" fill="${bg}"/><circle cx="68" cy="97" r="4" fill="${bg}"/>`,
+        // 3: йога — руки вгору, медитація
+        `<circle cx="50" cy="30" r="13" fill="${c2}"/><path d="M35,90 Q35,55 50,55 Q65,55 65,90 Z" fill="${c1}"/><path d="M50,55 L28,32 M50,55 L72,32" stroke="${c1}" stroke-width="8" fill="none" stroke-linecap="round"/>`,
+        // 4: зимовий — шарф і об'ємніший силует
+        `<circle cx="50" cy="30" r="13" fill="${c2}"/><path d="M28,90 Q28,52 50,52 Q72,52 72,90 Z" fill="${c1}"/><rect x="38" y="48" width="24" height="10" rx="4" fill="${c3}"/><rect x="55" y="55" width="8" height="22" rx="3" fill="${c3}"/>`,
+      ];
+      shape = variants[variantIdx % variants.length];
+      break;
+    }
+    case "bird": {
+      const variants = [
+        `<ellipse cx="48" cy="56" rx="26" ry="17" fill="${c1}"/><path d="M50,45 L76,29 L60,53 Z" fill="${c2}"/><circle cx="33" cy="49" r="4" fill="${bg}"/>`,
+        `<ellipse cx="50" cy="60" rx="27" ry="15" fill="${c1}"/><path d="M50,58 Q70,40 82,52 Q65,55 50,64 Z" fill="${c2}"/><circle cx="30" cy="55" r="4" fill="${bg}"/><path d="M22,55 L12,52 L22,60 Z" fill="${c2}"/>`,
+      ];
+      shape = variants[variantIdx % variants.length];
+      break;
+    }
     case "obstacles": shape = `<rect x="18" y="55" width="18" height="30" rx="3" fill="${c1}"/><rect x="43" y="38" width="18" height="47" rx="3" fill="${c2}"/><rect x="68" y="60" width="14" height="25" rx="3" fill="${c1}"/>`; break;
-    case "weather": shape = `<ellipse cx="44" cy="42" rx="25" ry="15" fill="${c2}"/><ellipse cx="64" cy="48" rx="17" ry="12" fill="${c1}"/><line x1="35" y1="68" x2="30" y2="84" stroke="${c1}" stroke-width="4" stroke-linecap="round"/><line x1="55" y1="68" x2="50" y2="84" stroke="${c1}" stroke-width="4" stroke-linecap="round"/>`; break;
-    case "boss": shape = `<circle cx="50" cy="52" r="27" fill="${c1}"/><path d="M22,42 L30,22 L38,42 M62,42 L70,22 L78,42" stroke="${c2}" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="40" cy="50" r="5" fill="${bg}"/><circle cx="60" cy="50" r="5" fill="${bg}"/>`; break;
+    case "weather": {
+      const variants = [
+        `<ellipse cx="44" cy="42" rx="25" ry="15" fill="${c2}"/><ellipse cx="64" cy="48" rx="17" ry="12" fill="${c1}"/><line x1="35" y1="68" x2="30" y2="84" stroke="${c1}" stroke-width="4" stroke-linecap="round"/><line x1="55" y1="68" x2="50" y2="84" stroke="${c1}" stroke-width="4" stroke-linecap="round"/>`,
+        `<circle cx="35" cy="30" r="14" fill="${c2}"/>${[0,1,2,3,4,5].map(i=>`<line x1="35" y1="30" x2="${35+22*Math.cos(i*Math.PI/3)}" y2="${30+22*Math.sin(i*Math.PI/3)}" stroke="${c2}" stroke-width="3" stroke-linecap="round"/>`).join("")}<ellipse cx="58" cy="65" rx="26" ry="16" fill="${c1}"/>`,
+      ];
+      shape = variants[variantIdx % variants.length];
+      break;
+    }
+    case "boss": {
+      const variants = [
+        `<circle cx="50" cy="52" r="27" fill="${c1}"/><path d="M22,42 L30,22 L38,42 M62,42 L70,22 L78,42" stroke="${c2}" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="40" cy="50" r="5" fill="${bg}"/><circle cx="60" cy="50" r="5" fill="${bg}"/>`,
+        `<path d="M20,50 Q20,20 50,20 Q80,20 80,50 Q80,75 50,85 Q20,75 20,50 Z" fill="${c1}"/><path d="M15,45 L25,35 L28,50 M85,45 L75,35 L72,50" fill="${c2}"/><circle cx="38" cy="48" r="5" fill="${bg}"/><circle cx="62" cy="48" r="5" fill="${bg}"/><path d="M38,65 Q50,72 62,65" stroke="${bg}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+      ];
+      shape = variants[variantIdx % variants.length];
+      break;
+    }
     case "timer": shape = `<circle cx="50" cy="56" r="27" fill="${c1}" stroke="${c2}" stroke-width="4"/><line x1="50" y1="56" x2="50" y2="40" stroke="${bg}" stroke-width="4" stroke-linecap="round"/><line x1="50" y1="56" x2="61" y2="56" stroke="${bg}" stroke-width="4" stroke-linecap="round"/><rect x="42" y="19" width="16" height="8" rx="3" fill="${c2}"/>`; break;
     case "background": shape = `<rect x="13" y="17" width="74" height="57" rx="6" fill="${bg}" stroke="${c2}" stroke-width="3"/><circle cx="30" cy="34" r="6" fill="${c2}"/><path d="M13,64 L38,44 L55,59 L70,41 L87,64 Z" fill="${c1}"/>`; break;
     case "keyboard": shape = `<rect x="13" y="36" width="74" height="38" rx="6" fill="${c1}"/>${[0,1,2,3].map(i=>`<rect x="${19+i*17}" y="44" width="12" height="9" rx="2" fill="${c2}"/><rect x="${19+i*17}" y="58" width="12" height="9" rx="2" fill="${c2}"/>`).join("")}`; break;
@@ -1080,13 +1119,15 @@ const VIP_TICKET_DEFS = {
   "week": { hours:168, price:100, label:"Тиждень" },
   "month":{ hours:720, price:300, label:"Місяць" },
 };
+let EQUIPPED_SKINS_CACHE = {};
 async function loadInventoryData(){
   try {
-    const [r, myItems, slotsRes, ticketsRes] = await Promise.all([apiRaw("get_inventory"), api("my_items"), api("chest_slots_get"), api("vip_my_tickets"), loadSkinsCatalog()]);
+    const [r, myItems, slotsRes, ticketsRes, equippedRes] = await Promise.all([apiRaw("get_inventory"), api("my_items"), api("chest_slots_get"), api("vip_my_tickets"), api("get_equipped_skins"), loadSkinsCatalog()]);
     CHESTS_STATE = r.ok ? r : null;
     CHEST_ITEMS_STATE = (myItems.ok ? myItems.items : []).filter(it => !it.isMerch && /^Кейс:|^Крафт:/.test(it.name||""));
     CHEST_SLOTS_STATE = slotsRes.ok ? slotsRes.slots : [];
     VIP_TICKETS_STATE = ticketsRes.ok ? ticketsRes.tickets : [];
+    EQUIPPED_SKINS_CACHE = equippedRes.ok ? equippedRes.equipped : {};
   } catch(e) { CHESTS_STATE = null; }
 }
 function paintInventory(){
@@ -1145,11 +1186,71 @@ function paintInventory(){
       ${(CHESTS_STATE.craftRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${CHESTS_STATE.shards<rc.cost?'disabled':''} onclick="craftItem('${rc.id}')">${esc(rc.name)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
     </div>
 
-    <div class="h2">🎨 Мої скіни <span class="hint">тапніть, щоб обрати/використати</span></div>
-    <div class="list" id="chestItemsList">${chestItemsListHtml()}</div>
+    <div class="h2">🎨 Мої скіни</div>
+    <div id="mySkinsSection"></div>
   `;
-  wrap.querySelectorAll("[data-chest-group]").forEach(el => el.addEventListener("click", () => openItemGroup(el.getAttribute("data-chest-group"))));
+  paintMySkins();
   startSlotTicker();
+}
+
+// ── Мої скіни: спочатку обираємо гру, потім бачимо скіни саме з неї ──
+let MY_SKINS_GAME = "runner";
+function skinGameOf(poolKey){
+  if (!poolKey) return null;
+  if (poolKey.indexOf("runner") === 0) return "runner";
+  if (poolKey.indexOf("wordle") === 0) return "wordle";
+  if (poolKey.indexOf("circle") === 0) return "circle";
+  return null;
+}
+function paintMySkins(){
+  const sec = document.getElementById("mySkinsSection");
+  if (!sec) return;
+  if (!CHEST_ITEMS_STATE.length) { sec.innerHTML = emptyBlock("🎒","Поки що порожньо","Відкривайте кейси або крафтіть із осколків"); return; }
+
+  const groups = {};
+  CHEST_ITEMS_STATE.forEach(it => {
+    const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
+    if (!groups[shortName]) groups[shortName] = { name: shortName, comment: it.comment, items: [] };
+    groups[shortName].items.push(it);
+  });
+  const pools = SKINS_CATALOG_CACHE || [];
+  const resolvedGroups = Object.values(groups).map(g => {
+    const pureName = g.name.replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,"");
+    const poolKey = findPoolKeyForItem(pureName, pools);
+    return Object.assign(g, { poolKey, game: skinGameOf(poolKey) });
+  });
+
+  const games = [
+    { id:"runner", ic:"🏃", lb:"Runner" },
+    { id:"wordle", ic:"🔤", lb:"Вгадай слово" },
+    { id:"circle", ic:"🔵", lb:"Слова по колу" },
+  ];
+  const tabsHtml = games.map(g => {
+    const count = resolvedGroups.filter(x => x.game === g.id).length;
+    return `<div class="t2" data-my-skins-game="${g.id}">${g.ic} ${g.lb} <span class="badge" style="margin-left:3px;">${count}</span></div>`;
+  }).join("");
+
+  const shown = resolvedGroups.filter(g => g.game === MY_SKINS_GAME);
+  const gridHtml = shown.length ? `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:10px;">` +
+    shown.map(g => {
+      const available = g.items.filter(x => x.status === "Не використано");
+      const countLabel = g.items.length > 1 ? `<div class="badge" style="position:absolute; top:-4px; right:-4px;">×${g.items.length}</div>` : "";
+      const cleanName = g.name.replace(/^Крафт: предмет рівня /,"").replace(/^Крафт: |^Кейс: /,"");
+      const isEquipped = g.poolKey === "runner_rare_character" && EQUIPPED_SKINS_CACHE["runner_rare_character"] === cleanName;
+      return `<div data-chest-group="${esc(g.name)}" style="cursor:pointer; text-align:center; position:relative;">
+        ${countLabel}
+        <div style="opacity:${available.length>0?1:.4}; ${isEquipped?'filter:drop-shadow(0 0 6px var(--success));':''}">${skinIconSvg(g.poolKey, g.name, 68)}</div>
+        <div class="sub" style="font-size:10px; margin-top:3px; line-height:1.25;">${esc(cleanName)}</div>
+        ${isEquipped ? `<div class="badge ok" style="margin-top:2px;">✓ Екіпіровано</div>` : (available.length>0 ? `<div class="badge new" style="margin-top:2px;">Обрати →</div>` : `<div class="badge ok" style="margin-top:2px;">Отримано</div>`)}
+      </div>`;
+    }).join("") + `</div>` : emptyBlock("🎨","Тут поки порожньо","Скіни цієї гри ще не випадали");
+
+  sec.innerHTML = `<div class="tabs2" style="flex-wrap:wrap; gap:4px;">${tabsHtml}</div>${gridHtml}`;
+  sec.querySelectorAll("[data-my-skins-game]").forEach(el => {
+    if (el.getAttribute("data-my-skins-game") === MY_SKINS_GAME) el.classList.add("active");
+    el.addEventListener("click", () => { MY_SKINS_GAME = el.getAttribute("data-my-skins-game"); paintMySkins(); });
+  });
+  sec.querySelectorAll("[data-chest-group]").forEach(el => el.addEventListener("click", () => openItemGroup(el.getAttribute("data-chest-group"))));
 }
 
 // ── Слоти кейсів ──
@@ -1303,36 +1404,19 @@ async function buyChest(chestId){
 }
 
 // ── Предмети з кейсів (самообслуговування) ──
-function chestItemsListHtml(){
-  if (!CHEST_ITEMS_STATE.length) return emptyBlock("🎒","Поки що порожньо","Відкривайте кейси або крафтіть із осколків");
-  const groups = {};
-  CHEST_ITEMS_STATE.forEach(it => {
-    const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
-    if (!groups[shortName]) groups[shortName] = { name: shortName, comment: it.comment, items: [] };
-    groups[shortName].items.push(it);
-  });
-  const pools = SKINS_CATALOG_CACHE || [];
-  return `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:10px;">` +
-    Object.values(groups).map(g => {
-      const available = g.items.filter(x => x.status === "Не використано");
-      const poolKey = findPoolKeyForItem(g.name.replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,""), pools);
-      const countLabel = g.items.length > 1 ? `<div class="badge" style="position:absolute; top:-4px; right:-4px;">×${g.items.length}</div>` : "";
-      return `<div data-chest-group="${esc(g.name)}" style="cursor:pointer; text-align:center; position:relative;">
-        ${countLabel}
-        <div style="opacity:${available.length>0?1:.4};">${skinIconSvg(poolKey, g.name, 68)}</div>
-        <div class="sub" style="font-size:10px; margin-top:3px; line-height:1.25;">${esc(g.name.replace(/^Крафт: предмет рівня /,"").replace(/^Крафт: |^Кейс: /,""))}</div>
-        ${available.length>0 ? `<div class="badge new" style="margin-top:2px;">Обрати →</div>` : `<div class="badge ok" style="margin-top:2px;">Отримано</div>`}
-      </div>`;
-    }).join("") + `</div>`;
-}
 function openItemGroup(name){
   const items = CHEST_ITEMS_STATE.filter(it => (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim() === name);
   const rarityMatch = name.match(/^Крафт: предмет рівня (Rare|Epic|Legendary)$/);
   const pools = SKINS_CATALOG_CACHE || [];
-  const poolKey = findPoolKeyForItem(name.replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,""), pools);
+  const pureName = name.replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,"");
+  const poolKey = findPoolKeyForItem(pureName, pools);
+  const isEquippable = poolKey === "runner_rare_character"; // поки що інтегровано лише з Runner
+  const isEquipped = isEquippable && EQUIPPED_SKINS_CACHE["runner_rare_character"] === pureName;
   showModal(`
     <div style="display:flex; justify-content:center; margin-bottom:8px;">${skinIconSvg(poolKey, name, 84)}</div>
     <div class="mh" style="text-align:center;">${esc(name)} <span class="hint">×${items.length}</span></div>
+    ${isEquippable ? `<div class="sub" style="text-align:center; margin-bottom:10px;">${isEquipped ? '✅ Зараз екіпіровано — застосовано у Runner' : '👤 Скін персонажа для Runner'}</div>` : ''}
+    ${isEquippable && !isEquipped ? `<button class="btn" style="margin-bottom:10px;" onclick="equipSkin('${poolKey}','${esc(pureName).replace(/'/g,"\\'")}')">🎨 Екіпірувати</button>` : ''}
     <div class="list">${items.map(it => `
       <div class="item">
         <div class="txt"><div class="t">${it.status==='Не використано' ? '⏳ Не використано' : '✅ Використано'}</div><div class="s">${esc(it.comment||'')}</div></div>
@@ -1342,6 +1426,15 @@ function openItemGroup(name){
       </div>
     `).join("")}</div>
   `);
+}
+async function equipSkin(poolKey, itemName){
+  try {
+    const r = await api("equip_skin", { poolKey, itemName });
+    if (!r.ok) { toast(r.error === "not_owned" ? "У вас немає цього предмета" : "Помилка", "err"); return; }
+    EQUIPPED_SKINS_CACHE[poolKey] = itemName;
+    toast("Екіпіровано! Побачите у Runner 🎉", "ok");
+    closeModal();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 async function openCraftPicker(row, rarity){
   showModal(`<div class="mh">🎁 Оберіть предмет <span class="hint">${esc(rarity)}</span></div>${loadingBlock()}`);
@@ -1565,14 +1658,19 @@ async function loadAdminSkins(){
 
       <div class="h2">Каталог усіх скінів <span class="hint">${ADMIN_SKINS_CATALOG.reduce((s,p)=>s+p.items.length,0)} шт.</span></div>
       ${ADMIN_SKINS_CATALOG.map(p => `
-        <div class="h2" style="font-size:13px; margin-top:14px;">${esc(p.label)} <span class="badge">${p.items.length}</span></div>
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(78px, 1fr)); gap:8px;">
-          ${p.items.map(it => `
-            <div style="text-align:center;">
-              ${skinIconSvg(p.key, it, 56)}
-              <div class="sub" style="font-size:10px; margin-top:2px; line-height:1.2;">${esc(it)}</div>
-            </div>
-          `).join("")}
+        <div class="card" style="margin-bottom:10px;">
+          <div class="row between" style="margin-bottom:10px;">
+            <div style="font-weight:700; font-size:13.5px;">${esc(p.label)}</div>
+            <div class="badge">${p.items.length} шт.</div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:10px;">
+            ${p.items.map(it => `
+              <div style="text-align:center;">
+                ${skinIconSvg(p.key, it, 64)}
+                <div class="sub" style="font-size:10.5px; margin-top:4px; line-height:1.25;">${esc(it)}</div>
+              </div>
+            `).join("")}
+          </div>
         </div>
       `).join("")}
     `;
