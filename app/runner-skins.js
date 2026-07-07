@@ -24,6 +24,48 @@ const CHARACTER_SKIN_STYLES = {
   "Йогин у потоці":          { hue: 275, sat: 60, light: 62 },
   "Зимовий бігун":           { hue: 198, sat: 35, light: 68 },
 };
+// ВАЖЛИВО: раніше кожен скін персонажа відрізнявся ЛИШЕ кольором — форма
+// тіла в грі й іконка в каталозі були однаковими для всіх 10 скінів.
+// CHARACTER_SHAPES прив'язує кожну назву до конкретного силуету/аксесуара
+// (краватка, хвостик, спідниця, шарф, дошка тощо) — цей же ключ
+// використовується і в грі (1.1_runner.txt), і в каталозі (іконка нижче),
+// тож вигляд завжди збігається.
+const CHARACTER_SHAPES = {
+  "Класичний бігун":         "classic",
+  "Бізнес-кежуал":           "suit",
+  "Спортивна дівчина":       "sporty_girl",
+  "Офісна леді":             "office_lady",
+  "Ретро-спортсмен":         "retro",
+  "Хіпстер-кур'єр":          "hipster",
+  "Бізнес-леді на підборах": "heels",
+  "Скейтер-новачок":         "skater",
+  "Йогин у потоці":          "yoga",
+  "Зимовий бігун":           "winter",
+};
+// Іконки каталогу для кожного конкретного скіна-персонажа — окремий силует
+// на кожен, а не один і той самий контур, перефарбований у різні кольори.
+const CHARACTER_ICON_ART = {
+  "Класичний бігун": (c1,c2,c3,bg) =>
+    `<circle cx="42" cy="26" r="13" fill="${c2}"/><path d="M30,50 Q40,48 50,55 L66,46" stroke="${c1}" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50,55 L44,88 M50,55 L66,80" stroke="${c1}" stroke-width="9" fill="none" stroke-linecap="round"/>`,
+  "Бізнес-кежуал": (c1,c2,c3,bg) =>
+    `<circle cx="50" cy="28" r="13" fill="${c2}"/><path d="M31,88 Q31,52 50,52 Q69,52 69,88 Z" fill="${c1}"/><path d="M46,52 L50,64 L54,52 Z" fill="${c3}"/><rect x="30" y="52" width="8" height="30" rx="2" fill="${c3}" opacity=".6"/><rect x="62" y="52" width="8" height="30" rx="2" fill="${c3}" opacity=".6"/>`,
+  "Спортивна дівчина": (c1,c2,c3,bg) =>
+    `<circle cx="48" cy="26" r="13" fill="${c2}"/><circle cx="63" cy="20" r="6" fill="${c2}"/><path d="M33,88 Q33,52 50,52 Q67,52 67,88 Z" fill="${c1}"/><path d="M35,60 L20,50 M65,55 L80,40" stroke="${c1}" stroke-width="8" fill="none" stroke-linecap="round"/>`,
+  "Офісна леді": (c1,c2,c3,bg) =>
+    `<circle cx="50" cy="26" r="12" fill="${c2}"/><path d="M35,50 L65,50 L60,60 L40,60 Z" fill="${c3}"/><path d="M32,90 Q32,58 50,58 Q68,58 68,90 Z" fill="${c1}"/>`,
+  "Ретро-спортсмен": (c1,c2,c3,bg) =>
+    `<circle cx="50" cy="28" r="13" fill="${c2}"/><rect x="37" y="19" width="26" height="6" rx="3" fill="${c3}"/><path d="M35,52 Q35,50 50,50 Q65,50 65,52 L62,88 L38,88 Z" fill="${c1}"/><rect x="36" y="60" width="28" height="6" fill="${c3}"/>`,
+  "Хіпстер-кур'єр": (c1,c2,c3,bg) =>
+    `<path d="M37,17 Q50,10 63,17 L63,26 L37,26 Z" fill="${c3}"/><circle cx="50" cy="27" r="12" fill="${c2}"/><path d="M32,88 Q32,52 50,52 Q68,52 68,88 Z" fill="${c1}"/><path d="M30,45 L72,80" stroke="${c3}" stroke-width="6" stroke-linecap="round"/><rect x="60" y="68" width="18" height="16" rx="3" fill="${c3}"/>`,
+  "Бізнес-леді на підборах": (c1,c2,c3,bg) =>
+    `<circle cx="50" cy="24" r="12" fill="${c2}"/><path d="M34,50 Q34,48 50,48 Q66,48 66,50 L72,88 L28,88 Z" fill="${c1}"/><path d="M40,88 L38,94 M60,88 L62,94" stroke="${c3}" stroke-width="4" stroke-linecap="round"/>`,
+  "Скейтер-новачок": (c1,c2,c3,bg) =>
+    `<circle cx="50" cy="30" r="12" fill="${c2}"/><path d="M33,86 Q33,50 50,50 Q67,50 67,86 Z" fill="${c1}"/><rect x="22" y="86" width="56" height="9" rx="4" fill="${c3}"/><circle cx="32" cy="97" r="4" fill="${bg}"/><circle cx="68" cy="97" r="4" fill="${bg}"/>`,
+  "Йогин у потоці": (c1,c2,c3,bg) =>
+    `<circle cx="50" cy="30" r="13" fill="${c2}"/><path d="M35,90 Q35,55 50,55 Q65,55 65,90 Z" fill="${c1}"/><path d="M50,55 L28,32 M50,55 L72,32" stroke="${c1}" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="50" cy="24" r="2.5" fill="${c3}"/>`,
+  "Зимовий бігун": (c1,c2,c3,bg) =>
+    `<circle cx="50" cy="30" r="13" fill="${c2}"/><circle cx="50" cy="17" r="6" fill="#fff"/><path d="M28,90 Q28,52 50,52 Q72,52 72,90 Z" fill="${c1}"/><rect x="38" y="48" width="24" height="10" rx="4" fill="${c3}"/><rect x="55" y="55" width="8" height="22" rx="3" fill="${c3}"/>`,
+};
 // Скін птаха-помічника (runner_epic_bird) — ПОВНІСТЮ окрема категорія від
 // скіна персонажа (runner_rare_character). Раніше в грі взагалі не було
 // візуалізації для скіна птаха (він завжди малювався фіксованим жовтим
