@@ -1,1164 +1,2081 @@
 <!DOCTYPE html>
-<html lang="uk">
-<head>
+<html lang="uk" style="background:#0A0C14;">
+<head> 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<title>áClub Runner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>áClub</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action:none;}
-#c{display:block;position:fixed;top:0;left:0;width:100% !important;height:100% !important;}
-.ov{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
-    justify-content:center;background:rgba(4,12,26,.95);z-index:99;padding:12px;gap:7px;overflow:hidden;}
-.ov.hide{display:none;}
-.title{font-family:'Press Start 2P',monospace;font-size:clamp(13px,3.5vw,20px);
-       color:#00e676;text-align:center;line-height:1.4;letter-spacing:2px;
-       text-shadow:0 0 20px rgba(0,230,118,.8);}
-.tips{font-size:clamp(8px,2vw,11px);color:#90a4ae;text-align:center;line-height:1.8;max-width:380px;}
-.tips b{color:#ccc;}
-.row{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;}
-.chip{padding:4px 9px;border-radius:6px;font-size:clamp(7px,1.8vw,9px);font-weight:900;
-      border:1px solid rgba(255,255,255,.12);}
-.cg{background:rgba(255,215,64,.15);color:#ffd740;}
-.cb{background:rgba(255,23,68,.15);color:#ff7090;}
-.medal{padding:5px 10px;border-radius:7px;font-size:clamp(8px,2vw,10px);font-weight:900;border:1px solid rgba(255,255,255,.12);}
-.mg{background:rgba(255,215,64,.15);color:#ffd740;}
-.ms{background:rgba(160,160,160,.15);color:#aaa;}
-.mb{background:rgba(180,100,50,.15);color:#cd7f32;}
-.btn{font-family:'Press Start 2P',monospace;font-size:clamp(9px,2.5vw,12px);
-     padding:14px 28px;border:none;border-radius:10px;cursor:pointer;
-     background:linear-gradient(135deg,#00c853,#00a152);color:#001a0a;
-     box-shadow:0 4px 20px rgba(0,200,83,.4);width:100%;max-width:240px;margin-top:4px;}
-.btn:active{transform:scale(.96);}
-.score-big{font-family:'Press Start 2P',monospace;font-size:clamp(18px,5vw,28px);color:#ffd740;}
-.best{font-size:clamp(10px,2.5vw,13px);color:#90a4ae;}
-.best b{color:#eee;}
-.st{font-size:9px;color:#90a4ae;text-align:center;min-height:14px;}
-.st.ok{color:#00c853;}
-.st.err{color:#ff1744;}
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@700;900&display=swap');
+:root{
+  --void:#0A0C14; --panel:#14182A; --panel2:#1C2136; --panel3:#232A45;
+  --line:#262C47; --brass:#0FA968; --brass-bright:#3FE0A0; --shard:#8B7CF6;
+  --text:#F3F1EA; --text-dim:#8890AA; --text-faint:#5B6280;
+  --rare:#4E8FE0; --epic:#B15EF0; --legendary:#F2A93B;
+  --success:#52C48E; --danger:#E2607A; --radius:16px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0; background:var(--void); color:var(--text); font-family:'Inter',sans-serif; overscroll-behavior:none;}
+body{padding-bottom:calc(76px + env(safe-area-inset-bottom)); min-height:100vh;}
+.mono{font-family:'Space Mono',monospace;}
+.display{font-family:'Unbounded',sans-serif;}
+button{font-family:inherit; cursor:pointer;}
+input,textarea{font-family:inherit;}
+
+body::before{
+  content:""; position:fixed; top:0; left:0; right:0; bottom:0; z-index:0; pointer-events:none;
+  background: radial-gradient(ellipse 600px 300px at 50% -10%, rgba(15,169,104,0.10), transparent 60%);
+}
+
+/* Topbar */
+.topbar{position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px 10px; gap:10px; background:linear-gradient(180deg, var(--void) 60%, rgba(10,12,20,.85) 85%, transparent);}
+.brand{display:flex; align-items:center; gap:8px;}
+.brand-mark{width:30px; height:30px; border-radius:9px; background:linear-gradient(155deg, var(--brass-bright), var(--brass) 60%, #0a5c3d);
+  display:flex; align-items:center; justify-content:center; font-family:'Unbounded'; font-weight:800; font-size:15px; color:#04231a;
+  box-shadow:0 2px 8px rgba(15,169,104,.35), inset 0 1px 0 rgba(255,255,255,.4);}
+.brand-name{font-family:'Unbounded'; font-weight:700; font-size:14.5px;}
+.pills{display:flex; gap:6px;}
+.pill{display:flex; align-items:center; gap:5px; background:var(--panel2); border:1px solid var(--line); border-radius:100px; padding:6px 11px 6px 8px;}
+.pill .val{font-family:'Space Mono'; font-weight:700; font-size:13.5px;}
+.pill.coin .val{color:var(--brass-bright);} .pill.shard .val{color:var(--shard);}
+
+.content{position:relative; z-index:1; padding:2px 16px 24px;}
+.h1{font-family:'Unbounded'; font-weight:700; font-size:19px; margin:14px 2px 12px;}
+.h2{font-family:'Unbounded'; font-weight:700; font-size:15px; margin:20px 2px 10px; display:flex; align-items:center; justify-content:space-between;}
+.h2 .hint{font-family:'Inter'; font-weight:500; font-size:11px; color:var(--text-faint);}
+.sub{color:var(--text-dim); font-size:12.5px; margin:-6px 2px 12px;}
+
+.card{background:linear-gradient(155deg, var(--panel2), var(--panel)); border:1px solid var(--line); border-radius:var(--radius); padding:14px;}
+.card + .card{margin-top:10px;}
+.row{display:flex; align-items:center; gap:10px;}
+.between{justify-content:space-between;}
+.stat-row{display:flex; gap:10px;}
+.stat-card{flex:1; background:var(--panel2); border:1px solid var(--line); border-radius:16px; padding:13px 14px 11px;}
+.stat-card .label{font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;}
+.stat-card .value{font-family:'Space Mono'; font-weight:700; font-size:20px;}
+.stat-card.coin .value{color:var(--brass-bright);} .stat-card.shard .value{color:var(--shard);}
+
+.btn{display:block; width:100%; text-align:center; border:none; border-radius:13px; padding:13px; font-weight:700; font-size:14px; color:#04231a;
+  background:linear-gradient(155deg, var(--brass-bright), var(--brass)); transition:transform .1s;}
+.btn:active{transform:scale(.97);}
+.btn.secondary{background:var(--panel3); color:var(--text); border:1px solid var(--line);}
+.btn.danger{background:var(--danger); color:#fff;}
+.btn:disabled{opacity:.45; pointer-events:none;}
+.btn.sm{padding:9px; font-size:12.5px; border-radius:10px;}
+.btn-row{display:flex; gap:8px;}
+.btn-row .btn{flex:1;}
+
+.list{display:flex; flex-direction:column; gap:8px;}
+.item{display:flex; align-items:center; gap:11px; background:var(--panel2); border:1px solid var(--line); border-radius:14px; padding:11px 13px;}
+.item .ic{font-size:19px; flex:none; width:26px; text-align:center;}
+.item .txt{flex:1; min-width:0;}
+.item .txt .t{font-size:13px; font-weight:600;}
+.item .txt .s{font-size:11px; color:var(--text-faint); margin-top:1px;}
+.item .right{flex:none; text-align:right;}
+
+.progress{height:8px; border-radius:6px; background:var(--panel3); overflow:hidden;}
+.progress > div{height:100%; background:linear-gradient(90deg, var(--brass), var(--brass-bright));}
+
+.empty{text-align:center; padding:34px 10px; color:var(--text-faint);}
+.empty .ic{font-size:34px; margin-bottom:8px;}
+.empty .t{font-weight:700; color:var(--text-dim); margin-bottom:4px;}
+.empty .s{font-size:12px;}
+
+.tabs2{display:flex; gap:6px; background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:4px; margin-bottom:12px;}
+.tabs2 .t2{flex:1; text-align:center; padding:8px 4px; border-radius:9px; font-size:12.5px; font-weight:700; color:var(--text-dim);}
+.tabs2 .t2.active{background:var(--panel3); color:var(--text);}
+.admin-tabs{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;}
+.admin-tab{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  padding:12px 6px; border-radius:14px; background:var(--panel2); border:1px solid var(--line);
+  cursor:pointer; transition:background .15s,border-color .15s,transform .1s;}
+.admin-tab:active{transform:scale(.96);}
+.admin-tab .aicon{width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:16px; background:var(--panel3); border:1px solid var(--line);}
+.admin-tab .alabel{font-size:11.5px; font-weight:700; color:var(--text-dim); text-align:center; line-height:1.2;}
+.admin-tab.active{background:rgba(15,169,104,.14); border-color:var(--brass);}
+.admin-tab.active .aicon{background:linear-gradient(155deg,var(--brass-bright),var(--brass)); border-color:transparent; box-shadow:0 2px 8px rgba(15,169,104,.35);}
+.admin-tab.active .alabel{color:var(--text);}
+
+textarea, input.field, select.field{width:100%; background:var(--panel3); border:1px solid var(--line); border-radius:12px; color:var(--text);
+  padding:11px 12px; font-size:13.5px; resize:vertical;}
+select.field{appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238890AA' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; background-size:16px; padding-right:34px;}
+select.field option{background:var(--panel3); color:var(--text);}
+textarea::placeholder, input.field::placeholder{color:var(--text-faint);}
+.field-label{font-size:11.5px; color:var(--text-faint); margin:10px 2px 5px;}
+
+.badge{font-size:10px; font-weight:700; padding:3px 8px; border-radius:100px; background:var(--panel3); color:var(--text-dim);}
+.badge.new{background:rgba(226,96,122,.18); color:var(--danger);}
+.badge.ok{background:rgba(82,196,142,.18); color:var(--success);}
+
+/* Bottom nav */
+.navbar{position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; background:rgba(15,18,32,.92); backdrop-filter:blur(14px);
+  border-top:1px solid var(--line); padding:8px 6px calc(6px + env(safe-area-inset-bottom));}
+.nav-btn{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; background:none; border:none; color:var(--text-faint); padding:6px 2px; border-radius:10px;}
+.nav-btn .ic{font-size:19px;}
+.nav-btn .lb{font-size:9.5px; font-weight:700;}
+.nav-btn.active{color:var(--brass-bright);}
+
+/* Toast */
+.toast{position:fixed; left:50%; bottom:92px; transform:translate(-50%,20px); background:var(--panel3); border:1px solid var(--line);
+  color:var(--text); padding:11px 18px; border-radius:100px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; z-index:80; transition:.25s;}
+.toast.show{opacity:1; transform:translate(-50%,0);}
+.toast.err{border-color:rgba(226,96,122,.5); color:#ffd7dd;}
+.toast.ok{border-color:rgba(82,196,142,.5); color:#d3ffe9;}
+
+/* Modal */
+.modal-bg{position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(4,6,12,.7); z-index:60; opacity:0; pointer-events:none; transition:.2s;}
+.modal-bg.show{opacity:1; pointer-events:auto;}
+.modal{position:fixed; left:12px; right:12px; bottom:12px; max-width:460px; margin:0 auto; background:var(--panel); border:1px solid var(--line);
+  border-radius:20px; padding:18px; z-index:61; transform:translateY(24px); opacity:0; pointer-events:none; transition:.22s; max-height:80vh; overflow:auto;}
+.modal.show{transform:translateY(0); opacity:1; pointer-events:auto;}
+.modal .mh{font-family:'Unbounded'; font-weight:700; font-size:15.5px; margin-bottom:10px;}
+
+.loading{display:flex; align-items:center; justify-content:center; padding:40px; color:var(--text-faint);}
+.spin{width:22px; height:22px; border-radius:50%; border:3px solid var(--panel3); border-top-color:var(--brass-bright); animation:sp 0.8s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+.rarity-dot{width:9px; height:9px; border-radius:50%; flex:none;}
+.rarity-dot.rare{background:var(--rare);} .rarity-dot.epic{background:var(--epic);} .rarity-dot.legendary{background:var(--legendary);}
+
+.game-card{background:linear-gradient(155deg, var(--panel2), var(--panel)); border:1px solid var(--line); border-radius:var(--radius); padding:15px; margin-bottom:10px;}
+.game-card .gt{font-family:'Unbounded'; font-weight:700; font-size:14.5px; margin-bottom:4px;}
+.game-card .gd{font-size:12px; color:var(--text-dim); margin-bottom:10px;}
+
+/* Анімація відкриття кейсу */
+.chest-open-wrap{position:relative; display:flex; justify-content:center; align-items:flex-end; height:96px; margin-bottom:6px;}
+.chest-lid-anim{transform-origin:50px 26px; animation:chestLidOpen .45s ease-out .1s both;}
+@keyframes chestLidOpen{
+  0%{transform:rotate(0deg) translateY(0);}
+  100%{transform:rotate(-38deg) translateY(-5px);}
+}
+.chest-glow{position:absolute; left:50%; top:8px; width:70px; height:70px; margin-left:-35px; border-radius:50%;
+  background:radial-gradient(circle, rgba(242,200,121,.55), transparent 70%); opacity:0; animation:chestGlow .6s ease-out .25s both;}
+@keyframes chestGlow{0%{opacity:0; transform:scale(.4);} 60%{opacity:1;} 100%{opacity:0; transform:scale(1.6);}}
+.chest-spark{position:absolute; top:30px; left:50%; font-size:16px; opacity:0; animation:chestSpark .7s ease-out .3s both;}
+@keyframes chestSpark{
+  0%{opacity:0; transform:translate(-50%,0) scale(.4);}
+  30%{opacity:1;}
+  100%{opacity:0; transform:translate(var(--dx,-30px),-50px) scale(1.1) rotate(20deg);}
+}
+.reward-pop{animation:rewardPop .5s cubic-bezier(.34,1.56,.64,1) .5s both;}
+@keyframes rewardPop{
+  0%{transform:scale(.3) translateY(12px); opacity:0;}
+  60%{transform:scale(1.12) translateY(-5px); opacity:1;}
+  100%{transform:scale(1) translateY(0); opacity:1;}
+}
+
+/* Кубик "Щасливчика" — рамка стоїть на місці, "крутяться" лише крапки */
+.dice-pips-spin{animation:pipsShuffle .16s ease-in-out infinite alternate; transform-origin:50px 50px;}
+@keyframes pipsShuffle{
+  0%{opacity:.45; transform:scale(.8);}
+  100%{opacity:1; transform:scale(1.12);}
+}
+.dice-land{animation:diceLand .45s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes diceLand{
+  0%{transform:scale(.6) rotate(-8deg); opacity:0;}
+  60%{transform:scale(1.15) rotate(4deg); opacity:1;}
+  100%{transform:scale(1) rotate(0deg); opacity:1;}
+}
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://telegram.org">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-<canvas id="c"></canvas>
 
-<!-- START OVERLAY -->
-<div class="ov" id="ovS">
-  <div class="title">áCLUB<br>RUNNER</div>
-  <div class="tips">
-    🍏 <b>Яблука</b> +10 · 🍎 <b>Червоне</b> +1á-coin<br>
-    ✨ <b>Золотий вогник</b> — щит або магніт<br>
-    🔴 <b>Червоний вогник</b> — яблука недоступні або вітер (блокує подвійний стрибок)<br>
-    👾 <b>Бос</b> — ухиляйся від куль!<br>
-    ⚡ <b>Вихор</b> — змінює швидкість назавжди (±1)<br>
-    🐦 <b>Червона птиця</b> — спавнить дебафи, їсть бафи!<br>
-    ❤️ <b>1 життя</b> на старті — більше можна купити в Апгрейдах!
+<div class="topbar">
+  <div class="brand"><div class="brand-mark">á</div><div class="brand-name">áClub</div></div>
+  <div class="pills">
+    <div class="pill coin">💰<span class="val mono" id="pillCoin">0</span></div>
+    <div class="pill shard">🔮<span class="val mono" id="pillShard">0</span></div>
   </div>
-  <div class="row">
-    <div class="medal mg">🥇 20 á</div>
-    <div class="medal ms">🥈 15 á</div>
-    <div class="medal mb">🥉 10 á</div>
-  </div>
-  <div class="row">
-    <div class="chip cg">🛡 ЩИТ</div>
-    <div class="chip cg">🧲 МАГНІТ</div>
-    <div class="chip cb">🔴 ЯБЛУКА НЕДОСТУПНІ</div>
-    <div class="chip cb">💨 ВІТЕР</div>
-  </div>
-  <button class="btn" onclick="startGame()">▶ СТАРТ</button>
-  <div style="font-size:9px;color:#546e7a;margin-top:-2px;">ТАП / ПРОБІЛ — СТРИБОК</div>
 </div>
 
-<!-- GAME OVER OVERLAY -->
-<div class="ov hide" id="ovE">
-  <div class="title">GAME<br>OVER</div>
-  <div class="score-big" id="endSc">0</div>
-  <div class="best">Рекорд: <b id="bestSc">0</b></div>
-  <div class="st" id="sendSt"></div>
-  <button class="btn" onclick="startGame()" style="max-width:180px">↺ ЩЕ РАЗ</button>
-</div>
+<div class="content" id="screen"><div class="loading"><div class="spin"></div></div></div>
+
+<div class="navbar" id="navbar"></div>
+<div class="toast" id="toast"></div>
+<div class="modal-bg" id="modalBg"></div>
+<div class="modal" id="modal"></div>
 
 <script>
-const GAS='https://script.google.com/macros/s/AKfycbzH8qt2_fUmnrLEw0Z56fsyMEH-D3uOgBSeTxwzUMCDTFDDoNBAowLTZqEGwSFo26ie9A/exec';
-const WRK='https://aclub-runner-test.rjcnz-faw4.workers.dev';
+// ============================================================
+// КОНФІГ
+// ============================================================
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzH8qt2_fUmnrLEw0Z56fsyMEH-D3uOgBSeTxwzUMCDTFDDoNBAowLTZqEGwSFo26ie9A/exec";
+const GAME_SECRET = "aclub2026runnertest";
+const RUNNER_URL = "https://unissx.github.io/aclub-games_test/runner/?v=1";
+const WORDLE_URL = "https://unissx.github.io/aclub-games_test/wordle/?v=13";
+const CIRCLE_URL = "https://unissx.github.io/aclub-games_test/circle/?v=4";
 
-const cv=document.getElementById('c'),ctx=cv.getContext('2d');
-if(window.Telegram&&window.Telegram.WebApp){
-  window.Telegram.WebApp.ready();
-  window.Telegram.WebApp.expand();
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { try { tg.ready(); tg.expand(); tg.setHeaderColor("#0A0C14"); tg.setBackgroundColor("#0A0C14"); } catch(e){} }
+
+function getUserId(){
+  const qs = new URLSearchParams(location.search);
+  if (qs.get("tgid")) return qs.get("tgid");
+  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) return String(tg.initDataUnsafe.user.id);
+  return null;
 }
-let state='idle',score=0,lives=1,maxLives=1,speed=0,frame=0,bestScore=0;
-let dt=1,lastTime=0,speedMod=0,boostLabel='',inv=0;
-let obstacles=[],apples=[],boosters=[],particles=[],flyingEnemies=[],bossBullets=[],speedMods=[];
-let bgOff=0,grOff=0;
-let shield=false,shieldTime=0,magnet=false,magnetTime=0,noApples=false,noApplesTime=0;
-let wind=false,windTime=0; // дебаф вітру — блокує подвійний стрибок
-const WIND_DUR=5*60;
-const BDUR=60*3; // тривалість дебафу яблук (3 сек)
-let boss=null,bossActive=false;
-let nextSpeedMod=400,nextApple=0,nextBooster=0,nextEnemy=0;
-let redAppleSpawned=false;
-let gameCount=parseInt(localStorage.getItem('ag')||'0');
-let W,H,GY,PH,FL,SCALE;
+const USER_ID = getUserId();
 
-function resize(){
-  W=window.innerWidth||screen.width;
-  H=window.innerHeight||screen.height;
-  if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.viewportHeight>100){
-    H=window.Telegram.WebApp.viewportStableHeight||window.Telegram.WebApp.viewportHeight||H;
-    W=window.Telegram.WebApp.viewportWidth||W;
-  }
-  cv.width=W;cv.height=H;cv.style.width=W+'px';cv.style.height=H+'px';
-  // Під час активної гри НЕ перераховуємо масштаб/фізику — інакше
-  // стрибок/швидкість "стрибають" якщо хтось змінить розмір вікна
-  // на льоту. Масштаб оновлюється лише на старті нового забігу.
-  if(state==='playing')return;
-  SCALE=Math.min(W/520,H/230);
-  GY=H-Math.round(44*SCALE);PH=Math.round(36*SCALE);FL=GY-PH;
+async function api(action, payload){
+  const body = { type:"web_action", userId: USER_ID, secret: GAME_SECRET, action, payload: payload || {} };
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(WEBAPP_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(body), signal: controller.signal });
+    return await res.json();
+  } finally { clearTimeout(t); }
 }
-window.addEventListener('resize',resize);
-if(window.Telegram&&window.Telegram.WebApp){window.Telegram.WebApp.onEvent('viewportChanged',resize);}
-
-const GRAV=0.44; // базова гравітація (буде масштабуватись через GRAV*SCALE)
-const P={
-  get x(){return Math.round(70*SCALE);},
-  y:0,vy:0,onGround:true,jc:0,af:0,at:0,
-  init(){this.y=FL;this.vy=0;this.onGround=true;this.jc=0;this.af=0;this.at=0;},
-  jump(){
-    const maxJumps = wind ? 1 : 2;
-    if(this.jc<maxJumps){
-      const h1=90*SCALE,h2=60*SCALE;
-      this.vy=this.jc===0?-Math.sqrt(2*GRAV*SCALE*h1):-Math.sqrt(2*GRAV*SCALE*h2);
-      this.onGround=false;this.jc++;spawnP(this.x+s(14),this.y+PH,'#00e676',5);
-    }
-  },
-  update(){
-    this.vy+=GRAV*SCALE*dt;this.y+=this.vy*dt;
-    if(this.y>=FL){this.y=FL;this.vy=0;this.onGround=true;this.jc=0;}
-    this.at+=dt;if(this.at>=7){this.at=0;this.af=(this.af+1)%4;}
-    if(inv>0)inv-=dt;
-    if(shieldTime>0){shieldTime-=dt;if(shieldTime<=0){shield=false;boostLabel='';}}
-    if(magnetTime>0){magnetTime-=dt;if(magnetTime<=0){magnet=false;boostLabel='';}}
-    if(noApplesTime>0){noApplesTime-=dt;if(noApplesTime<=0){noApples=false;boostLabel='';}}
-    if(windTime>0){windTime-=dt;if(windTime<=0){wind=false;}}
-  },
-  draw(){
-    if(inv>0&&Math.floor(inv/4)%2===0)return;
-    const px=this.x,py=Math.round(this.y);
-    const run=this.onGround?Math.sin(this.af*Math.PI/2):0;
-    ctx.save();ctx.globalAlpha=.18;ctx.fillStyle='#000';
-    ctx.beginPath();ctx.ellipse(px+s(14),GY+s(2),s(12),s(3),0,0,Math.PI*2);ctx.fill();ctx.restore();
-    if(shield){ctx.save();ctx.globalAlpha=.5;ctx.strokeStyle='#00e5ff';ctx.lineWidth=s(3);
-      ctx.shadowColor='#00e5ff';ctx.shadowBlur=14;ctx.beginPath();ctx.arc(px+s(14),py+PH/2,s(24),0,Math.PI*2);ctx.stroke();
-      // Таймер-дуга щита
-      const maxDur=SHIELD_DUR[_upgrades.shield]||SHIELD_DUR[0];
-      const prog=Math.min(shieldTime/maxDur,1);
-      ctx.globalAlpha=.9;ctx.strokeStyle='#00e5ff';ctx.lineWidth=s(2);
-      ctx.shadowBlur=6;
-      ctx.beginPath();ctx.arc(px+s(14),py+PH/2,s(28),-.5*Math.PI,-.5*Math.PI+prog*2*Math.PI);ctx.stroke();
-      ctx.restore();}
-    const lo=run*s(5),arm=this.onGround?Math.cos(this.af*Math.PI/2)*s(4):-s(3);
-    const d=noApples;
-    const BC=d?'#ff1744':(SKIN_HUE!=null?`hsl(${SKIN_HUE},${SKIN_SAT}%,${SKIN_LIGHT}%)`:'#00c853'),
-          DC=d?'#c0003c':(SKIN_HUE!=null?`hsl(${SKIN_HUE},${SKIN_SAT}%,${Math.max(10,SKIN_LIGHT-20)}%)`:'#004d40'),
-          LC=d?'#ff6090':(SKIN_HUE!=null?`hsl(${SKIN_HUE},${Math.max(0,SKIN_SAT-10)}%,${Math.min(90,SKIN_LIGHT+10)}%)`:'#00a152'),
-          SK=d?'#ff6090':'#a5d6a7',
-          HC=d?'#c0003c':(SKIN_HUE!=null?`hsl(${SKIN_HUE},${SKIN_SAT}%,${SKIN_LIGHT}%)`:'#00c853');
-    ctx.fillStyle=LC;ctx.beginPath();ctx.roundRect(px+s(4),py+s(26),s(9),s(13)+lo,s(3));ctx.fill();
-    ctx.beginPath();ctx.roundRect(px+s(15),py+s(26),s(9),s(13)-lo,s(3));ctx.fill();
-    ctx.fillStyle=DC;ctx.beginPath();ctx.roundRect(px+s(2),py+s(37)+lo,s(13),s(4),s(2));ctx.fill();
-    ctx.beginPath();ctx.roundRect(px+s(13),py+s(37)-lo,s(13),s(4),s(2));ctx.fill();
-    ctx.fillStyle=BC;ctx.beginPath();ctx.roundRect(px+s(3),py+s(12),s(22),s(18),s(5));ctx.fill();
-    ctx.fillStyle=DC;ctx.font=`bold ${s(11)}px Nunito`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('á',px+s(14),py+s(21));
-    ctx.fillStyle=BC;ctx.beginPath();ctx.roundRect(px-s(3),py+s(13)+arm,s(7),s(12),s(3));ctx.fill();
-    ctx.beginPath();ctx.roundRect(px+s(24),py+s(13)-arm,s(7),s(12),s(3));ctx.fill();
-    ctx.fillStyle=SK;ctx.beginPath();ctx.roundRect(px+s(4),py,s(20),s(16),s(8));ctx.fill();
-    ctx.fillStyle=HC;ctx.beginPath();ctx.roundRect(px+s(3),py-s(3),s(22),s(8),[s(6),s(6),0,0]);ctx.fill();
-    ctx.fillStyle='#1a237e';ctx.fillRect(px+s(8),py+s(5),s(3),s(3));ctx.fillRect(px+s(17),py+s(5),s(3),s(3));
-    ctx.strokeStyle='#1a237e';ctx.lineWidth=s(1.5);ctx.beginPath();ctx.arc(px+s(14),py+s(11),s(4),0.2,Math.PI-0.2);ctx.stroke();
-  },
-  box(){return{x:this.x+s(4),y:this.y+s(2),w:s(20),h:PH-s(2)};}
-};
-function s(v){return Math.round(v*SCALE);}
-resize();P.y=FL;
-
-const KB=[{w:44,h:58,t:'b'},{w:18,h:92,t:'t'},{w:62,h:46,t:'b'},{w:28,h:72,t:'d'},{w:36,h:52,t:'b'},{w:52,h:62,t:'b'},{w:22,h:82,t:'t'},{w:46,h:42,t:'b'},{w:32,h:98,t:'m'}];
-let BL=[];
-function initBL(){BL=[];let bx=0;while(bx<W*4){const b=KB[Math.floor(Math.random()*KB.length)];BL.push({...b,ox:bx,ws:b.w*SCALE,hs:b.h*SCALE});bx+=b.w*SCALE+Math.floor(Math.random()*10);}}
-function drawBld(b,x,al){
-  const by=GY-b.hs;ctx.save();ctx.globalAlpha=al;ctx.fillStyle=al>0.6?'#0a1e30':'#1e3a5f';
-  if(b.t==='b'){ctx.fillRect(x,by,b.ws,b.hs);ctx.fillStyle='rgba(255,220,100,.1)';for(let wy=by+6;wy<GY-4;wy+=s(10))for(let wx=x+4;wx<x+b.ws-4;wx+=s(8))if((Math.floor(wx)*7+Math.floor(wy)*3)%11>4)ctx.fillRect(wx,wy,s(4),s(5));}
-  else if(b.t==='t'){ctx.fillRect(x+s(4),by,b.ws-s(8),b.hs);ctx.beginPath();ctx.moveTo(x,by+s(5));ctx.lineTo(x+b.ws/2,by-s(15));ctx.lineTo(x+b.ws,by+s(5));ctx.fill();}
-  else if(b.t==='d'){ctx.fillRect(x+s(5),by+s(20),b.ws-s(10),b.hs-s(20));ctx.beginPath();ctx.arc(x+b.ws/2,by+s(22),(b.ws-s(10))/2,Math.PI,0);ctx.fill();}
-  else if(b.t==='m'){ctx.fillRect(x+s(8),by+s(40),s(8),b.hs-s(40));ctx.fillStyle=al>0.6?'#152840':'#2a4a6a';ctx.beginPath();ctx.moveTo(x+s(4),by+s(40));ctx.lineTo(x+s(12),by+s(15));ctx.lineTo(x+s(20),by+s(40));ctx.fill();ctx.beginPath();ctx.arc(x+s(12),by+s(12),s(5),0,Math.PI*2);ctx.fill();}
-  ctx.restore();
-}
-// ── ЛОКАЦІЇ ──────────────────────────────────────────────────
-// 0=Ніч, 1=Захід, 2=Дощ, 3=Туман
-const LOCATIONS = [
-  { name:'🌙 Ніч',    sky:['#050d1a','#0d2137','#1a3a5c'], ground:['#1a3a1a','#0a1a0a'], line:'#00c853', bld1:'#0a1e30', bld2:'#1e3a5f', stars:true,  rain:false, fog:false },
-  { name:'🌅 Захід',  sky:['#1a0d2e','#3d1555','#6b2d6b'], ground:['#2a0f0f','#150505'], line:'#ff7043', bld1:'#1a0520', bld2:'#2d0a35', stars:false, rain:false, fog:false },
-  { name:'🌧 Дощ',    sky:['#0a0f14','#111a22','#1a2a35'], ground:['#0a150a','#050f05'], line:'#4fc3f7', bld1:'#070d12', bld2:'#0d1a22', stars:false, rain:true,  fog:false },
-  { name:'🌫 Туман',  sky:['#1a1a2e','#2a2a4a','#3a3a5a'], ground:['#151520','#0a0a15'], line:'#9c27b0', bld1:'#111120', bld2:'#1a1a30', stars:true,  rain:false, fog:true  },
-];
-// Пресети локацій для екіпірованих скінів погоди (runner_legendary_weather).
-// Раніше такого зв'язку не існувало — погода завжди циклічно перемикалась
-// між 4 стандартними пресетами вище залежно від score, незалежно від того,
-// який скін погоди екіпірований.
-const WEATHER_PRESETS = {
-  storm:       { name:'⛈ Грозова злива',    sky:['#0a0d10','#141a1f','#1c2831'], ground:['#080f08','#040a04'], line:'#4fc3f7', bld1:'#06090c', bld2:'#0c161c', stars:false, rain:true,  fog:false },
-  snow:        { name:'❄️ Снігова буря',     sky:['#1a222c','#2a3a4a','#3d5266'], ground:['#1a2228','#0d1418'], line:'#e1f5fe', bld1:'#141c24','bld2':'#22323f', stars:false, rain:true,  fog:true  },
-  office_fog:  { name:'🌫 Туман над офісом', sky:['#22242e','#31333f','#3f414f'], ground:['#181a20','#0c0d10'], line:'#b0bec5', bld1:'#1c1e26', bld2:'#282a36', stars:false, rain:false, fog:true  },
-  rainbow:     { name:'🌈 Веселка успіху',   sky:['#0d1b2e','#3a2d5c','#6b3d8c'], ground:['#122a1a','#08150c'], line:'#ffca28', bld1:'#141a2a', bld2:'#2a2050', stars:true,  rain:false, fog:false },
-  aurora:      { name:'🌌 Північне сяйво',   sky:['#050a14','#0a2438','#0d4a4a'], ground:['#0a1a18','#04100e'], line:'#69f0ae', bld1:'#081420', bld2:'#0e2f38', stars:true,  rain:false, fog:false },
-  sandstorm:   { name:'🏜 Пісочна буря',     sky:['#2e2210','#4a3418','#6b4a20'], ground:['#241a0c','#120d06'], line:'#ffb74d', bld1:'#221a0e', bld2:'#3a2c14', stars:false, rain:false, fog:true  },
-  gold_sunset: { name:'🌇 Золотий захід сонця', sky:['#2a1006','#5c2410','#8c4418'], ground:['#1a0e08','#0d0704'], line:'#ffd740', bld1:'#200c04', bld2:'#3a1808', stars:false, rain:false, fog:false },
-  moon_night:  { name:'🌕 Місячна ніч',      sky:['#02040a','#081020','#122238'], ground:['#040a08','#020504'], line:'#c5cae9', bld1:'#04070e', bld2:'#0a1526', stars:true,  rain:false, fog:false },
-};
-let rainDrops=[];
-function initRain(){rainDrops=[];for(let i=0;i<80;i++)rainDrops.push({x:Math.random()*W,y:Math.random()*H,spd:8+Math.random()*6,len:8+Math.random()*12});}
-function getLoc(){
-  if (WEATHER_PRESET && WEATHER_PRESETS[WEATHER_PRESET]) return WEATHER_PRESETS[WEATHER_PRESET];
-  return LOCATIONS[Math.floor(score/500)%LOCATIONS.length];
+async function apiRaw(type, payload){
+  const body = Object.assign({ type, userId: USER_ID, secret: GAME_SECRET }, payload || {});
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(WEBAPP_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(body), signal: controller.signal });
+    return await res.json();
+  } finally { clearTimeout(t); }
 }
 
-function drawBldLoc(b,x,al,loc){
-  const by=GY-b.hs;ctx.save();ctx.globalAlpha=al;
-  ctx.fillStyle=al>0.6?loc.bld1:loc.bld2;
-  if(b.t==='b'){ctx.fillRect(x,by,b.ws,b.hs);ctx.fillStyle='rgba(255,220,100,.08)';for(let wy=by+6;wy<GY-4;wy+=s(10))for(let wx=x+4;wx<x+b.ws-4;wx+=s(8))if((Math.floor(wx)*7+Math.floor(wy)*3)%11>4)ctx.fillRect(wx,wy,s(4),s(5));}
-  else if(b.t==='t'){ctx.fillRect(x+s(4),by,b.ws-s(8),b.hs);ctx.beginPath();ctx.moveTo(x,by+s(5));ctx.lineTo(x+b.ws/2,by-s(15));ctx.lineTo(x+b.ws,by+s(5));ctx.fill();}
-  else if(b.t==='d'){ctx.fillRect(x+s(5),by+s(20),b.ws-s(10),b.hs-s(20));ctx.beginPath();ctx.arc(x+b.ws/2,by+s(22),(b.ws-s(10))/2,Math.PI,0);ctx.fill();}
-  else if(b.t==='m'){ctx.fillRect(x+s(8),by+s(40),s(8),b.hs-s(40));ctx.fillStyle=al>0.6?loc.bld1:loc.bld2;ctx.beginPath();ctx.moveTo(x+s(4),by+s(40));ctx.lineTo(x+s(12),by+s(15));ctx.lineTo(x+s(20),by+s(40));ctx.fill();ctx.beginPath();ctx.arc(x+s(12),by+s(12),s(5),0,Math.PI*2);ctx.fill();}
-  ctx.restore();
+function fmt(n){ return (n ?? 0).toLocaleString("uk-UA"); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// ПІБ зберігається як "Прізвище Ім'я По-батькові" — для привітання показуємо
+// лише ім'я (друге слово), а не все ПІБ повністю. Скрізь, де ім'я
+// використовується для звірки/пошуку записів (замовлення, ефекти тощо),
+// продовжуємо використовувати повне DASH.name — ця функція лише для показу.
+function firstNameOf(fullName){
+  const parts = String(fullName||"").trim().split(/\s+/);
+  return parts[1] || parts[0] || fullName || "";
 }
 
-function drawBG(){
-  const loc=getLoc();
-  const sg=ctx.createLinearGradient(0,0,0,GY);
-  sg.addColorStop(0,loc.sky[0]);sg.addColorStop(.6,loc.sky[1]);sg.addColorStop(1,loc.sky[2]);
-  ctx.fillStyle=sg;ctx.fillRect(0,0,W,H);
-
-  // Зірки або ефекти неба
-  if(loc.stars){
-    ctx.fillStyle='rgba(255,255,255,.45)';
-    for(let i=0;i<50;i++){const sx=((i*67+bgOff*.05)%W+W)%W,sy=(i*29)%(GY*.6),ss=(i%3)*.4+.3;ctx.beginPath();ctx.arc(sx,sy,ss,0,Math.PI*2);ctx.fill();}
-  }
-  if(loc.sky[0]==='#1a0d2e'){
-    // Захід — темно-фіолетове небо з червоним сонцем біля горизонту
-    ctx.save();ctx.shadowColor='#ff7043';ctx.shadowBlur=30;
-    const sunY=GY-s(40);
-    ctx.fillStyle='#ff5722';ctx.beginPath();ctx.arc(W-s(80),sunY,s(18),0,Math.PI*2);ctx.fill();
-    // Промені
-    ctx.strokeStyle='rgba(255,112,67,.3)';ctx.lineWidth=s(30);
-    ctx.beginPath();ctx.moveTo(W-s(80),sunY);ctx.lineTo(W-s(80),GY);ctx.stroke();
-    ctx.restore();
-  } else if(loc.stars){
-    // Ніч/туман — місяць
-    ctx.save();ctx.shadowColor='#fffde7';ctx.shadowBlur=20;ctx.fillStyle='#fffde7';
-    ctx.beginPath();ctx.arc(W-s(55),s(28),s(16),0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=loc.sky[1];ctx.beginPath();ctx.arc(W-s(49),s(24),s(12),0,Math.PI*2);ctx.fill();ctx.restore();
-  }
-
-  // Туман
-  if(loc.fog){
-    ctx.save();ctx.globalAlpha=0.15+Math.sin(bgOff*.001)*.05;
-    const fg=ctx.createLinearGradient(0,GY*.3,0,GY);fg.addColorStop(0,'transparent');fg.addColorStop(1,'#9c27b0');
-    ctx.fillStyle=fg;ctx.fillRect(0,GY*.3,W,GY*.7);ctx.restore();
-  }
-
-  // Будівлі
-  const b2=(bgOff*.28)%(W*4);for(const b of BL){const bx=((b.ox-b2)%(W*4)+W*4)%(W*4)-W*.3;if(bx>-200&&bx<W+200)drawBldLoc(b,bx,.4,loc);}
-  const b1=(bgOff*.55)%(W*4);for(let i=0;i<BL.length;i+=2){const b=BL[i];const bx=((b.ox-b1)%(W*4)+W*4)%(W*4)-W*.3;if(bx>-200&&bx<W+200)drawBldLoc(b,bx,.8,loc);}
-
-  // Земля
-  const gg=ctx.createLinearGradient(0,GY,0,H);gg.addColorStop(0,loc.ground[0]);gg.addColorStop(1,loc.ground[1]);
-  ctx.fillStyle=gg;ctx.fillRect(0,GY,W,H-GY);
-  ctx.save();ctx.strokeStyle=loc.line;ctx.lineWidth=2;ctx.shadowColor=loc.line;ctx.shadowBlur=8;
-  ctx.beginPath();ctx.moveTo(0,GY);ctx.lineTo(W,GY);ctx.stroke();ctx.restore();
-  ctx.strokeStyle=loc.line.replace(')',`,.07)`).replace('rgb','rgba');
-  ctx.lineWidth=1;const go=grOff%s(48);
-  for(let gx=-go;gx<W;gx+=s(48)){ctx.beginPath();ctx.moveTo(gx,GY);ctx.lineTo(gx,H);ctx.stroke();}
-
-  // Дощ
-  if(loc.rain){
-    if(!rainDrops.length)initRain();
-    ctx.save();ctx.strokeStyle='rgba(100,180,255,.5)';ctx.lineWidth=1;
-    rainDrops.forEach(d=>{
-      ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(d.x-2,d.y+d.len);ctx.stroke();
-      d.y+=d.spd*dt;d.x-=dt;
-      if(d.y>H){d.y=-10;d.x=Math.random()*W;}
-    });
-    ctx.restore();
-  }
-
-  // Назва локації при переході (кожні 500 очок)
-  const locIdx=Math.floor(score/500)%LOCATIONS.length;
-  const locBoundary=locIdx*500;
-  if(score-locBoundary<3){
-    ctx.save();ctx.globalAlpha=Math.max(0,1-(score-locBoundary)/3);
-    ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,H/2-s(20),W,s(40));
-    ctx.fillStyle='#fff';ctx.font=`bold ${s(14)}px "Press Start 2P"`;ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(loc.name,W/2,H/2);ctx.restore();
-  }
-}
-function drawHUD(){
-  const fs=Math.round(Math.max(16,Math.min(22*SCALE,28)));
-  const fl=Math.round(Math.max(22,Math.min(28*SCALE,36)));
-  const fsp=Math.round(Math.max(14,Math.min(18*SCALE,24)));
-  const hudH=Math.round(Math.max(52,64*SCALE)),pad=8;
-  ctx.fillStyle='rgba(5,15,30,.9)';ctx.beginPath();ctx.roundRect(pad,pad,W-pad*2,hudH,8);ctx.fill();
-  ctx.strokeStyle='rgba(0,200,83,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(pad,pad,W-pad*2,hudH,8);ctx.stroke();
-  ctx.fillStyle='#ffd740';ctx.font=`bold ${fs}px "Press Start 2P",monospace`;ctx.textAlign='left';ctx.textBaseline='middle';
-  ctx.fillText(String(Math.floor(score)).padStart(4,'0'),pad+12,pad+hudH/2);
-  const hx=W/2-(maxLives-1)*fl*1.1/2;
-  for(let i=0;i<maxLives;i++){ctx.globalAlpha=i<lives?1:.2;ctx.font=`${fl}px Arial`;ctx.textAlign='center';ctx.fillText('💚',hx+i*fl*1.1,pad+hudH/2+2);}
-  ctx.globalAlpha=1;
-  ctx.fillStyle='#00e676';ctx.font=`bold ${fsp}px "Press Start 2P",monospace`;ctx.textAlign='right';
-  ctx.fillText('x'+speed.toFixed(1),W-pad-12,pad+hudH/2);
-  // Іконки активних бонусів — праворуч під HUD
-  let iconY = pad + hudH + s(20);
-  const iconR = s(14);
-  const iconX = W - pad - 12 - iconR;
-
-  if(shield){
-    const maxDur = SHIELD_DUR[_upgrades.shield]||SHIELD_DUR[0];
-    const prog = Math.min(shieldTime/maxDur, 1);
-    // Фон кола
-    ctx.fillStyle='rgba(0,20,40,.7)';
-    ctx.beginPath();ctx.arc(iconX,iconY,iconR+s(2),0,Math.PI*2);ctx.fill();
-    // Сіра доріжка
-    ctx.strokeStyle='rgba(0,229,255,.2)';ctx.lineWidth=s(3);
-    ctx.beginPath();ctx.arc(iconX,iconY,iconR,-.5*Math.PI,1.5*Math.PI);ctx.stroke();
-    // Прогрес
-    ctx.strokeStyle='#00e5ff';ctx.lineWidth=s(3);ctx.shadowColor='#00e5ff';ctx.shadowBlur=6;
-    ctx.beginPath();ctx.arc(iconX,iconY,iconR,-.5*Math.PI,-.5*Math.PI+prog*2*Math.PI);ctx.stroke();
-    ctx.shadowBlur=0;
-    // Іконка щита намальована
-    ctx.fillStyle='#00e5ff';
-    ctx.beginPath();
-    ctx.moveTo(iconX,iconY-s(8));
-    ctx.lineTo(iconX+s(6),iconY-s(5));
-    ctx.lineTo(iconX+s(6),iconY+s(2));
-    ctx.quadraticCurveTo(iconX+s(6),iconY+s(8),iconX,iconY+s(10));
-    ctx.quadraticCurveTo(iconX-s(6),iconY+s(8),iconX-s(6),iconY+s(2));
-    ctx.lineTo(iconX-s(6),iconY-s(5));
-    ctx.closePath();ctx.fill();
-    ctx.fillStyle='rgba(0,20,40,.4)';
-    ctx.beginPath();
-    ctx.moveTo(iconX,iconY-s(6));ctx.lineTo(iconX+s(4),iconY-s(3));
-    ctx.lineTo(iconX+s(4),iconY+s(1));
-    ctx.quadraticCurveTo(iconX+s(4),iconY+s(6),iconX,iconY+s(8));
-    ctx.quadraticCurveTo(iconX-s(4),iconY+s(6),iconX-s(4),iconY+s(1));
-    ctx.lineTo(iconX-s(4),iconY-s(3));
-    ctx.closePath();ctx.fill();
-    iconY += iconR*2 + s(6);
-  }
-
-  if(magnet){
-    const maxDur = MAGNET_DUR[_upgrades.magnet]||(60*5);
-    const prog = Math.min(magnetTime/maxDur, 1);
-    ctx.fillStyle='rgba(20,10,0,.7)';
-    ctx.beginPath();ctx.arc(iconX,iconY,iconR+s(2),0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='rgba(255,215,64,.2)';ctx.lineWidth=s(3);
-    ctx.beginPath();ctx.arc(iconX,iconY,iconR,-.5*Math.PI,1.5*Math.PI);ctx.stroke();
-    ctx.strokeStyle='#ffd740';ctx.lineWidth=s(3);ctx.shadowColor='#ffd740';ctx.shadowBlur=6;
-    ctx.beginPath();ctx.arc(iconX,iconY,iconR,-.5*Math.PI,-.5*Math.PI+prog*2*Math.PI);ctx.stroke();
-    ctx.shadowBlur=0;
-    ctx.font=`${s(14)}px Arial`;ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('🧲',iconX,iconY);
-    iconY += iconR*2 + s(6);
-  }
-
-  if(noApples){
-    ctx.fillStyle='rgba(30,0,0,.7)';
-    ctx.beginPath();ctx.arc(iconX,iconY,iconR+s(2),0,Math.PI*2);ctx.fill();
-    const prog=Math.max(0,Math.min(noApplesTime/BDUR,1));
-    ctx.strokeStyle='rgba(255,23,68,.2)';ctx.lineWidth=s(3);
-    ctx.beginPath();ctx.arc(iconX,iconY,iconR,0,Math.PI*2);ctx.stroke();
-    ctx.strokeStyle='#ff1744';ctx.lineWidth=s(3);ctx.shadowColor='#ff1744';ctx.shadowBlur=4;
-    ctx.beginPath();ctx.arc(iconX,iconY,iconR,-.5*Math.PI,-.5*Math.PI+prog*2*Math.PI);ctx.stroke();
-    ctx.shadowBlur=0;
-    ctx.fillStyle='#ff5252';ctx.beginPath();ctx.arc(iconX,iconY,s(6),0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#fff';ctx.lineWidth=s(2);
-    ctx.beginPath();ctx.moveTo(iconX-s(4),iconY-s(4));ctx.lineTo(iconX+s(4),iconY+s(4));ctx.stroke();
-    ctx.beginPath();ctx.moveTo(iconX+s(4),iconY-s(4));ctx.lineTo(iconX-s(4),iconY+s(4));ctx.stroke();
-  }
-  if(wind){
-    ctx.fillStyle='rgba(10,20,40,.7)';
-    ctx.beginPath();ctx.arc(iconX,iconY,iconR+s(2),0,Math.PI*2);ctx.fill();
-    const prog=Math.max(0,Math.min(windTime/WIND_DUR,1));
-    ctx.strokeStyle='rgba(144,202,249,.2)';ctx.lineWidth=s(3);
-    ctx.beginPath();ctx.arc(iconX,iconY,iconR,0,Math.PI*2);ctx.stroke();
-    ctx.strokeStyle='#90caf9';ctx.lineWidth=s(3);ctx.shadowColor='#90caf9';ctx.shadowBlur=4;
-    ctx.beginPath();ctx.arc(iconX,iconY,iconR,-.5*Math.PI,-.5*Math.PI+prog*2*Math.PI);ctx.stroke();
-    ctx.shadowBlur=0;
-    // Іконка вітру
-    ctx.strokeStyle='#90caf9';ctx.lineWidth=s(2);
-    ctx.beginPath();ctx.moveTo(iconX-s(6),iconY-s(2));ctx.bezierCurveTo(iconX,iconY-s(8),iconX+s(7),iconY-s(4),iconX+s(6),iconY+s(1));ctx.stroke();
-    ctx.beginPath();ctx.moveTo(iconX-s(6),iconY+s(3));ctx.bezierCurveTo(iconX,iconY-s(3),iconX+s(5),iconY+s(1),iconX+s(4),iconY+s(5));ctx.stroke();
-  }
-  ctx.textBaseline='alphabetic';
+function toast(msg, kind){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (kind ? " " + kind : "");
+  clearTimeout(toast._h);
+  toast._h = setTimeout(() => t.classList.remove("show"), 2600);
 }
 
-const OT=[
-  {id:'cone',w:22,h:32,draw(x,y,w,h){ctx.fillStyle='#ff6f00';ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x+w/2,y);ctx.lineTo(x+w,y+h);ctx.fill();ctx.fillStyle='#ffcc02';ctx.beginPath();ctx.moveTo(x+w*.18,y+h*.85);ctx.lineTo(x+w/2,y+h*.2);ctx.lineTo(x+w*.82,y+h*.85);ctx.fill();ctx.fillStyle='rgba(255,255,255,.8)';ctx.fillRect(x+w*.14,y+h*.38,w*.72,h*.05);ctx.fillRect(x+w*.23,y+h*.62,w*.54,h*.05);ctx.fillStyle='#e65100';ctx.beginPath();ctx.roundRect(x-s(2),y+h-s(4),w+s(4),s(4),s(2));ctx.fill();}},
-  {id:'barrier',w:16,h:46,draw(x,y,w,h){ctx.fillStyle='#d32f2f';ctx.beginPath();ctx.roundRect(x+w*.25,y,w*.5,h,s(3));ctx.fill();ctx.fillStyle='#ffeb3b';ctx.fillRect(x+w*.19,y+h*.17,w*.62,h*.1);ctx.fillRect(x+w*.19,y+h*.46,w*.62,h*.1);ctx.fillRect(x+w*.19,y+h*.75,w*.62,h*.1);ctx.save();ctx.fillStyle='#ffd740';ctx.shadowColor='#ffd740';ctx.shadowBlur=8;ctx.beginPath();ctx.arc(x+w/2,y+s(5),s(5),0,Math.PI*2);ctx.fill();ctx.restore();}},
-  {id:'pit',w:50,h:10,isPit:true,draw(x,y,w,h){ctx.fillStyle='#000a00';ctx.fillRect(x,GY,w,H-GY);ctx.fillStyle='#ff1744';ctx.fillRect(x,GY-s(3),w,s(3));ctx.fillStyle='#b71c1c';for(let sx=x+s(3);sx<x+w-s(3);sx+=s(9)){ctx.beginPath();ctx.moveTo(sx,GY+s(3));ctx.lineTo(sx+s(4.5),GY+s(16));ctx.lineTo(sx+s(9),GY+s(3));ctx.fill();}}},
-  {id:'box',w:30,h:30,draw(x,y,w,h){ctx.fillStyle='#e65100';ctx.beginPath();ctx.roundRect(x,y,w,h,s(4));ctx.fill();ctx.fillStyle='#ff8f00';ctx.beginPath();ctx.roundRect(x+s(2),y+s(2),w-s(4),h/2-s(3),s(3));ctx.fill();ctx.fillStyle='#bf360c';ctx.fillRect(x,y+h/2-s(2),w,s(4));ctx.fillRect(x+w/2-s(2),y,s(4),h);ctx.strokeStyle='#ffcc02';ctx.lineWidth=s(1.5);ctx.beginPath();ctx.roundRect(x+s(1),y+s(1),w-s(2),h-s(2),s(3));ctx.stroke();}},
-  {id:'spike',w:26,h:36,draw(x,y,w,h){ctx.fillStyle='#4a148c';ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x+w/2,y);ctx.lineTo(x+w,y+h);ctx.fill();ctx.fillStyle='#9c27b0';ctx.beginPath();ctx.moveTo(x+w*.19,y+h);ctx.lineTo(x+w/2,y+h*.17);ctx.lineTo(x+w*.81,y+h);ctx.fill();ctx.strokeStyle='#e040fb';ctx.lineWidth=s(1);ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x+w/2,y);ctx.lineTo(x+w,y+h);ctx.stroke();}},
-];
-
-function safeGapPx(){
-  const reactionSec=Math.max(1.4,1.4+(speed-4.5)*0.08);
-  return speed*60*reactionSec*SCALE+Math.random()*s(80);
-}
-function spawnGroup(){
-  const r=Math.random();let count=1;
-  if(score>400&&r<0.28)count=2;if(score>800&&r<0.12)count=3;
-  let xOff=W+s(30);
-  for(let i=0;i<count;i++){
-    const avail=score<150?OT.filter(t=>!t.isPit):OT;
-    const pool=count>1?OT.filter(t=>!t.isPit):avail;
-    const ob=pool[Math.floor(Math.random()*pool.length)];
-    const ow=s(ob.w),oh=s(ob.h);
-    obstacles.push({...ob,x:xOff,y:ob.isPit?GY:GY-oh,w:ow,h:oh,passed:false,origW:ob.w,origH:ob.h});
-    xOff+=ow+s(10);
-  }
-}
-function lastObsRight(){if(!obstacles.length)return -9999;const o=obstacles[obstacles.length-1];return o.x+o.w;}
-
-let _enemyBirdHp = 0; // залишок HP ворожого птаха між появами
-let _nextEnemyBirdScore = 1500; // score при якому може з'явитись наступний птах
-
-function trySpawnEnemy(){
-  if(score < 1500) return;
-  if(score < _nextEnemyBirdScore) return;
-  const onScreen=obstacles.filter(o=>o.x>0&&o.x<W);
-  if(onScreen.length>0||flyingEnemies.length>0)return;
-  const ey=GY-s(58)-Math.floor(Math.random()*2)*s(18);
-  const hp = _enemyBirdHp > 0 && _enemyBirdHp < 10 ? _enemyBirdHp : 10;
-  _enemyBirdHp = 0;
-  flyingEnemies.push({
-    x:W+s(30),y:ey,homeX:W*.68+Math.random()*s(60),
-    w:s(32),h:s(22),wa:0,phase:'enter',baseY:ey,
-    hp, maxHp:10, actionTimer:0
-  });
+// Якщо бекенд повернув server_error/fatal_error — показуємо реальний
+// текст помилки (detail), а не незрозумілий код на кшталт "server_error".
+function apiErrText(r){
+  if (r && (r.error === "server_error" || r.error === "fatal_error") && r.detail) return "Помилка сервера: " + r.detail;
+  return (r && r.error) || "Помилка";
 }
 
-let _enemyBirdLaser=null; // лазер ворожого птаха
-
-function updateFlyingEnemy(e){
-  e.wa+=dt;
-  if(e.phase==='enter'){e.x-=speed*SCALE*dt;if(e.x<=e.homeX)e.phase='hover';}
-  else{e.x=e.homeX+Math.sin(e.wa*.04)*s(8);}
-  e.y=e.baseY+Math.sin(e.wa*.07)*s(3);
-
-  if(e.phase==='hover'){
-    e.actionTimer+=dt;
-
-    // Їсть бафи на шляху з 50% шансом
-    for(const b of [...boosters]){
-      if(b.collected||b.good===false)continue; // не чіпає дебафи
-      const dx=Math.abs(b.x-(e.x+e.w/2));
-      const dy=Math.abs(b.y-(e.y+e.h/2));
-      if(dx<s(60)&&dy<s(80)&&Math.random()<0.5){
-        b.collected=true;
-        _enemyBirdLaser={sx:e.x+e.w/2,sy:e.y+e.h/2,tx:b.x,ty:b.y,timer:20,color:'#ffd740'};
-        spawnT(b.x,b.y-s(10),'🛡💨','#ff5722');
-      }
-    }
-
-    // Спавнить дебаф кожні 7 сек через лазер в підлогу
-    if(e.actionTimer >= 7*60){
-      e.actionTimer=0;
-      const debuffs=['noapple','wind'];
-      const debuff=debuffs[Math.floor(Math.random()*debuffs.length)];
-      const def=BDEFS.find(b=>b.id===debuff);
-      if(def){
-        const tx=e.x+e.w/2;
-        // Лазер в підлогу
-        _enemyBirdLaser={sx:tx,sy:e.y+e.h,tx:tx,ty:GY,timer:30,color:'#ff1744'};
-        // Спавним дебаф на місці де промінь торкається землі
-        boosters.push({...def,x:tx,y:GY-s(44),r:s(11),collected:false,anim:0});
-        spawnT(tx,GY-s(50),'⚠️','#ff1744');
-      }
-    }
-  }
-
-  if(_enemyBirdLaser){
-    _enemyBirdLaser.timer-=dt;
-    if(_enemyBirdLaser.timer<=0)_enemyBirdLaser=null;
-  }
-}
-function drawFlyingEnemy(e){
-  const px=e.x,py=e.y,flap=Math.sin(e.wa*.18)*s(10);
-  ctx.fillStyle='#b71c1c';ctx.beginPath();ctx.ellipse(px+e.w/2,py+e.h*.55,e.w/2,e.h*.36,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#e53935';
-  ctx.beginPath();ctx.moveTo(px+e.w/2,py+e.h*.32);ctx.quadraticCurveTo(px-s(2),py-s(9)+flap,px-s(6),py+s(4));ctx.quadraticCurveTo(px+s(8),py+s(9),px+e.w/2,py+e.h*.32);ctx.fill();
-  ctx.beginPath();ctx.moveTo(px+e.w/2,py+e.h*.32);ctx.quadraticCurveTo(px+e.w+s(2),py-s(9)+flap,px+e.w+s(6),py+s(4));ctx.quadraticCurveTo(px+e.w-s(8),py+s(9),px+e.w/2,py+e.h*.32);ctx.fill();
-  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px+e.w*.34,py+e.h*.5,s(3),0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(px+e.w*.66,py+e.h*.5,s(3),0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#b71c1c';ctx.beginPath();ctx.arc(px+e.w*.38,py+e.h*.5,s(1.5),0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(px+e.w*.62,py+e.h*.5,s(1.5),0,Math.PI*2);ctx.fill();
-
-  // HP бар
-  if(e.hp!==undefined){
-    ctx.fillStyle='#111';ctx.beginPath();ctx.roundRect(px,py-s(10),e.w,s(5),s(2));ctx.fill();
-    ctx.fillStyle='#ff1744';ctx.beginPath();ctx.roundRect(px,py-s(10),e.w*(e.hp/e.maxHp),s(5),s(2));ctx.fill();
-  }
-
-  // Таймер спавну дебафів (7 сек)
-  if(e.phase==='hover'){
-    const prog=Math.min((e.actionTimer||0)/(7*60),1);
-    ctx.strokeStyle='rgba(255,23,68,.2)';ctx.lineWidth=s(2);
-    ctx.beginPath();ctx.arc(px+e.w/2,py+e.h/2,s(20),0,Math.PI*2);ctx.stroke();
-    ctx.strokeStyle='#ff1744';ctx.lineWidth=s(2);ctx.shadowColor='#ff1744';ctx.shadowBlur=4;
-    ctx.beginPath();ctx.arc(px+e.w/2,py+e.h/2,s(20),-.5*Math.PI,-.5*Math.PI+prog*2*Math.PI);ctx.stroke();
-    ctx.shadowBlur=0;
-  }
-
-  // Лазер ворожого птаха
-  if(_enemyBirdLaser&&_enemyBirdLaser.timer>0){
-    const alpha=_enemyBirdLaser.timer/30;
-    ctx.save();ctx.globalAlpha=alpha;
-    ctx.strokeStyle=_enemyBirdLaser.color;ctx.lineWidth=s(3);
-    ctx.shadowColor=_enemyBirdLaser.color;ctx.shadowBlur=12;
-    ctx.beginPath();ctx.moveTo(_enemyBirdLaser.sx,_enemyBirdLaser.sy);
-    ctx.lineTo(_enemyBirdLaser.tx,_enemyBirdLaser.ty);ctx.stroke();
-    ctx.globalAlpha=alpha*.5;ctx.fillStyle=_enemyBirdLaser.color;
-    ctx.beginPath();ctx.arc(_enemyBirdLaser.tx,_enemyBirdLaser.ty,s(6)*alpha,0,Math.PI*2);ctx.fill();
-    ctx.restore();
-  }
-
-  // Небезпечна зона — червона лінія від птаха до землі
-  if(e.phase==='hover'){
-    ctx.save();
-    ctx.globalAlpha=0.15+Math.sin(e.wa*.1)*.05;
-    ctx.fillStyle='#ff1744';
-    ctx.fillRect(px+e.w*.2,py+e.h,e.w*.6,GY-(py+e.h));
-    ctx.restore();
-    // Попередження зверху
-    ctx.save();ctx.globalAlpha=.85+Math.sin(e.wa*.15)*.15;
-    ctx.fillStyle='#ff1744';ctx.font=`bold ${s(8)}px "Press Start 2P"`;ctx.textAlign='center';
-    ctx.shadowColor='#ff1744';ctx.shadowBlur=8;
-    ctx.fillText('⚠',px+e.w/2,py-s(6));ctx.restore();
-    // Стрілка вниз що попереджає
-    ctx.save();ctx.strokeStyle='#ff1744';ctx.lineWidth=s(1.5);ctx.globalAlpha=0.5;
-    ctx.beginPath();ctx.moveTo(px+e.w/2,py+e.h+s(4));ctx.lineTo(px+e.w/2,GY-s(4));ctx.stroke();
-    ctx.restore();
-  }
-}
-
-let _bossRemainingHp = 0; // залишок HP попереднього боса
-
-function getBossZone(sc){const idx=Math.floor((sc-1000)/2000);if(idx<0)return null;return{start:1000+idx*2000,end:1300+idx*2000,level:idx+1};}
-function spawnBoss(level){
-  bossActive=true;bossBullets=[];obstacles=[];flyingEnemies=[];
-  let hp=100; // HP боса завжди 100, рівень впливає лише на бонус за вбивство
-  if(_bossRemainingHp>0&&_bossRemainingHp<hp){
-    hp=_bossRemainingHp;
-    _bossRemainingHp=0;
-  } else {
-    _bossRemainingHp=0;
-  }
-  boss={x:W+s(60),y:GY-s(70),w:s(60),h:s(70),hp,maxHp:hp,level,anim:0,phase:'enter',vx:-s(1.5),shootTimer:180,pat:0};
-  inv=120; // 2 секунди інвулю при появі боса
-  spawnP(W/2,H/2,'#ff1744',25);
-}
-function drawBoss(){
-  if(!boss)return;
-  boss.anim+=dt;
-  const px=boss.x,py=boss.y,bob=Math.sin(boss.anim*.05)*s(4);
-  const bc=BOSS_HUE!=null?`hsl(${BOSS_HUE},${BOSS_SAT}%,${BOSS_LIGHT}%)`:(boss.level===1?'#880000':(boss.level===2?'#4a0080':'#004d40'));
-  ctx.fillStyle=bc;ctx.beginPath();ctx.roundRect(px,py+bob,boss.w,boss.h,s(8));ctx.fill();
-  ctx.fillStyle=BOSS_HUE!=null?`hsl(${BOSS_HUE},${BOSS_SAT}%,${Math.min(80,BOSS_LIGHT+20)}%)`:(boss.level===1?'#c62828':(boss.level===2?'#7b1fa2':'#00695c'));
-  ctx.beginPath();ctx.roundRect(px+boss.w*.13,py+boss.h*.14+bob,boss.w*.74,boss.h*.72,s(6));ctx.fill();
-  ctx.save();ctx.shadowColor='#ff1744';ctx.shadowBlur=14;ctx.fillStyle='#ff1744';
-  ctx.beginPath();ctx.arc(px+boss.w*.3,py+boss.h*.37+bob,s(8),0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.arc(px+boss.w*.7,py+boss.h*.37+bob,s(8),0,Math.PI*2);ctx.fill();ctx.restore();
-  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px+boss.w*.33,py+boss.h*.37+bob,s(3.5),0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.arc(px+boss.w*.67,py+boss.h*.37+bob,s(3.5),0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#111';ctx.beginPath();ctx.roundRect(px-s(10),py+bob-s(20),boss.w+s(20),s(12),s(4));ctx.fill();
-  ctx.fillStyle=boss.hp/boss.maxHp>.5?'#ff1744':'#ff6d00';ctx.beginPath();ctx.roundRect(px-s(10),py+bob-s(20),(boss.w+s(20))*(boss.hp/boss.maxHp),s(12),s(4));ctx.fill();
-  ctx.fillStyle='#fff';ctx.font=`bold ${s(10)}px Nunito`;ctx.textAlign='center';
-  ctx.fillText(`👾 HP: ${boss.hp}/${boss.maxHp}`,px+boss.w/2,py+bob-s(24));
-  for(const b of bossBullets){
-    ctx.save();ctx.shadowColor='#ff6d00';ctx.shadowBlur=12;
-    ctx.fillStyle='rgba(255,109,0,.3)';ctx.beginPath();ctx.arc(b.x,b.y,b.r+s(4),0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#ff6d00';ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#ffe082';ctx.beginPath();ctx.arc(b.x-b.r*.3,b.y-b.r*.3,b.r*.4,0,Math.PI*2);ctx.fill();ctx.restore();
-    if(b.x>W*.4&&b.x<W*.9){ctx.save();ctx.globalAlpha=.7;ctx.fillStyle='#fff';ctx.font=`bold ${s(10)}px Arial`;ctx.textAlign='center';ctx.fillText(b.hint,b.x,b.hint==='▲'?b.y-b.r-s(8):b.y+b.r+s(14));ctx.restore();}
-  }
-}
-
-function isSafe(xPos){for(const o of obstacles){if(o.x<xPos+s(100)&&o.x+o.w>xPos-s(50))return false;}return true;}
-function trySpawnApple(){
-  if(!isSafe(W+s(15)))return;
-  const fl=Math.random()<.55,ay=fl?GY-s(26)-Math.floor(Math.random()*3)*s(22):GY-s(18);
-  const isRed=!redAppleSpawned&&gameCount>0&&gameCount%50===0&&score>=500;
-  if(isRed)redAppleSpawned=true;
-  apples.push({x:W+s(15),y:ay,r:s(9),isRed,collected:false,anim:0});
-}
-const BDEFS=[{id:'shield',label:'🛡 ЩИТ',good:true},{id:'magnet',label:'🧲 МАГНІТ',good:true},{id:'noapple',label:'🔴 ЯБЛУКА НЕДОСТУПНІ',good:false},{id:'wind',label:'💨 ВІТЕР',good:false}];
-function trySpawnBooster(){
-  if(!isSafe(W+s(15)))return;
-  // Якщо обидва бафи активні — нічого не спавнити
-  if(shield&&magnet){boosters=boosters.filter(b=>!b.good);return;}
-  // Фільтруємо доступні бустери
-  const avail=BDEFS.filter(bt=>{
-    if(bt.id==='shield'&&shield)return false;
-    if(bt.id==='magnet'&&magnet)return false;
-    if(bt.id==='noapple'&&noApples)return false;
-    if(bt.id==='wind'&&wind)return false;
-    return true;
-  });
-  if(!avail.length)return;
-  // Видаляємо вже заспавнені бустери що більше не актуальні
-  boosters=boosters.filter(b=>{
-    if(b.id==='shield'&&shield)return false;
-    if(b.id==='magnet'&&magnet)return false;
-    if(b.id==='noapple'&&noApples)return false;
-    if(b.id==='wind'&&wind)return false;
-    return true;
-  });
-  const bt=avail[Math.floor(Math.random()*avail.length)];
-  boosters.push({...bt,x:W+s(15),y:GY-s(44)-Math.floor(Math.random()*2)*s(20),r:s(11),collected:false,anim:0});
-}
-function applyBooster(bt){
-  boostLabel=bt.label;
-  if(bt.id==='shield'){if(!shield){shield=true;shieldTime=SHIELD_DUR[_upgrades.shield]||SHIELD_DUR[0];}}
-  if(bt.id==='magnet'){magnet=true;magnetTime=MAGNET_DUR[_upgrades.magnet]||(60*5);}
-  if(bt.id==='noapple'){noApples=true;noApplesTime=BDUR;}
-  if(bt.id==='wind'){wind=true;windTime=WIND_DUR;spawnT(P.x+s(14),P.y-s(10),'WIND!','#90caf9');}
-  spawnP(P.x+s(14),P.y,bt.good?'#ffd740':'#ff1744',8);
-}
-function drawBooster(b){
-  b.anim+=dt;const t=b.anim,bob=Math.sin(t*.08)*s(3);
-  ctx.save();ctx.translate(b.x,b.y+bob);const p=.9+Math.sin(t*.12)*.1;ctx.scale(p,p);
-  const g=ctx.createRadialGradient(0,0,b.r*.3,0,0,b.r*1.8);
-  g.addColorStop(0,b.good?'rgba(255,215,64,.7)':'rgba(255,23,68,.6)');g.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,b.r*1.8,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=b.good?'#ffd740':'#ff1744';ctx.shadowColor=b.good?'#ffd740':'#ff1744';ctx.shadowBlur=12;
-  ctx.beginPath();ctx.moveTo(0,-b.r*1.3);ctx.bezierCurveTo(b.r*.8,-b.r*.6,b.r*.9,b.r*.4,0,b.r);ctx.bezierCurveTo(-b.r*.9,b.r*.4,-b.r*.8,-b.r*.6,0,-b.r*1.3);ctx.fill();ctx.restore();
-}
-function drawApple(a){
-  a.anim+=dt;const bob=Math.sin(a.anim*.07)*s(2);
-  ctx.save();ctx.translate(a.x,a.y+bob);
-  if(a.isRed){ctx.shadowColor='#ff1744';ctx.shadowBlur=16;}if(noApples)ctx.globalAlpha=.3;
-  ctx.fillStyle=a.isRed?'#e53935':'#43a047';ctx.beginPath();ctx.arc(0,0,a.r,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=a.isRed?'#ef9a9a':'#a5d6a7';ctx.beginPath();ctx.ellipse(-s(2),-s(3),s(3),s(4),-.4,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle='#5d4037';ctx.lineWidth=s(1.5);ctx.beginPath();ctx.moveTo(0,-a.r);ctx.quadraticCurveTo(s(4),-a.r-s(6),s(2),-a.r-s(10));ctx.stroke();
-  ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.ellipse(s(4),-a.r-s(5),s(4),s(2),.5,0,Math.PI*2);ctx.fill();
-  if(a.isRed){ctx.globalAlpha=1;ctx.fillStyle='#ff8a80';ctx.font=`bold ${s(7)}px Nunito`;ctx.textAlign='center';ctx.fillText('+1á',0,a.r+s(10));}
-  if(noApples){ctx.globalAlpha=.9;ctx.strokeStyle='#ff1744';ctx.lineWidth=s(2.5);ctx.beginPath();ctx.moveTo(-a.r,-a.r);ctx.lineTo(a.r,a.r);ctx.stroke();ctx.beginPath();ctx.moveTo(a.r,-a.r);ctx.lineTo(-a.r,a.r);ctx.stroke();}
-  ctx.restore();
-}
-const SMODS=[{id:'f',label:'⚡ +SPD',delta:1,color:'#ff6d00'},{id:'s',label:'🐢 -SPD',delta:-1,color:'#40c4ff'}];
-function trySpawnSpeedMod(){
-  if(!isSafe(W+s(15)))return;
-  const m=SMODS[Math.floor(Math.random()*SMODS.length)];
-  speedMods.push({...m,x:W+s(15),y:GY-s(40)-Math.floor(Math.random()*2)*s(18),r:s(12),collected:false,anim:0});
-}
-function drawSpeedMod(m){
-  m.anim+=dt;const bob=Math.sin(m.anim*.09)*s(3),p=.9+Math.sin(m.anim*.15)*.1;
-  ctx.save();ctx.translate(m.x,m.y+bob);ctx.scale(p,p);
-  ctx.strokeStyle=m.color;ctx.lineWidth=s(2.5);ctx.shadowColor=m.color;ctx.shadowBlur=12;
-  ctx.beginPath();ctx.arc(0,0,m.r+s(5),0,Math.PI*2);ctx.stroke();
-  ctx.fillStyle=m.color;ctx.beginPath();ctx.arc(0,0,m.r,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#fff';ctx.font=`bold ${s(13)}px Arial`;ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(m.delta>0?'▲':'▼',0,s(1));ctx.restore();
-  ctx.save();ctx.fillStyle=m.color;ctx.font=`bold ${s(7)}px "Press Start 2P"`;ctx.textAlign='center';
-  ctx.fillText(m.label,m.x,m.y+bob+m.r+s(12));ctx.restore();
-}
-
-function spawnP(x,y,color,n){for(let i=0;i<n;i++)particles.push({x,y,color,text:null,vx:(Math.random()-.5)*s(5),vy:-(Math.random()*s(5)+s(1)),life:1,decay:.04+Math.random()*.04,size:Math.random()*s(5)+s(2)});}
-function spawnT(x,y,text,color){particles.push({x,y,color,text,vx:0,vy:-s(1.8),life:1,decay:.018,size:0});}
-
-function gameLoop(ts){
-  if(state!=='playing')return;
-  if(!lastTime)lastTime=ts;
-  const el=ts-lastTime;lastTime=ts;
-  dt=Math.min(el/16.667,3);frame+=dt;
-  let bs=START_SPEED[_upgrades.speed||0]+Math.floor(score/150)*.4+speedMod;
-  if(bs<2)bs=2;if(bs>14)bs=14;speed=bs;
-  score+=dt*.15;
-  bgOff=(bgOff+speed*SCALE*dt*.38)%(W*4);
-  grOff=(grOff+speed*SCALE*dt)%s(48);
-  if(!bossActive){
-    const z=getBossZone(Math.floor(score));
-    if(z&&Math.floor(score)>=z.start&&Math.floor(score)<=z.end&&!boss)spawnBoss(z.level);
-  }
-  if(boss){
-    const z=getBossZone(Math.floor(score)-1);
-    if(z&&Math.floor(score)>z.end+50&&boss.phase==='fight'){boss.phase='flee';boss.vx=s(3);}
-    if(boss.phase==='flee'){boss.x+=boss.vx*2*dt;if(boss.x>W+s(100)){
-      _bossRemainingHp=boss.hp>0?boss.hp:0; // зберігаємо залишок
-      boss=null;bossActive=false;bossBullets=[];nextEnemy=frame+300;
-    }}
-  }
-  if(!bossActive){
-    if(lastObsRight()<W-safeGapPx()&&frame>80&&frame>_birdClearTimer)spawnGroup();
-    if(frame>nextApple){trySpawnApple();nextApple=frame+80+Math.random()*60;}
-    if(frame>nextBooster&&score>60){trySpawnBooster();nextBooster=frame+300+Math.random()*120;}
-    if(score>=nextSpeedMod){trySpawnSpeedMod();nextSpeedMod+=400+Math.random()*200;}
-    if(frame>nextEnemy&&score>=500){trySpawnEnemy();nextEnemy=frame+250+Math.random()*120;}
-  }else{
-    if(frame>nextApple){trySpawnApple();nextApple=frame+80;}
-    if(frame>nextBooster&&score>60){trySpawnBooster();nextBooster=frame+300;}
-  }
-  P.update();
-  const spd=speed*SCALE*dt;
-  obstacles.forEach(o=>{o.x-=spd;if(!o.passed&&o.x+o.w<P.x){o.passed=true;score+=5;spawnT(P.x+s(14),P.y-s(12),'+5','#69f0ae');}});
-  obstacles=obstacles.filter(o=>o.x>-s(80));
-  apples.forEach(a=>{a.x-=spd;});apples=apples.filter(a=>a.x>-s(30)&&!a.collected);
-  boosters.forEach(b=>{b.x-=spd;});boosters=boosters.filter(b=>b.x>-s(30)&&!b.collected);
-  speedMods.forEach(m=>{m.x-=spd;});speedMods=speedMods.filter(m=>m.x>-s(30)&&!m.collected);
-  flyingEnemies.forEach(updateFlyingEnemy);
-  // Зберігаємо HP ворожого птаха якщо вилетів за екран
-  flyingEnemies=flyingEnemies.filter(e=>{
-    if(e.x<-s(80)){
-      if(e.hp>0)_enemyBirdHp=e.hp;
-      _nextEnemyBirdScore=score+1000;
-      return false;
-    }
-    return true;
-  });
-  if(boss&&boss.phase==='enter'){boss.x+=boss.vx*dt;if(boss.x<=W*.58)boss.phase='fight';}
-  if(boss&&boss.phase==='fight'){
-    boss.x+=Math.sin(boss.anim*.03)*s(1.2)*dt;boss.shootTimer-=dt;
-    if(boss.shootTimer<=0){
-      boss.pat=(boss.pat+1)%5;
-      if(boss.pat===0){bossBullets.push({x:boss.x,y:GY-s(14),vx:-s(6),vy:0,r:s(10),hint:'▲'});}
-      else if(boss.pat===1){bossBullets.push({x:boss.x,y:GY-s(14),vx:-s(5.5),vy:0,r:s(9),hint:'▲'});bossBullets.push({x:boss.x-s(25),y:GY-s(42),vx:-s(5),vy:0,r:s(8),hint:'—'});}
-      else if(boss.pat===2){bossBullets.push({x:boss.x,y:GY-s(20),vx:-s(9),vy:0,r:s(9),hint:'▲'});}
-      else if(boss.pat===3){bossBullets.push({x:boss.x,y:GY-s(50),vx:-s(6),vy:0,r:s(9),hint:'—'});}
-      else{bossBullets.push({x:boss.x,y:GY-s(14),vx:-s(6),vy:0,r:s(8),hint:'▲'});setTimeout(()=>{if(boss)bossBullets.push({x:boss.x,y:GY-s(35),vx:-s(6),vy:0,r:s(8),hint:'—'});},400);setTimeout(()=>{if(boss)bossBullets.push({x:boss.x,y:GY-s(14),vx:-s(6),vy:0,r:s(8),hint:'▲'});},800);}
-      boss.shootTimer=80+Math.random()*40;
-    }
-  }
-  bossBullets.forEach(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;});bossBullets=bossBullets.filter(b=>b.x>-s(20)&&b.y<H+s(20));
-  particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=.12*SCALE*dt;p.life-=p.decay*dt;});particles=particles.filter(p=>p.life>0);
-  const pb=P.box();
-  function hitShield(rm){if(shield){shield=false;shieldTime=0;inv=70;boostLabel='';spawnT(P.x+s(14),P.y-s(10),'ЩИТ!','#00e5ff');if(rm)rm();return true;}return false;}
-  function hitPlayer(){lives--;inv=90;spawnP(P.x+s(14),P.y+PH/2,'#ff1744',15);if(lives<=0){endGame();return false;}return true;}
-  if(inv<=0){
-    for(const o of [...obstacles]){
-      let hit=false;
-      if(o.isPit){if(pb.x+pb.w>o.x+s(4)&&pb.x<o.x+o.w-s(4)&&pb.y+pb.h>=GY-s(2))hit=true;}
-      else{if(pb.x<o.x+o.w-s(4)&&pb.x+pb.w>o.x+s(4)&&pb.y<o.y+o.h-s(2)&&pb.y+pb.h>o.y+s(2))hit=true;}
-      if(hit){const rm=()=>{obstacles=obstacles.filter(x=>x!==o);};if(!hitShield(rm)){if(!hitPlayer())return;}else{if(!obstacles.includes(o)){}else obstacles=obstacles.filter(x=>x!==o);}break;}
-    }
-  }
-  if(inv<=0){
-    for(const e of [...flyingEnemies]){
-      const eb={x:e.x+s(4),y:e.y+s(2),w:e.w-s(8),h:e.h-s(4)};
-      if(pb.x<eb.x+eb.w&&pb.x+pb.w>eb.x&&pb.y<eb.y+eb.h&&pb.y+pb.h>eb.y){
-        const rm=()=>{flyingEnemies=flyingEnemies.filter(x=>x!==e);};
-        if(!hitShield(rm)){flyingEnemies=flyingEnemies.filter(x=>x!==e);if(!hitPlayer())return;}break;
-      }
-    }
-    for(const b of bossBullets){
-      if(pb.x<b.x+b.r&&pb.x+pb.w>b.x-b.r&&pb.y<b.y+b.r&&pb.y+pb.h>b.y-b.r){
-        if(!hitShield(()=>{b.x=-9999;})){b.x=-9999;if(!hitPlayer())return;}break;
-      }
-    }
-  }
-  if(boss&&inv<=0&&(boss.phase==='fight'||boss.phase==='enter')){
-    const bb={x:boss.x+s(6),y:boss.y+s(8),w:boss.w-s(12),h:boss.h-s(8)};
-    if(pb.x<bb.x+bb.w&&pb.x+pb.w>bb.x&&pb.y<bb.y+bb.h&&pb.y+pb.h>bb.y){if(!hitShield(null)){if(!hitPlayer())return;}}
-  }
-  const pb2=P.box();const pcx=pb2.x+pb2.w/2,pcy=pb2.y+PH/2;
-  const magnetRadius=s(200);
-  for(const a of apples){
-    if(a.collected)continue;
-    if(magnet&&!noApples){
-      const dx=pcx-a.x,dy=pcy-a.y;
-      const dist=Math.sqrt(dx*dx+dy*dy)||1;
-      // Якщо яблуко опинилось позаду гравця (рідкісний випадок) — миттєво забираємо
-      if(a.x<P.x-s(30)){
-        a.collected=true;
-        if(a.isRed){score+=50;spawnP(pcx,pcy,'#ff1744',12);spawnT(pcx,pcy-s(16),'+1á','#ff1744');sendCoin();}
-        else{score+=10;spawnP(pcx,pcy,'#00c853',8);spawnT(pcx,pcy-s(13),'+10','#00c853');}
-        continue;
-      }
-      // Тягнемо яблука в радіусі попереду або збоку
-      if(dist<magnetRadius){
-        const pullSpeed=Math.max(dist*0.3,s(8))*dt;
-        a.x+=dx/dist*pullSpeed;
-        a.y+=dy/dist*pullSpeed;
-      }
-    }
-    const dist2=Math.hypot(a.x-pcx,a.y-pcy);
-    if(dist2<a.r+s(14)&&!noApples){
-      a.collected=true;
-      if(a.isRed){score+=50;spawnP(a.x,a.y,'#ff1744',12);spawnT(a.x,a.y-s(16),'+1á','#ff1744');sendCoin();}
-      else{score+=10;spawnP(a.x,a.y,'#00c853',8);spawnT(a.x,a.y-s(13),'+10','#00c853');}
-    }
-  }
-  for(const b of boosters){
-    if(b.collected)continue;
-    if(Math.hypot(b.x-pb.x-pb.w/2,b.y-pb.y-PH/2)<b.r+s(16)){
-      if(b.id==='shield'&&shield)continue;
-      if(b.id==='magnet'&&magnet)continue;
-      if(b.id==='noapple'&&noApples)continue;
-      if(b.id==='wind'&&wind)continue;
-      b.collected=true;
-      applyBooster(b);
-    }
-  }
-  for(const m of speedMods){
-    if(Math.hypot(m.x-pb.x-pb.w/2,m.y-pb.y-PH/2)<m.r+s(16)&&!m.collected){
-      m.collected=true;speedMod=Math.max(-2,Math.min(4,speedMod+m.delta));
-      spawnT(m.x,m.y-s(20),m.delta>0?'⚡+1':' 🐢-1',m.color);spawnP(m.x,m.y,m.color,10);
-      boostLabel=m.delta>0?'⚡ ШВИДШЕ':'🐢 ПОВІЛЬНІШЕ';
-      setTimeout(()=>{if(boostLabel.includes('ШВИ')||boostLabel.includes('ПОВІЛ'))boostLabel='';},2000);
-    }
-  }
-  ctx.clearRect(0,0,W,H);drawBG();
-  obstacles.forEach(o=>o.draw(o.x,o.y,o.w,o.h));
-  if(OBS_HUE!=null){
-    obstacles.forEach(o=>{
-      ctx.save();
-      ctx.globalCompositeOperation='hue';
-      ctx.fillStyle=`hsl(${OBS_HUE},${OBS_SAT}%,${OBS_LIGHT}%)`;
-      ctx.fillRect(o.x-2, o.isPit?GY-2:o.y-2, o.w+4, o.isPit?(H-GY)+4:o.h+4);
-      ctx.restore();
-    });
-  }
-  apples.filter(a=>!a.collected).forEach(drawApple);
-  boosters.filter(b=>!b.collected).forEach(drawBooster);
-  speedMods.filter(m=>!m.collected).forEach(drawSpeedMod);
-  flyingEnemies.forEach(drawFlyingEnemy);
-  if(boss)drawBoss();
-  particles.forEach(p=>{ctx.save();ctx.globalAlpha=p.life;if(p.text){ctx.fillStyle=p.color;ctx.font=`bold ${s(13)}px Nunito`;ctx.textAlign='center';ctx.fillText(p.text,p.x,p.y);}else{ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size/2,0,Math.PI*2);ctx.fill();}ctx.restore();});
-  P.draw();drawHUD();
-  updateBirdHelper();drawBirdHelper();
-  if(bossActive&&boss&&boss.phase!=='flee'){
-    const hudH2=Math.round(Math.max(52,64*SCALE));
-    ctx.save();ctx.globalAlpha=.8+Math.sin(frame*.2)*.2;ctx.fillStyle='#ff1744';ctx.shadowColor='#ff1744';ctx.shadowBlur=20;
-    ctx.font=`bold ${s(11)}px "Press Start 2P"`;ctx.textAlign='center';
-    ctx.fillText(boss.phase==='enter'?'⚠ БОС! ⚠':'⚡ СТРИБАЙ або УХИЛЯЙСЯ!',W/2,hudH2+s(30));ctx.restore();
-  }
-  requestAnimationFrame(gameLoop);
-}
-
-document.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();if(state==='playing')P.jump();else if(state==='idle')startGame();}});
-document.addEventListener('touchstart',e=>{
-  if(e.target.closest('.ov')||e.target.tagName==='BUTTON'||e.target.closest('button'))return;
-  if(state==='playing'){e.preventDefault();P.jump();}
-},{passive:false});
-document.addEventListener('mousedown',e=>{
-  if(e.target.closest('.ov')||e.target.tagName==='BUTTON'||e.target.closest('button'))return;
-  if(state==='playing')P.jump();
+// Показуємо реальний текст будь-якої необробленої JS-помилки — щоб
+// відрізняти "немає з'єднання з сервером" від справжнього бага в
+// самому застосунку (без цього обидва виглядали як той самий текст).
+window.addEventListener('error', function(e){
+  try { toast('JS помилка: ' + (e.message || 'невідомо'), 'err'); } catch(_) {}
+});
+window.addEventListener('unhandledrejection', function(e){
+  try {
+    const m = (e.reason && (e.reason.message || e.reason.toString())) || 'невідомо';
+    toast('JS помилка: ' + m, 'err');
+  } catch(_) {}
 });
 
-function startGame(){
-  document.getElementById('ovS').classList.add('hide');
-  document.getElementById('ovE').classList.add('hide');
-  readUpgrades(); // читаємо апгрейди з URL динамічно
-  resize();initBL();
-  maxLives=LIVES_BASE[_upgrades.lives]||1;
-  score=0;lives=maxLives;speed=START_SPEED[_upgrades.speed]||4.5;frame=0;lastTime=0;dt=1;speedMod=0;boostLabel='';inv=0;
-  obstacles=[];apples=[];boosters=[];particles=[];flyingEnemies=[];bossBullets=[];speedMods=[];
-  shield=false;shieldTime=0;magnet=false;magnetTime=0;noApples=false;noApplesTime=0;
-  wind=false;windTime=0;
-  boss=null;bossActive=false;redAppleSpawned=false;nextSpeedMod=400;
-  nextApple=0;nextBooster=0;nextEnemy=0;
-  _bossRemainingHp=0;
-  _enemyBirdHp=0;
-  _nextEnemyBirdScore=1500;
-  _enemyBirdLaser=null;
-  _sessionStart=Date.now();
-  _submitDone=false;
-  _birdTimer=0;
-  _birdLaser=null;
-  _birdClearTimer=0;
-  P.init();state='playing';gameCount++;localStorage.setItem('ag',gameCount);
-  requestAnimationFrame(gameLoop);
+function showModal(html){
+  document.getElementById("modal").innerHTML = html;
+  document.getElementById("modalBg").classList.add("show");
+  document.getElementById("modal").classList.add("show");
 }
-function endGame(){
-  state='dead';
-  const sc=Math.floor(score);if(sc>bestScore)bestScore=sc;
-  document.getElementById('endSc').textContent=sc+' очок';
-  document.getElementById('bestSc').textContent=bestScore;
-  document.getElementById('sendSt').textContent='';document.getElementById('sendSt').className='st';
-  document.getElementById('ovE').classList.remove('hide');
-  ctx.clearRect(0,0,W,H);drawBG();P.draw();
-  ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,0,W,H);
-  sendScore(sc);
+function closeModal(){
+  document.getElementById("modalBg").classList.remove("show");
+  document.getElementById("modal").classList.remove("show");
 }
+document.getElementById("modalBg").addEventListener("click", closeModal);
 
-function idleLoop(ts){
-  if(state!=='idle')return;
-  if(!lastTime)lastTime=ts;const el=ts-lastTime;lastTime=ts;const idt=Math.min(el/16.667,3);
-  ctx.clearRect(0,0,W,H);drawBG();
-  P.at+=idt;if(P.at>=18){P.at=0;P.af=(P.af+1)%4;}P.draw();
-  ctx.save();ctx.globalAlpha=.5+Math.sin(Date.now()*.003)*.4;ctx.fillStyle='#00e676';
-  ctx.font=`${s(10)}px "Press Start 2P"`;ctx.textAlign='center';ctx.fillText('ТАП / ПРОБІЛ',W/2,H-s(12));ctx.restore();
-  requestAnimationFrame(idleLoop);
+// ============================================================
+// СТАН
+// ============================================================
+let DASH = null;
+let TAB = "home";
+let SHOP_SUB = "abank";
+const TABS = [
+  { id:"home",      ic:"🏠", lb:"Головна" },
+  { id:"games",     ic:"🎮", lb:"Ігри" },
+  { id:"shop",      ic:"🏪", lb:"Магазин" },
+  { id:"inventory", ic:"🎒", lb:"Інвентар" },
+  { id:"support",   ic:"🆘", lb:"Підтримка" },
+];
+
+function renderNav(){
+  const isAdmin = DASH && (DASH.isAdmin || DASH.isMerchAdmin);
+  const tabs = TABS.concat(isAdmin ? [{ id:"admin", ic:"🔐", lb:"Адмін" }] : []);
+  document.getElementById("navbar").innerHTML = tabs.map(t => `
+    <button class="nav-btn ${TAB===t.id?'active':''}" data-nav="${t.id}">
+      <div class="ic">${t.ic}</div><div class="lb">${t.lb}</div>
+    </button>`).join("");
+  document.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", () => nav(b.getAttribute("data-nav"))));
 }
 
-// Читаємо параметри з URL — підтримуємо і ? і # для сумісності
-function getTg(){
-  const fromHash  = new URLSearchParams(window.location.hash.substring(1));
-  const fromQuery = new URLSearchParams(window.location.search);
-  const get = (k) => fromQuery.get(k) || fromHash.get(k);
-  return{uid:get('tgid'),cid:get('tgchat'),mid:get('tgmsg'),iid:get('tginline'),cur:get('current_msg')};
+function nav(tab){
+  TAB = tab;
+  renderNav();
+  render();
 }
 
-// Апгрейди читаються динамічно при старті гри
-let _upgrades={bird:0,shield:0,magnet:0,speed:0,lives:0};
-let SKIN_HUE=null, SKIN_SAT=70, SKIN_LIGHT=45; // колір екіпірованого скіна персонажа (з застосунку áClub), null = стандартний вигляд
-let BIRD_HUE=null, BIRD_SAT=70, BIRD_LIGHT=50; // колір екіпірованого скіна ПТАХА-помічника — окремо від персонажа
-let OBS_HUE=null, OBS_SAT=70, OBS_LIGHT=50;    // тон екіпірованого скіна набору перешкод
-let BOSS_HUE=null, BOSS_SAT=60, BOSS_LIGHT=35; // тон екіпірованого скіна боса
-let WEATHER_PRESET=null;                        // ключ екіпірованого скіна погоди (фіксує локацію)
-function readUpgrades(){
-  const fromQuery=new URLSearchParams(window.location.search);
-  const fromHash=new URLSearchParams(window.location.hash.substring(1));
-  const get=(k)=>parseInt(fromQuery.get(k)||fromHash.get(k)||'0');
-  _upgrades={bird:get('bird'),shield:get('shield'),magnet:get('magnet'),speed:get('uspeed'),lives:get('ulives')};
-  const hueRaw=fromQuery.get('skinhue')||fromHash.get('skinhue');
-  SKIN_HUE=(hueRaw!==null && hueRaw!=='') ? parseInt(hueRaw) : null;
-  // ВАЖЛИВО: раніше передавався лише hue, а saturation/lightness завжди були
-  // фіксовані (70%/45%) — тому різні скіни, які відрізнялись лише відтінком
-  // при тих самих sat/light, часто виглядали майже нерозрізнювано (особливо
-  // на темних/пастельних відтінках). Тепер застосунок може передавати й
-  // sat/light окремо для кожного конкретного скіна — це і робить їх реально
-  // помітно різними.
-  const satRaw=fromQuery.get('skinsat')||fromHash.get('skinsat');
-  const lightRaw=fromQuery.get('skinlight')||fromHash.get('skinlight');
-  SKIN_SAT=(satRaw!==null && satRaw!=='') ? parseInt(satRaw) : 70;
-  SKIN_LIGHT=(lightRaw!==null && lightRaw!=='') ? parseInt(lightRaw) : 45;
+let BOOT_WATCHDOG = null;
 
-  // Скін птаха-помічника — окремі параметри, ніяк не пов'язані з SKIN_HUE
-  // персонажа. Раніше такого механізму не було взагалі, тому екіпірування
-  // скіна птаха ніяк не відображалось у грі.
-  const bHueRaw=fromQuery.get('birdhue')||fromHash.get('birdhue');
-  BIRD_HUE=(bHueRaw!==null && bHueRaw!=='') ? parseInt(bHueRaw) : null;
-  const bSatRaw=fromQuery.get('birdsat')||fromHash.get('birdsat');
-  const bLightRaw=fromQuery.get('birdlight')||fromHash.get('birdlight');
-  BIRD_SAT=(bSatRaw!==null && bSatRaw!=='') ? parseInt(bSatRaw) : 70;
-  BIRD_LIGHT=(bLightRaw!==null && bLightRaw!=='') ? parseInt(bLightRaw) : 50;
-
-  // Скін набору перешкод — тонування вже намальованих перешкод.
-  const oHueRaw=fromQuery.get('obshue')||fromHash.get('obshue');
-  OBS_HUE=(oHueRaw!==null && oHueRaw!=='') ? parseInt(oHueRaw) : null;
-  OBS_SAT=parseInt(fromQuery.get('obssat')||fromHash.get('obssat')||'70');
-  OBS_LIGHT=parseInt(fromQuery.get('obslight')||fromHash.get('obslight')||'50');
-
-  // Скін боса — тонування тіла боса замість фіксованого кольору за рівнем.
-  const boHueRaw=fromQuery.get('bosshue')||fromHash.get('bosshue');
-  BOSS_HUE=(boHueRaw!==null && boHueRaw!=='') ? parseInt(boHueRaw) : null;
-  BOSS_SAT=parseInt(fromQuery.get('bosssat')||fromHash.get('bosssat')||'60');
-  BOSS_LIGHT=parseInt(fromQuery.get('bosslight')||fromHash.get('bosslight')||'35');
-
-  // Скін погоди — фіксує конкретний пресет локації на всю гру замість
-  // стандартної ротації 4 пресетів по score.
-  WEATHER_PRESET=fromQuery.get('weather')||fromHash.get('weather')||null;
-}
-
-const SHIELD_DUR  = [5*60, 7*60, 10*60, 15*60, 20*60, 30*60]; // індекс = рівень 0-5
-const MAGNET_DUR  = [0, 8*60, 12*60, 18*60, 25*60, 35*60];
-const START_SPEED = [4.5, 5.0, 5.5, 6.0, 7.0, 8.0];
-const LIVES_BASE  = [1, 2, 3]; // індекс = рівень апгрейду lives (0-2)
-const BIRD_INTERVAL = [0, 10*60, 9*60, 8*60, 7*60, 5*60]; // фреймів між пострілами
-const BIRD_DAMAGE   = [0, 1, 2, 3, 4, 5]; // урон по босу
-
-let _birdTimer=0;
-let _birdAnim=0;
-let _birdClearTimer=0; // кулдаун перед спавном нової групи після знищення птахом
-let _birdLaser=null;
-
-function updateBirdHelper(){
-  if(_upgrades.bird<=0)return;
-  _birdAnim+=dt;
-  _birdTimer+=dt;
-  const interval=BIRD_INTERVAL[_upgrades.bird];
-  if(_birdTimer>=interval){
-    // Пріоритет 1: ворожий птах
-    const enemyBird=flyingEnemies.find(e=>e.phase==='hover');
-    if(enemyBird){
-      _birdTimer=0;
-      const dmg=BIRD_DAMAGE[_upgrades.bird];
-      const bx2=enemyBird.x+enemyBird.w/2, by2=enemyBird.y+enemyBird.h/2;
-      const osx2=P.x+s(60), osy2=FL-s(220);
-      _birdLaser={sx:osx2,sy:osy2,tx:bx2,ty:by2,active:true,timer:25,isBoss:false};
-      enemyBird.hp-=dmg;
-      spawnP(bx2,by2,'#ffd740',8);
-      spawnT(bx2,by2-s(16),'🦅-'+dmg,'#ffd740');
-      if(enemyBird.hp<=0){
-        flyingEnemies=flyingEnemies.filter(e=>e!==enemyBird);
-        _enemyBirdHp=0;
-        score+=50;
-        spawnT(bx2,by2-s(20),'+50!','#ffd740');
-        _nextEnemyBirdScore=score+1000;
-      }
-      return;
-    }
-    // Пріоритет 2: бос
-    if(boss&&(boss.phase==='fight'||boss.phase==='enter')){
-      _birdTimer=0;
-      const dmg=BIRD_DAMAGE[_upgrades.bird];
-      const bx=boss.x+boss.w/2, by=boss.y+boss.h/2;
-      const bsx2=P.x+s(60), bsy2=FL-s(220);
-      _birdLaser={sx:bsx2,sy:bsy2,tx:bx,ty:by,active:true,timer:25,isBoss:true};
-      boss.hp-=dmg;
-      spawnP(bx,by,'#ffd740',12);
-      spawnT(bx,by-s(20),'🦅-'+dmg,'#ffd740');
-      if(boss.hp<=0){
-        const bonus=boss.level===1?500:(boss.level===2?750:1000);
-        score+=bonus;
-        spawnP(bx,by,'#ffd740',30);
-        spawnT(bx,by-s(30),'+'+bonus+'!','#ffd740');
-        boss=null;bossActive=false;bossBullets=[];_bossRemainingHp=0;
-      }
-      return;
-    }
-    // Потім атакуємо перешкоди — знищуємо весь кластер поруч щоб не виринала сусідня
-    const target=obstacles.find(o=>o.x>P.x+s(20));
-    if(target){
-      _birdTimer=0;
-      const tx=target.x+target.w/2, ty=target.y+target.h/2;
-      const osx2=P.x+s(60), osy2=FL-s(130);
-      _birdLaser={sx:osx2,sy:osy2,tx,ty,active:true,timer:25,isBoss:false};
-      // Знаходимо весь кластер перешкод що йдуть поруч (з невеликими проміжками)
-      const cluster=[target];
-      let changed=true;
-      while(changed){
-        changed=false;
-        for(const o of obstacles){
-          if(cluster.includes(o))continue;
-          for(const c of cluster){
-            const gap=Math.min(Math.abs(o.x-(c.x+c.w)),Math.abs(c.x-(o.x+o.w)));
-            if(gap<s(60)){cluster.push(o);changed=true;break;}
-          }
-        }
-      }
-      obstacles=obstacles.filter(o=>!cluster.includes(o));
-      score+=5*cluster.length;
-      spawnP(tx,ty,'#ffd740',10);
-      spawnT(tx,ty-s(16),'+'+(5*cluster.length),'#69f0ae');
-      // Кулдаун перед спавном нової групи — щоб не з'являлась "поруч" на високій швидкості
-      _birdClearTimer=frame+90;
-    }
-  }
-  if(_birdLaser&&_birdLaser.active){
-    _birdLaser.timer-=dt;
-    if(_birdLaser.timer<=0)_birdLaser=null;
-  }
-}
-
-function drawBirdHelper(){
-  if(_upgrades.bird<=0)return;
-  // Птах летить над персонажем, трохи правіше
-  const bx=P.x+s(60)+Math.sin(_birdAnim*.04)*s(20);
-  const by=FL-s(220)+Math.sin(_birdAnim*.07)*s(12);
-  const flap=Math.sin(_birdAnim*.22)*s(10);
-  const lvl=_upgrades.bird;
-  ctx.save();
-  // Тіло — якщо екіпіровано скін птаха (BIRD_HUE), використовуємо його колір,
-  // інакше стандартний жовтий/жовтогарячий залежно від рівня.
-  const bodyColor = BIRD_HUE!=null ? `hsl(${BIRD_HUE},${BIRD_SAT}%,${BIRD_LIGHT}%)` : (lvl>=3?'#ff9800':'#ffd740');
-  const wingColor = BIRD_HUE!=null ? `hsl(${BIRD_HUE},${BIRD_SAT}%,${Math.max(10,BIRD_LIGHT-15)}%)` : (lvl>=3?'#ff6d00':'#ffcc02');
-  ctx.fillStyle=bodyColor;
-  ctx.beginPath();ctx.ellipse(bx,by,s(14),s(9),0,0,Math.PI*2);ctx.fill();
-  // Крила
-  ctx.fillStyle=wingColor;
-  ctx.beginPath();ctx.moveTo(bx,by-s(3));ctx.quadraticCurveTo(bx-s(18),by-s(14)+flap,bx-s(22),by+s(2));ctx.quadraticCurveTo(bx-s(8),by+s(8),bx,by-s(3));ctx.fill();
-  ctx.beginPath();ctx.moveTo(bx,by-s(3));ctx.quadraticCurveTo(bx+s(18),by-s(14)+flap,bx+s(22),by+s(2));ctx.quadraticCurveTo(bx+s(8),by+s(8),bx,by-s(3));ctx.fill();
-  // Очі
-  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx+s(5),by-s(1),s(3),0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#1a237e';ctx.beginPath();ctx.arc(bx+s(6),by-s(1),s(1.5),0,Math.PI*2);ctx.fill();
-  // Дзьоб
-  ctx.fillStyle='#e65100';ctx.beginPath();ctx.moveTo(bx+s(13),by);ctx.lineTo(bx+s(20),by-s(2));ctx.lineTo(bx+s(13),by+s(3));ctx.fill();
-  // Рівень
-  ctx.fillStyle='#fff';ctx.font=`bold ${s(7)}px "Press Start 2P"`;ctx.textAlign='center';
-  ctx.fillText('Lv'+lvl,bx,by+s(18));
-  // Таймер-дуга навколо птаха
-  const prog=_birdTimer/BIRD_INTERVAL[lvl];
-  ctx.strokeStyle='rgba(255,215,64,.2)';ctx.lineWidth=s(3);
-  ctx.beginPath();ctx.arc(bx,by,s(22),-.5*Math.PI,1.5*Math.PI);ctx.stroke();
-  ctx.strokeStyle=bodyColor;ctx.lineWidth=s(3);ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=6;
-  ctx.beginPath();ctx.arc(bx,by,s(22),-.5*Math.PI,-.5*Math.PI+prog*2*Math.PI);ctx.stroke();
-  ctx.restore();
-  // Лазер
-  if(_birdLaser&&_birdLaser.active){
-    const alpha=_birdLaser.timer/25;
-    ctx.save();ctx.globalAlpha=alpha;
-    ctx.strokeStyle=_birdLaser.isBoss?'#ffd740':'#ff1744';
-    ctx.lineWidth=s(3);ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=16;
-    ctx.beginPath();ctx.moveTo(_birdLaser.sx,_birdLaser.sy);ctx.lineTo(_birdLaser.tx,_birdLaser.ty);ctx.stroke();
-    // Вибух в точці попадання
-    ctx.globalAlpha=alpha*.6;ctx.fillStyle=ctx.strokeStyle;
-    ctx.beginPath();ctx.arc(_birdLaser.tx,_birdLaser.ty,s(8)*alpha,0,Math.PI*2);ctx.fill();
-    ctx.restore();
-  }
-}
-
-// Час старту — 0 означає гра не запускалась
-let _sessionStart=0;
-// Лічильник спроб відправки — захист від повторних викликів
-let _submitDone=false;
-
-async function sendScore(v){
-  const st=document.getElementById('sendSt');
-  st.textContent='⏳ Зберігаємо...';
-
-  if(_sessionStart===0){st.textContent='';return;}
-  if(_submitDone){st.textContent='';return;}
-  _submitDone=true;
-
-  // Читаємо параметри динамічно — на момент GAME OVER URL вже має параметри
-  const{uid,cid,mid,iid,cur}=getTg();
-
-  if(!uid){
-    const dl='https://t.me/AGameMasterbot?start=runner_'+v;
-    st.innerHTML='<a href="'+dl+'" style="color:#ffd740;font-size:8px;">👆 Зберегти результат</a>';
-    st.className='st err';
+async function boot(){
+  if (!USER_ID) {
+    document.getElementById("screen").innerHTML = emptyBlock("🔒","Немає доступу","Відкрийте застосунок кнопкою в боті — так ми дізнаємось, хто ви.");
+    renderNav();
     return;
   }
+  BOOT_WATCHDOG = setTimeout(() => {
+    document.getElementById("screen").innerHTML = emptyBlock("🐢","Довго вантажиться...","Сервер повільно відповідає. Перевірте інтернет.")
+      + `<button class="btn" style="margin-top:14px;" onclick="location.reload()">🔄 Спробувати ще раз</button>`;
+  }, 8000);
 
-  const elapsed=Math.min(Math.floor((Date.now()-_sessionStart)/1000), 9999);
-  const minRequired=Math.floor(v*0.04);
-  if(elapsed < minRequired){st.textContent='';return;}
+  const ok = await refreshDashboard();
+  clearTimeout(BOOT_WATCHDOG);
 
-  if((cid&&mid)||iid){
-    let q='user_id='+uid+'&score='+v+'&wt=wrk_test_xyz123&elapsed='+elapsed;
-    if(iid)q+='&inline_message_id='+encodeURIComponent(iid);
-    else q+='&chat_id='+cid+'&message_id='+mid;
-    if(cur)q+='&current_msg='+cur;
-    try{
-      const resp=await fetch(WRK+'?'+q);
-      const data=await resp.json();
-      if(data.ok){st.textContent='✅ Збережено!';st.className='st ok';}
-      else{
-        try{new Image().src=GAS+'?type=game_result&game=runner&score='+v+'&userId='+uid+'&secret=aclub2026runnertest&elapsed='+elapsed+'&_t='+Date.now();}catch(e){}
-        st.textContent='✅ Збережено!';st.className='st ok';
+  if (!ok) {
+    if (LAST_DASHBOARD_ERROR === "admin_only_mode") {
+      document.getElementById("screen").innerHTML = emptyBlock("🚧","Застосунок ще тестується","Зараз доступ мають лише адміни. Незабаром відкриємо для всіх — слідкуйте за оновленнями в чаті з ботом!");
+    } else {
+      document.getElementById("screen").innerHTML = emptyBlock("⚠️","Не вдалось завантажити","Перевірте інтернет-з'єднання і спробуйте ще раз.")
+        + `<button class="btn" style="margin-top:14px;" onclick="location.reload()">🔄 Спробувати ще раз</button>`;
+    }
+    renderNav();
+    return;
+  }
+  renderNav();
+  render();
+}
+
+let LAST_DASHBOARD_ERROR = null;
+async function refreshDashboard(){
+  try {
+    const d = await api("dashboard");
+    if (d.ok) {
+      DASH = d;
+      document.getElementById("pillCoin").textContent = fmt(d.balance||0);
+      document.getElementById("pillShard").textContent = fmt(d.shards||0);
+      return true;
+    }
+    LAST_DASHBOARD_ERROR = d.error || null;
+    return false;
+  } catch(e) { toast("Немає з'єднання з сервером", "err"); return false; }
+}
+
+function emptyBlock(icon, title, sub){
+  return `<div class="empty"><div class="ic">${icon}</div><div class="t">${esc(title)}</div><div class="s">${esc(sub)}</div></div>`;
+}
+function loadingBlock(){ return `<div class="loading"><div class="spin"></div></div>`; }
+
+function render(){
+  if (!DASH || !DASH.registered) {
+    document.getElementById("screen").innerHTML = emptyBlock("🤖","Ви ще не зареєстровані",
+      "Поверніться в чат з ботом і надішліть свій LDAP (наприклад AB120996RGN), щоб зареєструватись — після цього застосунок стане доступним.");
+    return;
+  }
+  if (TAB === "home") return renderHome();
+  if (TAB === "games") return renderGames();
+  if (TAB === "shop") return renderShop();
+  if (TAB === "inventory") return renderInventory();
+  if (TAB === "support") return renderSupport();
+  if (TAB === "admin") return renderAdmin();
+}
+
+// ============================================================
+// ГОЛОВНА
+// ============================================================
+function renderHome(){
+  const db = DASH.dailyBonus || {};
+  const streak = db.streak || 0;
+  const daysTo7 = streak >= 7 ? 0 : 7 - streak;
+  const vip = DASH.vip || {};
+  const badges = [];
+  if (DASH.isMainAdmin) badges.push('<span class="badge" style="background:linear-gradient(155deg,#F2A93B,#B15EF0); color:#1a0f2e; font-weight:800;">⭐ ГОЛОВНИЙ АДМІН</span>');
+  else if (DASH.isAdmin) badges.push('<span class="badge" style="background:var(--epic); color:#fff; font-weight:800;">🛡 АДМІН</span>');
+  if (DASH.isMerchAdmin) badges.push('<span class="badge" style="background:var(--rare); color:#fff; font-weight:800;">📦 МЕРЧ-АДМІН</span>');
+  if (vip.active) badges.push('<span class="badge ok" style="font-weight:800;">👑 VIP</span>');
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `
+    <div class="h1">👋 Привіт, ${esc(firstNameOf(DASH.name))}!</div>
+    ${badges.length ? `<div class="row" style="flex-wrap:wrap; gap:6px; margin:-6px 2px 12px;">${badges.join("")}</div>` : ""}
+    <div class="stat-row">
+      <div class="stat-card coin"><div class="label">Баланс</div><div class="value mono">${fmt(DASH.balance)} 💰</div></div>
+      <div class="stat-card shard"><div class="label">Осколки</div><div class="value mono">${fmt(DASH.shards)} 🔮</div></div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="row between">
+        <div class="display" style="font-weight:700; font-size:14px;">🎁 Щоденний бонус</div>
+        <div class="badge">${streak} 🔥 стрік</div>
+      </div>
+      <div class="progress" style="margin:10px 0 6px;"><div style="width:${Math.min(100, streak/7*100)}%"></div></div>
+      <div class="sub" style="margin:0 0 10px;">${streak>=7 ? 'Преміум-стрік активний — щодня +2 á-coin!' : `Ще ${daysTo7} дн. до бонусу ×2 щодня`}</div>
+      <button class="btn" id="btnDaily" ${db.claimedToday ? 'disabled' : ''}>${db.claimedToday ? '✅ Вже отримано сьогодні' : '🎁 Забрати бонус'}</button>
+    </div>
+
+    <div class="h2">Швидкі дії</div>
+    <div class="list">
+      <div class="item" data-nav="games" style="cursor:pointer">
+        <div class="ic">🎮</div><div class="txt"><div class="t">Заробити á-coin</div><div class="s">Ребус, Щасливчик, Runner, Wordle</div></div>
+        <div class="right">→</div>
+      </div>
+      <div class="item" data-nav="inventory" style="cursor:pointer">
+        <div class="ic">🎒</div><div class="txt"><div class="t">Інвентар</div><div class="s">Кейси, VIP, заряди, товари, мерч</div></div>
+        <div class="right">→</div>
+      </div>
+    </div>
+
+    <div class="h2">Історія<span class="hint" id="goHistory" style="cursor:pointer">вся історія →</span></div>
+    <div class="list" id="historyPreview">${loadingBlock()}</div>
+  `;
+  screen.querySelectorAll("[data-nav]").forEach(el => el.addEventListener("click", () => nav(el.getAttribute("data-nav"))));
+  document.getElementById("goHistory").addEventListener("click", () => openHistoryModal());
+  document.getElementById("btnDaily").addEventListener("click", claimDaily);
+  loadHistoryPreview();
+}
+
+async function claimDaily(){
+  const btn = document.getElementById("btnDaily");
+  btn.disabled = true; btn.textContent = "⏳ Нараховуємо бонус...";
+  try {
+    const r = await api("daily_bonus_claim");
+    if (!r.ok) { toast(apiErrText(r), "err"); }
+    else { toast("Бонус нараховано! Перевірте чат з ботом 🎉", "ok"); await refreshDashboard(); }
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+  render();
+}
+
+async function loadHistoryPreview(){
+  try {
+    const r = await api("history_list");
+    const wrap = document.getElementById("historyPreview");
+    if (!wrap) return;
+    if (!r.ok) { wrap.innerHTML = emptyBlock("📭","Немає даних",""); return; }
+    const merged = [
+      ...r.income.slice(0,4).map(x => ({...x, sign:"+"})),
+      ...r.expense.slice(0,4).map(x => ({...x, sign:"-"}))
+    ];
+    if (!merged.length) { wrap.innerHTML = emptyBlock("📭","Історія порожня","Почніть грати, щоб тут щось з'явилось"); return; }
+    wrap.innerHTML = merged.slice(0,6).map(historyRow).join("");
+  } catch(e) {}
+}
+function historyRow(x){
+  const pos = x.sign === "+";
+  return `<div class="item">
+    <div class="ic">${pos?'🔹':'🔸'}</div>
+    <div class="txt"><div class="t">${esc(x.detail||x.type||'')}</div><div class="s">${esc(x.date||'')}</div></div>
+    <div class="right mono" style="color:${pos?'var(--success)':'var(--danger)'}; font-weight:700;">${pos?'+':'-'}${fmt(x.amount)}</div>
+  </div>`;
+}
+async function openHistoryModal(){
+  showModal(`<div class="mh">📈 Історія</div><div id="histFull">${loadingBlock()}</div>`);
+  try {
+    const r = await api("history_list");
+    const wrap = document.getElementById("histFull");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("📭","Помилка",""); return; }
+    const merged = [
+      ...r.income.map(x => ({...x, sign:"+"})),
+      ...r.expense.map(x => ({...x, sign:"-"}))
+    ];
+    wrap.innerHTML = merged.length ? `<div class="list">${merged.map(historyRow).join("")}</div>` : emptyBlock("📭","Порожньо","");
+  } catch(e){}
+}
+
+// ============================================================
+// МОЇ ТОВАРИ (модалка, доступна з Головної та Магазину)
+// ============================================================
+async function loadMyItems(containerId){
+  containerId = containerId || "myItemsWrap";
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  try {
+    const r = await api("my_items");
+    if (!r.ok || !r.items.length) { wrap.innerHTML = emptyBlock("🎁","Поки що порожньо","Товари з магазину з'являться тут."); return; }
+    wrap.innerHTML = `<div class="list">` + r.items.map(it => {
+      const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
+      const selfUse = !it.isMerch && /^Кейс:|^Крафт:/.test(it.name||"");
+      let statusTxt = selfUse ? "🎁 Готово до використання — натисніть" : "⏳ Очікує використання";
+      if (it.isMerch) {
+        const accepted = ["Прийнято","Відправлено"].includes(it.merchStatus);
+        statusTxt = accepted ? (it.merchStatus==="Відправлено"?"📬 Відправлено":"📬 Прийнято") : (it.isOrdered ? "✅ Дані вказано, очікує" : "⏳ Потрібно вказати доставку");
       }
-    }catch(e){
-      try{new Image().src=GAS+'?type=game_result&game=runner&score='+v+'&userId='+uid+'&secret=aclub2026runnertest&elapsed='+elapsed+'&_t='+Date.now();}catch(e2){}
-      st.textContent='✅ Збережено!';st.className='st ok';
+      return `<div class="item" data-item-row="${it.row}" data-merch="${it.isMerch?1:0}" style="cursor:pointer">
+        <div class="ic">${it.isMerch?'📦':'🎁'}</div>
+        <div class="txt"><div class="t">${esc(shortName)}</div><div class="s">${esc(statusTxt)}</div></div>
+        <div class="right">→</div>
+      </div>`;
+    }).join("") + `</div><button class="btn secondary" style="margin-top:12px;" onclick="openMyMerchModal()">📦 Мій мерч — історія</button>`;
+    wrap.querySelectorAll("[data-item-row]").forEach(el => {
+      el.addEventListener("click", () => openItemDetail(parseInt(el.getAttribute("data-item-row")), el.getAttribute("data-merch")==="1", r.items.find(x=>x.row==el.getAttribute("data-item-row"))));
+    });
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+
+async function openItemDetail(row, isMerch, it){
+  const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
+  let body = "";
+  if (isMerch) {
+    const accepted = ["Прийнято","Відправлено"].includes(it.merchStatus);
+    if (accepted) {
+      body = `<div class="sub">Статус: 📬 ${it.merchStatus==="Відправлено"?"Відправлено — посилка в дорозі":"Прийнято адміністратором"}</div>
+        <div class="sub">По питаннях доставки: @tashkevych</div>`;
+    } else {
+      body = `<div class="sub" style="margin-bottom:10px;">${it.isOrdered ? "Дані доставки вказано, очікує підтвердження адміном." : "Потрібно вказати дані доставки."}</div>
+        <button class="btn" onclick="openMerchForm(${row}, '${esc(shortName).replace(/'/g,"\\'")}')">📦 ${it.isOrdered?'Редагувати':'Вказати'} дані доставки</button>
+        <button class="btn danger" style="margin-top:8px;" onclick="cancelItem(${row})">❌ Скасувати замовлення</button>`;
     }
   } else {
-    st.textContent='⚠️ Відкрий гру через Telegram!';
-    st.className='st err';
+    const selfUse = /^Кейс:|^Крафт:/.test(it.name || "");
+    const rarityMatch = (it.name || "").match(/^Крафт: предмет рівня (Rare|Epic|Legendary)$/);
+    const pools = SKINS_CATALOG_CACHE || (await loadSkinsCatalog());
+    if (!Object.keys(EQUIPPED_SKINS_CACHE).length) {
+      try { const eq = await api("get_equipped_skins"); if (eq.ok) EQUIPPED_SKINS_CACHE = eq.equipped; } catch(e) {}
+    }
+    const pureName = (it.name||"").replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,"");
+    const poolKey = findPoolKeyForItem(pureName, pools);
+    // ВАЖЛИВО: раніше екіпіруваним вважався лише скін персонажа Runner
+    // (poolKey === "runner_rare_character"), а всі інші скіни (птиці, погода,
+    // боси, перешкоди, скіни Wordle/Circle) потрапляли в гілку "Використати" —
+    // бекенд позначав предмет використаним, і скін просто зникав з інвентаря
+    // без жодного ефекту. Тепер екіпірується будь-який предмет зі SKIN_POOLS.
+    const isEquippable = !!poolKey;
+    const isEquipped = isEquippable && EQUIPPED_SKINS_CACHE[poolKey] === pureName;
+    body = rarityMatch
+      ? `<div class="sub" style="margin-bottom:10px;">Оберіть конкретний предмет цієї рідкості.</div>
+        <button class="btn" onclick="closeModal(); openCraftPicker(${row}, '${rarityMatch[1]}')">🎁 Обрати предмет</button>
+        <button class="btn danger" style="margin-top:8px;" onclick="cancelItem(${row})">❌ Скасувати</button>`
+      : isEquippable
+      ? `<div class="sub" style="margin-bottom:10px;">${isEquipped ? '✅ Зараз екіпіровано — застосовано в грі' : '🎨 Косметичний скін'}</div>
+        ${!isEquipped ? `<button class="btn" onclick="equipSkin('${poolKey}','${esc(pureName).replace(/'/g,"\\'")}')">🎨 Екіпірувати</button>` : ''}`
+      : selfUse
+      ? `<div class="sub" style="margin-bottom:10px;">Предмет з кейсу/крафту — можна використати самостійно, без адміна.</div>
+        <button class="btn" onclick="selfUseItem(${row})">✅ Використати</button>
+        <button class="btn danger" style="margin-top:8px;" onclick="cancelItem(${row})">❌ Скасувати</button>`
+      : `<div class="sub" style="margin-bottom:10px;">Для використання зверніться до СС особисто 💚</div>
+        <button class="btn danger" onclick="cancelItem(${row})">❌ Скасувати покупку</button>`;
+  }
+  showModal(`<div class="mh">🎁 ${esc(shortName)}</div>${body}`);
+}
+
+async function selfUseItem(row){
+  try {
+    const r = await api("item_self_use", { row });
+    if (!r.ok) { toast(r.error === "already_used" ? "Вже використано" : "Помилка", "err"); return; }
+    toast("Використано! ✅", "ok");
+    closeModal();
+    if (document.getElementById("myItemsWrap")) loadMyItems("myItemsWrap");
+    else if (TAB === "shop" && SHOP_SUB === "items") loadMyItems("shopBody");
+    if (TAB === "inventory") renderInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+async function cancelItem(row){
+  if (!confirm("Скасувати покупку? Кошти повернуться на баланс.")) return;
+  try {
+    const r = await api("item_cancel", { row });
+    if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
+    toast("Покупку скасовано, кошти повернено", "ok");
+    await refreshDashboard();
+    closeModal();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+function openMerchForm(row, itemName){
+  showModal(`
+    <div class="mh">📦 Дані доставки — ${esc(itemName)}</div>
+    <div class="field-label">ПІБ отримувача</div><input class="field" id="mf_name" placeholder="Іван Іваненко">
+    <div class="field-label">Місто</div><input class="field" id="mf_city" placeholder="Київ">
+    <div class="field-label">Відділення / поштомат</div><input class="field" id="mf_branch" placeholder="№12">
+    <div class="field-label">Телефон</div><input class="field" id="mf_phone" placeholder="+380...">
+    <div class="field-label">Коментар (необов'язково)</div><textarea class="field" id="mf_comment" rows="2"></textarea>
+    <button class="btn" style="margin-top:14px;" onclick="submitMerchForm(${row})">✅ Оформити замовлення</button>
+  `);
+}
+async function submitMerchForm(row){
+  const p = {
+    row, name: document.getElementById("mf_name").value, city: document.getElementById("mf_city").value,
+    branch: document.getElementById("mf_branch").value, phone: document.getElementById("mf_phone").value,
+    comment: document.getElementById("mf_comment").value
+  };
+  if (!p.name || !p.phone) { toast("Вкажіть хоча б ПІБ і телефон", "err"); return; }
+  try {
+    const r = await api("merch_submit", p);
+    if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
+    toast("Замовлення оформлено! 🎉", "ok");
+    closeModal();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+async function openMyMerchModal(){
+  showModal(`<div class="mh">📦 Мій мерч</div><div id="myMerchWrap">${loadingBlock()}</div>`);
+  try {
+    const r = await api("my_merch");
+    const wrap = document.getElementById("myMerchWrap");
+    if (!r.ok || !r.orders.length) { wrap.innerHTML = emptyBlock("📦","Замовлень немає",""); return; }
+    wrap.innerHTML = `<div class="list">` + r.orders.map(m => {
+      const icon = m.status==="Відправлено"?"✅":(m.status||"").includes("Скасован")?"❌":m.status==="Прийнято"?"📬":"⏳";
+      return `<div class="item"><div class="ic">${icon}</div><div class="txt"><div class="t">${esc(m.item)}</div>
+        <div class="s">${esc(m.date)} · ${esc(m.status)} ${m.city?('· '+esc(m.city)+' відд.'+esc(m.branch)):''}</div></div></div>`;
+    }).join("") + `</div>`;
+  } catch(e) {}
+}
+
+// ============================================================
+// ІГРИ
+// ============================================================
+// Telegram не дозволяє відкрити ще один повноцінний Mini App поверх
+// уже відкритого — tg.openLink() завжди відкриває звичайне посилання
+// (у внутрішньому браузері Telegram або в зовнішньому на десктопі).
+// Тому важкі ігри (Runner/Wordle/Circle) вбудовуємо прямо в застосунок
+// через iframe на весь екран — це лишається "тут же", без переходів.
+function openGameFrame(url, title){
+  const full = url + "&tgid=" + encodeURIComponent(USER_ID);
+  const wrap = document.createElement("div");
+  wrap.id = "gameFrameOverlay";
+  wrap.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9999; background:var(--void); display:flex; flex-direction:column; overflow:hidden;";
+  wrap.innerHTML = `
+    <div style="flex:0 0 auto; display:flex; align-items:center; gap:10px; padding:10px 12px; padding-top:calc(10px + env(safe-area-inset-top)); background:var(--panel); border-bottom:1px solid var(--line);">
+      <button onclick="closeGameFrame()" style="background:var(--panel3); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:8px 12px; font-weight:700; font-size:13px;">← Назад</button>
+      <div class="display" style="font-weight:700; font-size:13.5px;">${esc(title||"")}</div>
+    </div>
+    <div style="flex:1 1 auto; min-height:0; min-width:0; position:relative;">
+      <iframe src="${full}" style="display:block; position:absolute; top:0; left:0; right:0; bottom:0; width:100%; height:100%; border:none; background:#050d1a;" allow="autoplay"></iframe>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+}
+function closeGameFrame(){
+  const el = document.getElementById("gameFrameOverlay");
+  if (el) el.remove();
+}
+// Fallback для випадку, коли гра у iframe — на іншому домені (постMessage
+// працює навіть cross-origin, на відміну від прямого виклику window.parent.fn()).
+window.addEventListener("message", (e) => {
+  if (e && e.data && e.data.type === "closeGameFrame") closeGameFrame();
+});
+
+// Підтягуємо рівні апгрейдів (максимум, якщо VIP активний) і передаємо
+// їх у query-параметрах, які Runner читає сам при старті.
+async function playRunner(){
+  let params = { bird:0, shield:0, magnet:0, uspeed:0, ulives:0, equippedCharacter:null, equippedBird:null, equippedObstacles:null, equippedWeather:null, equippedBoss:null };
+  try {
+    const r = await api("runner_launch_params");
+    if (r.ok) params = r;
+  } catch(e) {}
+  const style = params.equippedCharacter
+    ? (CHARACTER_SKIN_STYLES[params.equippedCharacter] || { hue: _hashHue(params.equippedCharacter), sat: 70, light: 45 })
+    : null;
+  const birdStyle = params.equippedBird
+    ? (BIRD_SKIN_STYLES[params.equippedBird] || { hue: _hashHue(params.equippedBird), sat: 70, light: 45 })
+    : null;
+  const obstacleStyle = params.equippedObstacles
+    ? (OBSTACLE_SKIN_STYLES[params.equippedObstacles] || { hue: _hashHue(params.equippedObstacles), sat: 70, light: 50 })
+    : null;
+  const bossStyle = params.equippedBoss
+    ? (BOSS_SKIN_STYLES[params.equippedBoss] || { hue: _hashHue(params.equippedBoss), sat: 60, light: 35 })
+    : null;
+  const weatherPreset = params.equippedWeather ? (WEATHER_SKIN_PRESETS[params.equippedWeather] || "") : "";
+  const url = RUNNER_URL + `&bird=${params.bird}&shield=${params.shield}&magnet=${params.magnet}&uspeed=${params.uspeed}&ulives=${params.ulives}${style?`&skinhue=${style.hue}&skinsat=${style.sat}&skinlight=${style.light}`:""}${birdStyle?`&birdhue=${birdStyle.hue}&birdsat=${birdStyle.sat}&birdlight=${birdStyle.light}`:""}${obstacleStyle?`&obshue=${obstacleStyle.hue}&obssat=${obstacleStyle.sat}&obslight=${obstacleStyle.light}`:""}${bossStyle?`&bosshue=${bossStyle.hue}&bosssat=${bossStyle.sat}&bosslight=${bossStyle.light}`:""}${weatherPreset?`&weather=${weatherPreset}`:""}`;
+  openGameFrame(url, "🏃 áClub Runner");
+}
+
+function renderGames(){
+  const rebus = DASH.rebus || {};
+  const lucky = DASH.lucky || { used:0, cap:3 };
+  const vipActive = !!(DASH.vip && DASH.vip.active);
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `
+    <div class="h1">🎮 Заробити á-coin</div>
+
+    <div class="game-card">
+      <div class="gt">🧩 Ребус дня</div>
+      <div class="gd">${rebus.active ? (rebus.answered ? "Ви вже відповіли — чекайте результатів." : "Розгадайте ребус і введіть відповідь одним словом.") : "На сьогодні ребусу поки немає."}</div>
+      ${rebus.active ? `<div class="card" style="margin-bottom:10px; background:var(--panel3); border:none;">${esc(rebus.text)}</div>` : ""}
+      ${rebus.active && !rebus.answered ? `
+        <input class="field" id="rebusAnswer" placeholder="Ваша відповідь..." style="margin-bottom:8px;">
+        <div class="btn-row">
+          <button class="btn secondary sm" onclick="getRebusHint()">💡 Підказка</button>
+          <button class="btn sm" onclick="submitRebusAnswer()">✍️ Відповісти</button>
+        </div>` : ""}
+      ${rebus.active && rebus.answered ? `
+        <button class="btn secondary sm" style="${vipActive ? 'background:var(--success); color:#0a2a1c; border-color:var(--success);' : ''}" onclick="openChangeAnswer(${vipActive})">${vipActive ? '✏️ Змінити відповідь' : '🔒 Змінити відповідь (VIP)'}</button>` : ""}
+    </div>
+
+    <div class="game-card">
+      <div class="gt">🎰 Щасливчик</div>
+      <div class="gd" id="luckyGd">Вгадайте число від 1 до 6 і отримайте +${DASH.lucky && DASH.lucky.reward || 3} á-coin миттєво. Спроба ${lucky.used}/${lucky.cap}.</div>
+      <div id="luckyPicker" class="btn-row" style="flex-wrap:wrap; gap:6px;">
+        ${[1,2,3,4,5,6].map(n => `<button class="btn secondary sm" style="flex:1 1 27%;" onclick="rollLucky(${n})" ${lucky.used>=lucky.cap?'disabled':''}>${n}</button>`).join("")}
+      </div>
+      <div id="luckyResult"></div>
+    </div>
+
+    <div class="game-card">
+      <div class="gt">🏃 áClub Runner</div>
+      <div class="gd">Біжи через перешкоди, збирай яблука, потрапляй у топ тижневого турніру.</div>
+      <button class="btn" onclick="playRunner()">🎮 Грати${vipActive ? ' (VIP: макс. прокачка)' : ''}</button>
+    </div>
+
+    <div class="game-card">
+      <div class="gt">🔤 Вгадай слово</div>
+      <div class="gd">Класичний Wordle українською — 6 спроб, нагорода за швидкість.</div>
+      <button class="btn" onclick="openGameFrame('${WORDLE_URL}','🔤 Вгадай слово')">🔤 Грати</button>
+    </div>
+
+    <div class="game-card">
+      <div class="gt">🔵 Слова по колу</div>
+      <div class="gd">Знаходьте слова, з'єднуючи літери по колу.</div>
+      <button class="btn" onclick="openGameFrame('${CIRCLE_URL}','🔵 Слова по колу')">🔵 Грати</button>
+    </div>
+  `;
+}
+
+async function openChangeAnswer(vipActive){
+  if (!vipActive) {
+    const ticketsCount = (DASH.vip && DASH.vip.ticketsCount) || 0;
+    let ticketsHtml = "";
+    if (ticketsCount > 0) {
+      try {
+        const tr = await api("vip_my_tickets");
+        if (tr.ok && tr.tickets.length) {
+          ticketsHtml = `<div class="sub" style="margin:10px 0 6px;">У вас є непроактивований VIP-тикет:</div>
+            <div class="list">${tr.tickets.map(t => `
+              <div class="item"><div class="ic">🎟</div><div class="txt"><div class="t">${esc((VIP_TICKET_DEFS[t.type]||{}).label || t.type)}</div></div>
+              <button class="btn sm" style="width:auto; padding:8px 12px;" onclick="activateVipTicket(${t.row})">Активувати</button></div>
+            `).join("")}</div>`;
+        }
+      } catch(e) {}
+    }
+    showModal(`<div class="mh">🔒 Доступно з VIP</div><div class="sub" style="margin-bottom:12px;">Зміна відповіді після відправки — привілей VIP-статусу.</div>
+      ${ticketsHtml}
+      <button class="btn" style="margin-top:10px;" onclick="closeModal(); nav('inventory');">👑 Придбати VIP</button>`);
+    return;
+  }
+  showModal(`
+    <div class="mh">✏️ Змінити відповідь</div>
+    <input class="field" id="rebusAnswerEdit" placeholder="Нова відповідь..." style="margin-bottom:10px;">
+    <button class="btn" onclick="submitChangeAnswer()">✅ Зберегти нову відповідь</button>
+  `);
+}
+async function submitChangeAnswer(){
+  const val = document.getElementById("rebusAnswerEdit").value.trim();
+  if (!val) { toast("Введіть відповідь", "err"); return; }
+  try {
+    const r = await api("rebus_change_answer", { answer: val });
+    if (!r.ok) { showModal(`<div class="mh">❌ Не вдалось</div><div class="sub">Спробуйте ще раз.</div>`); return; }
+    showModal(`<div class="mh">✅ Відповідь оновлено!</div><div class="sub">Нова відповідь збережена. Приз до <b>+${r.prize} á-coin</b> після закриття ребусу.</div>`);
+  } catch(e) { showModal(`<div class="mh">⚠️ Немає з'єднання</div>`); }
+}
+
+async function submitRebusAnswer(){
+  const val = document.getElementById("rebusAnswer").value.trim();
+  if (!val) { toast("Введіть відповідь", "err"); return; }
+  try {
+    const r = await api("rebus_answer", { answer: val });
+    if (!r.ok) {
+      showModal(`<div class="mh">❌ Не вдалось надіслати</div><div class="sub">${r.error === "already_answered" ? "Ви вже відповіли на цей ребус." : "Сталася помилка, спробуйте ще раз."}</div>`);
+      return;
+    }
+    showModal(`<div class="mh">⏳ Відповідь прийнято!</div><div class="sub">Результати будуть після закриття ребусу.<br>Якщо відповідь правильна — отримаєте <b>+${r.prize} á-coin</b>.</div>`);
+    await refreshDashboard(); renderGames();
+  } catch(e) { showModal(`<div class="mh">⚠️ Немає з'єднання</div><div class="sub">Перевірте інтернет і спробуйте ще раз.</div>`); }
+}
+async function getRebusHint(){
+  try {
+    let r = await api("rebus_hint", { confirm:false });
+    if (!r.ok) { showModal(`<div class="mh">⚠️ Помилка</div><div class="sub">${esc(r.error||"")}</div>`); return; }
+    if (r.needConfirm) {
+      if (!confirm("Підказка зменшує приз вдвічі. Продовжити?")) return;
+      r = await api("rebus_hint", { confirm:true });
+      if (!r.ok) { showModal(`<div class="mh">⚠️ Помилка</div>`); return; }
+    }
+    showModal(`<div class="mh">💡 Підказка</div><div class="sub">${esc(r.hint)}</div>`);
+  } catch(e) { showModal(`<div class="mh">⚠️ Немає з'єднання</div>`); }
+}
+
+// Результат «Щасливчика» — рандомайзер на сервері, без анімованого
+// кубика в Telegram-чаті. Показуємо власну SVG-анімацію кидка прямо
+// в застосунку (замість плоских unicode-символів).
+const DICE_PIPS = {
+  1: [[50,50]],
+  2: [[28,28],[72,72]],
+  3: [[28,28],[50,50],[72,72]],
+  4: [[28,28],[72,28],[28,72],[72,72]],
+  5: [[28,28],[72,28],[50,50],[28,72],[72,72]],
+  6: [[28,25],[72,25],[28,50],[72,50],[28,75],[72,75]],
+};
+function diceFaceSvg(value, extraClass){
+  const pips = DICE_PIPS[value] || DICE_PIPS[1];
+  const isSpinning = extraClass === "dice-spin";
+  return `<svg class="${isSpinning ? '' : (extraClass||'')}" width="76" height="76" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect x="4" y="4" width="92" height="92" rx="20" fill="var(--panel3)" stroke="var(--brass-bright)" stroke-width="3"/>
+    <g class="${isSpinning ? 'dice-pips-spin' : ''}">
+      ${pips.map(([cx,cy]) => `<circle cx="${cx}" cy="${cy}" r="8" fill="var(--brass-bright)"/>`).join("")}
+    </g>
+  </svg>`;
+}
+async function rollLucky(guess){
+  const resultEl = document.getElementById("luckyResult");
+  document.querySelectorAll("#luckyPicker button").forEach(b => b.disabled = true);
+  if (!resultEl) return;
+  resultEl.innerHTML = `
+    <div class="card" style="margin-top:10px; background:var(--panel3); border:none;">
+      <div style="display:flex; justify-content:center; margin:4px 0;" id="diceFace">${diceFaceSvg(1,'dice-spin')}</div>
+      <div class="sub" style="text-align:center;">Кидаємо...</div>
+    </div>`;
+  const faceEl = document.getElementById("diceFace");
+  let spins = 0;
+  const spinTimer = setInterval(() => {
+    if (faceEl) faceEl.innerHTML = diceFaceSvg(1 + Math.floor(Math.random()*6), 'dice-spin');
+    spins++;
+  }, 90);
+
+  let r;
+  try {
+    r = await api("lucky_roll", { guess });
+  } catch(e) {
+    clearInterval(spinTimer);
+    resultEl.innerHTML = `<div class="card" style="margin-top:10px; background:var(--panel3); border:none;"><div class="sub" style="text-align:center; color:var(--danger);">⚠️ Немає з'єднання. Спробуйте ще раз.</div></div>`;
+    document.querySelectorAll("#luckyPicker button").forEach(b => b.disabled = false);
+    return;
+  }
+  await new Promise(res => setTimeout(res, Math.max(0, 550 - spins*90)));
+  clearInterval(spinTimer);
+
+  if (!r.ok) {
+    const msg = r.error === "no_attempts_left" ? "Спроби на сьогодні вичерпано. Повертайтесь завтра 🌅" : "Сталася помилка, спробуйте ще раз.";
+    resultEl.innerHTML = `<div class="card" style="margin-top:10px; background:var(--panel3); border:none;"><div class="sub" style="text-align:center;">❌ ${msg}</div></div>`;
+    await refreshDashboard();
+    updateLuckyStatus();
+    return;
+  }
+  resultEl.innerHTML = `
+    <div class="card" style="margin-top:10px; background:var(--panel3); border:none;">
+      <div style="display:flex; justify-content:center; margin:4px 0;">${diceFaceSvg(r.diceVal, 'dice-land')}</div>
+      <div class="mh" style="text-align:center; font-size:14px;">${r.isWin ? '🎉 Перемога!' : '😅 Не цього разу'}</div>
+      <div class="sub" style="text-align:center; font-size:13px; margin-bottom:4px;">Випало число: <b style="color:var(--brass-bright); font-size:16px;">${r.diceVal}</b> (ви обрали ${guess})</div>
+      <div class="sub" style="text-align:center;">${r.isWin ? `Нараховано <b style="color:var(--success);">+${r.reward} á-coin</b>` : "Спробуйте ще раз, якщо є спроби."}</div>
+      <div class="sub" style="text-align:center; margin-top:4px;">Спроб залишилось сьогодні: <b>${r.attemptsLeft}</b></div>
+    </div>`;
+  await refreshDashboard();
+  updateLuckyStatus();
+}
+// Точкове оновлення статусу "Щасливчика" (лічильник спроб, доступність
+// кнопок) — без повного перемальовування екрана, щоб не стирати
+// щойно показаний результат кидка.
+function updateLuckyStatus(){
+  const gd = document.getElementById("luckyGd");
+  const lucky = (DASH && DASH.lucky) || { used:0, cap:3, reward:3 };
+  if (gd) gd.textContent = `Вгадайте число від 1 до 6 і отримайте +${lucky.reward||3} á-coin миттєво. Спроба ${lucky.used}/${lucky.cap}.`;
+  document.querySelectorAll("#luckyPicker button").forEach(b => b.disabled = lucky.used >= lucky.cap);
+}
+
+// ============================================================
+// МАГАЗИН
+// ============================================================
+function renderShop(){
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `
+    <div class="h1">🏪 Магазин</div>
+    <div class="tabs2" style="flex-wrap:wrap; gap:4px;">
+      <div class="t2" style="flex:1 1 30%;" data-sub="abank">🎁 áBank</div>
+      <div class="t2" style="flex:1 1 30%;" data-sub="chests">📦 Кейси</div>
+      <div class="t2" style="flex:1 1 30%;" data-sub="runner">🏃 Runner</div>
+      <div class="t2" style="flex:1 1 30%;" data-sub="wordle">🔤 Wordle</div>
+      <div class="t2" style="flex:1 1 30%;" data-sub="items">🎽 Мої товари</div>
+    </div>
+    <div id="shopBody">${loadingBlock()}</div>
+  `;
+  screen.querySelectorAll("[data-sub]").forEach(el => {
+    if (el.getAttribute("data-sub") === SHOP_SUB) el.classList.add("active");
+    el.addEventListener("click", () => { SHOP_SUB = el.getAttribute("data-sub"); renderShop(); });
+  });
+  if (SHOP_SUB === "abank") loadShopAbank();
+  else if (SHOP_SUB === "chests") loadShopChests();
+  else if (SHOP_SUB === "runner") loadUpgrades("runner");
+  else if (SHOP_SUB === "wordle") loadUpgrades("wordle");
+  else loadMyItems("shopBody");
+}
+
+// ── Кейси (покупка — потрапляє у слот в «Інвентарі») ──
+async function loadShopChests(){
+  const wrap = document.getElementById("shopBody");
+  try {
+    const r = await apiRaw("get_inventory");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    CHESTS_STATE = r;
+    wrap.innerHTML = `<div class="sub" style="margin:-2px 2px 10px;">Кейс відкривається одразу після покупки.</div>
+      <div class="list" id="buyChestList">${buyChestListHtml()}</div>`;
+    wrap.querySelectorAll("[data-buy-chest]").forEach(el => el.addEventListener("click", () => openBuyChestSheet(el.getAttribute("data-buy-chest"))));
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+
+async function loadShopAbank(){
+  const wrap = document.getElementById("shopBody");
+  try {
+    const r = await api("shop_list");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    paintShopAbank(r);
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+function paintShopAbank(r){
+  const wrap = document.getElementById("shopBody");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="list">` + r.items.map(it => `
+    <div class="card">
+      <div class="row between"><div style="font-weight:700; font-size:13.5px;">${it.type==='merch'?'📦':'🎁'} ${esc(it.name)}</div>
+      <div class="mono" style="color:var(--brass-bright); font-weight:700;">${it.price} 💰</div></div>
+      <div class="sub" style="margin:6px 0 10px;">${esc(it.desc)}</div>
+      <button class="btn sm" ${r.balance < it.price ? 'disabled' : ''} onclick="buyShopItem('${it.id}', ${it.price})">
+        ${r.balance < it.price ? 'Недостатньо á-coin' : 'Купити'}
+      </button>
+    </div>`).join("") + `</div>`;
+}
+async function buyShopItem(id, price){
+  if (!confirm(`Придбати за ${price} á-coin?`)) return;
+  try {
+    const r = await api("shop_buy", { itemId:id });
+    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+    toast("Придбано! Перевірте «Мої товари»", "ok");
+    await refreshDashboard(); loadShopAbank();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+async function loadUpgrades(kind){
+  const wrap = document.getElementById("shopBody");
+  try {
+    const r = await api(kind === "runner" ? "upgrades_runner_get" : "upgrades_wordle_get");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    paintUpgrades(kind, r);
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+function paintUpgrades(kind, r){
+  const wrap = document.getElementById("shopBody");
+  if (!wrap) return;
+  const entries = Object.entries(r.upgrades);
+  wrap.innerHTML = `<div class="list">` + entries.map(([key, upg]) => {
+    const maxLevel = upg.maxLevel || 5;
+    const cur = r.current[key] || 0;
+    const maxed = cur >= maxLevel;
+    const price = !maxed ? upg.prices[cur] : 0;
+    const effect = cur > 0 ? upg.effects[cur-1] : (key==='lives' ? "1 життя (базово)" : "не куплено");
+    return `<div class="card">
+      <div class="row between"><div style="font-weight:700; font-size:13.5px;">${esc(upg.name)}</div><div class="badge">${cur}/${maxLevel}</div></div>
+      <div class="sub" style="margin:6px 0;">${esc(upg.desc)}</div>
+      <div class="progress" style="margin-bottom:8px;"><div style="width:${cur/maxLevel*100}%"></div></div>
+      <div class="sub" style="margin:0 0 10px;">Зараз: ${esc(effect)}${!maxed?` · Далі: ${esc(upg.effects[cur])} — ${price} 💰`:''}</div>
+      <button class="btn sm" ${maxed || r.balance < price ? 'disabled' : ''} onclick="buyUpgrade('${kind}','${key}')">
+        ${maxed ? '✅ Максимум' : (r.balance < price ? 'Недостатньо á-coin' : `Купити рів. ${cur+1} — ${price} 💰`)}
+      </button>
+    </div>`;
+  }).join("") + `</div>`;
+}
+async function buyUpgrade(kind, key){
+  try {
+    const r = await api(kind === "runner" ? "upgrades_runner_buy" : "upgrades_wordle_buy", { key });
+    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+    toast("Апгрейд придбано!", "ok");
+    await refreshDashboard(); loadUpgrades(kind);
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+// ============================================================
+// ІНВЕНТАР — кейси-слоти (реальний таймер), VIP, заряди,
+// товари з магазину/мерч, предмети з кейсів. Усе в одному місці.
+// ============================================================
+const CHEST_META = {
+  avangard:    { icon:"💰", base:"#2f5233", lid:"#D9A94E", accent:"#8a6a1a", gem:"#F2C879" },
+  singularity: { icon:"⚡️", base:"#2d1f4d", lid:"#8B7CF6", accent:"#4a3b7a", gem:"#c9bdff" },
+  ultimatum:   { icon:"🏃", base:"#0d3b3f", lid:"#4E8FE0", accent:"#0a2a2d", gem:"#9fd0ff" },
+  requiem:     { icon:"🌒", base:"#241b3d", lid:"#6b4fa0", accent:"#1a1430", gem:"#b79bf0" },
+  collapse:    { icon:"🔤", base:"#4a2a10", lid:"#E8873A", accent:"#3a2008", gem:"#ffcf9e" },
+  absolut:     { icon:"👑", base:"#241a05", lid:"#F2C879", accent:"#9c7530", gem:"#fff3d0" },
+  silver:      { icon:"🥈", base:"#4a4a52", lid:"#C7CBD1", accent:"#8a8f99", gem:"#eef1f4" },
+  gold:        { icon:"🥇", base:"#6b4e12", lid:"#F2C879", accent:"#a9791e", gem:"#fff0c2" },
+  epic:        { icon:"💜", base:"#3a1f4d", lid:"#B15EF0", accent:"#6b2f8a", gem:"#e6c3ff" },
+  legendary:   { icon:"🧡", base:"#5c3410", lid:"#F2A93B", accent:"#a35a12", gem:"#ffdca0" },
+};
+// Один шаблон 2D-скрині, розфарбований під кожен тип — узгоджено
+// виглядає і в Магазині, і в слотах Інвентаря. animated=true —
+// кришка окремою групою з CSS-анімацією відкриття.
+// ============================================================
+// Візуал скінів: своя форма-силует під кожну категорію + свій
+// колір під кожну конкретну назву (з хешу тексту) — щоб усі ~96
+// скінів виглядали розрізнювано, без потреби малювати кожен окремо.
+// ============================================================
+// Кураторська палітра для кожного конкретного скіна-персонажа Runner —
+// раніше колір рахувався автоматично через хеш назви (_hashHue), через що
+// частина скінів отримувала майже однаковий або ледь помітний відтінок
+// (наприклад, близький до дефолтного зеленого). Тепер кожен скін має власну,
+// свідомо підібрану комбінацію hue/saturation/lightness — це і усуває
+// "непомітні" скіни, і робить весь набір візуально різноманітнішим.
+const CHARACTER_SKIN_STYLES = {
+  "Класичний бігун":         { hue: 142, sat: 70, light: 45 },
+  "Бізнес-кежуал":           { hue: 212, sat: 55, light: 42 },
+  "Спортивна дівчина":       { hue: 328, sat: 80, light: 58 },
+  "Офісна леді":             { hue: 268, sat: 45, light: 40 },
+  "Ретро-спортсмен":         { hue: 24,  sat: 85, light: 50 },
+  "Хіпстер-кур'єр":          { hue: 42,  sat: 65, light: 38 },
+  "Бізнес-леді на підборах": { hue: 345, sat: 60, light: 32 },
+  "Скейтер-новачок":         { hue: 190, sat: 85, light: 50 },
+  "Йогин у потоці":          { hue: 275, sat: 60, light: 62 },
+  "Зимовий бігун":           { hue: 198, sat: 35, light: 68 },
+};
+// Скін птаха-помічника (runner_epic_bird) — ПОВНІСТЮ окрема категорія від
+// скіна персонажа (runner_rare_character). Раніше в грі взагалі не було
+// візуалізації для скіна птаха (він завжди малювався фіксованим жовтим
+// кольором), тому екіпірування скіна птаха ніяк не мало впливати на людину —
+// якщо це виглядало так, ніби "змінився не той" скін, то тому, що екіпірувати
+// й побачити ефект саме від скіна птаха раніше було просто нізвідки.
+const BIRD_SKIN_STYLES = {
+  "Папужка-помічник": { hue: 145, sat: 75, light: 50 },
+  "Сова-мудрець":     { hue: 30,  sat: 35, light: 42 },
+  "Фламінго-піарник": { hue: 335, sat: 80, light: 65 },
+  "Пінгвін-бухгалтер":{ hue: 210, sat: 15, light: 30 },
+  "Голуб-кур'єр":     { hue: 220, sat: 15, light: 70 },
+  "Тукан-дизайнер":   { hue: 20,  sat: 90, light: 55 },
+  "Синичка-стажерка": { hue: 55,  sat: 85, light: 60 },
+  "Ластівка-таймкіпер":{ hue: 205, sat: 60, light: 35 },
+  "Ворон-дедлайн":    { hue: 260, sat: 30, light: 20 },
+  "Яструб-аудитор":   { hue: 15,  sat: 45, light: 35 },
+  "Грак-конкурент":   { hue: 250, sat: 20, light: 25 },
+  "Сич-критик":       { hue: 40,  sat: 40, light: 45 },
+  "Орел-начальник":   { hue: 35,  sat: 70, light: 40 },
+  "Дрізд-саботажник": { hue: 90,  sat: 30, light: 35 },
+  "Крук-стрес":       { hue: 275, sat: 40, light: 18 },
+  "Сорока-пліткарка": { hue: 0,   sat: 5,  light: 22 },
+};
+// Скін набору перешкод (runner_epic_obstacles) — тонує вже намальовані
+// перешкоди в свій колір (canvas blend-mode 'hue'), не змінюючи форму.
+const OBSTACLE_SKIN_STYLES = {
+  "Офісний набір перешкод":              { hue: 210, sat: 55, light: 50 },
+  "Будівельний набір перешкод":          { hue: 35,  sat: 85, light: 50 },
+  "Кухонний набір перешкод":             { hue: 5,   sat: 65, light: 50 },
+  "Новорічний набір перешкод":           { hue: 145, sat: 65, light: 45 },
+  "Спортивний набір перешкод":           { hue: 260, sat: 60, light: 50 },
+  "Кіберпанк-набір перешкод":            { hue: 315, sat: 85, light: 55 },
+  "Набір перешкод «Джунглі»":            { hue: 100, sat: 55, light: 40 },
+  "Набір перешкод «Архів документів»":   { hue: 45,  sat: 25, light: 45 },
+};
+// Скін боса (runner_legendary_boss) — тонує тіло боса замість фіксованого
+// кольору за рівнем.
+const BOSS_SKIN_STYLES = {
+  "Дракон-дедлайн":            { hue: 0,   sat: 70, light: 32 },
+  "Робот-контролер":           { hue: 200, sat: 20, light: 45 },
+  "Принтер-монстр":            { hue: 220, sat: 60, light: 40 },
+  "Королева бюрократії":       { hue: 320, sat: 55, light: 35 },
+  "Тінь минулого кварталу":    { hue: 265, sat: 40, light: 20 },
+  "Кракен звітів":             { hue: 190, sat: 65, light: 30 },
+  "Голем із паперів":          { hue: 40,  sat: 35, light: 45 },
+  "Привид понеділка":         { hue: 180, sat: 15, light: 60 },
+};
+// Скін погоди (runner_legendary_weather) — прив'язує конкретний скін до
+// конкретного пресету локації в самій грі Runner (там же зберігаються 4
+// стандартні + 8 нових "легендарних" пресетів). Runner приймає ключ пресету.
+const WEATHER_SKIN_PRESETS = {
+  "Грозова злива":       "storm",
+  "Снігова буря":        "snow",
+  "Туман над офісом":    "office_fog",
+  "Веселка успіху":      "rainbow",
+  "Північне сяйво":      "aurora",
+  "Пісочна буря":        "sandstorm",
+  "Золотий захід сонця": "gold_sunset",
+  "Місячна ніч":         "moon_night",
+};
+function _hashHue(str){
+  let h = 0;
+  for (let i=0;i<str.length;i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
+  return h % 360;
+}
+function skinCategoryOf(poolKey){
+  if (!poolKey) return "generic";
+  if (poolKey.indexOf("character") >= 0) return "character";
+  if (poolKey === "runner_epic_bird") return "bird";
+  if (poolKey.indexOf("obstacles") >= 0) return "obstacles";
+  if (poolKey.indexOf("weather") >= 0) return "weather";
+  if (poolKey.indexOf("boss") >= 0) return "boss";
+  if (poolKey.indexOf("timer") >= 0) return "timer";
+  if (poolKey.indexOf("keyboard") >= 0) return "keyboard";
+  if (poolKey.indexOf("background") >= 0) return "background";
+  if (poolKey.indexOf("wheel") >= 0) return "wheel";
+  if (poolKey.indexOf("letters") >= 0) return "letters";
+  return "generic";
+}
+function skinIconSvg(poolKey, itemName, size){
+  size = size || 44;
+  const cat = skinCategoryOf(poolKey);
+  const key = itemName || poolKey || "x";
+  const hue = _hashHue(key);
+  const variantIdx = _hashHue(key + "#v") ; // друге, незалежне число для вибору пози/дизайну
+  const c1 = `hsl(${hue},62%,55%)`, c2 = `hsl(${hue},70%,74%)`, c3 = `hsl(${hue},50%,38%)`, bg = `hsl(${hue},38%,16%)`;
+  let shape = "";
+  switch(cat){
+    case "character": {
+      const variants = [
+        // 0: бізнес-кежуал — піджак + краватка
+        `<circle cx="50" cy="28" r="13" fill="${c2}"/><path d="M31,88 Q31,52 50,52 Q69,52 69,88 Z" fill="${c1}"/><path d="M46,52 L50,64 L54,52 Z" fill="${c3}"/><rect x="30" y="52" width="8" height="30" rx="2" fill="${c3}" opacity=".6"/><rect x="62" y="52" width="8" height="30" rx="2" fill="${c3}" opacity=".6"/>`,
+        // 1: спортивний біг — нахил уперед, зігнута нога
+        `<circle cx="42" cy="26" r="13" fill="${c2}"/><path d="M30,50 Q40,48 50,55 L66,46" stroke="${c1}" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50,55 L44,88 M50,55 L66,80" stroke="${c1}" stroke-width="9" fill="none" stroke-linecap="round"/>`,
+        // 2: скейтер — дошка під ногами
+        `<circle cx="50" cy="26" r="13" fill="${c2}"/><path d="M33,86 Q33,50 50,50 Q67,50 67,86 Z" fill="${c1}"/><rect x="22" y="86" width="56" height="9" rx="4" fill="${c3}"/><circle cx="32" cy="97" r="4" fill="${bg}"/><circle cx="68" cy="97" r="4" fill="${bg}"/>`,
+        // 3: йога — руки вгору, медитація
+        `<circle cx="50" cy="30" r="13" fill="${c2}"/><path d="M35,90 Q35,55 50,55 Q65,55 65,90 Z" fill="${c1}"/><path d="M50,55 L28,32 M50,55 L72,32" stroke="${c1}" stroke-width="8" fill="none" stroke-linecap="round"/>`,
+        // 4: зимовий — шарф і об'ємніший силует
+        `<circle cx="50" cy="30" r="13" fill="${c2}"/><path d="M28,90 Q28,52 50,52 Q72,52 72,90 Z" fill="${c1}"/><rect x="38" y="48" width="24" height="10" rx="4" fill="${c3}"/><rect x="55" y="55" width="8" height="22" rx="3" fill="${c3}"/>`,
+      ];
+      shape = variants[variantIdx % variants.length];
+      break;
+    }
+    case "bird": {
+      const variants = [
+        `<ellipse cx="48" cy="56" rx="26" ry="17" fill="${c1}"/><path d="M50,45 L76,29 L60,53 Z" fill="${c2}"/><circle cx="33" cy="49" r="4" fill="${bg}"/>`,
+        `<ellipse cx="50" cy="60" rx="27" ry="15" fill="${c1}"/><path d="M50,58 Q70,40 82,52 Q65,55 50,64 Z" fill="${c2}"/><circle cx="30" cy="55" r="4" fill="${bg}"/><path d="M22,55 L12,52 L22,60 Z" fill="${c2}"/>`,
+      ];
+      shape = variants[variantIdx % variants.length];
+      break;
+    }
+    case "obstacles": shape = `<rect x="18" y="55" width="18" height="30" rx="3" fill="${c1}"/><rect x="43" y="38" width="18" height="47" rx="3" fill="${c2}"/><rect x="68" y="60" width="14" height="25" rx="3" fill="${c1}"/>`; break;
+    case "weather": {
+      const variants = [
+        `<ellipse cx="44" cy="42" rx="25" ry="15" fill="${c2}"/><ellipse cx="64" cy="48" rx="17" ry="12" fill="${c1}"/><line x1="35" y1="68" x2="30" y2="84" stroke="${c1}" stroke-width="4" stroke-linecap="round"/><line x1="55" y1="68" x2="50" y2="84" stroke="${c1}" stroke-width="4" stroke-linecap="round"/>`,
+        `<circle cx="35" cy="30" r="14" fill="${c2}"/>${[0,1,2,3,4,5].map(i=>`<line x1="35" y1="30" x2="${35+22*Math.cos(i*Math.PI/3)}" y2="${30+22*Math.sin(i*Math.PI/3)}" stroke="${c2}" stroke-width="3" stroke-linecap="round"/>`).join("")}<ellipse cx="58" cy="65" rx="26" ry="16" fill="${c1}"/>`,
+      ];
+      shape = variants[variantIdx % variants.length];
+      break;
+    }
+    case "boss": {
+      const variants = [
+        `<circle cx="50" cy="52" r="27" fill="${c1}"/><path d="M22,42 L30,22 L38,42 M62,42 L70,22 L78,42" stroke="${c2}" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="40" cy="50" r="5" fill="${bg}"/><circle cx="60" cy="50" r="5" fill="${bg}"/>`,
+        `<path d="M20,50 Q20,20 50,20 Q80,20 80,50 Q80,75 50,85 Q20,75 20,50 Z" fill="${c1}"/><path d="M15,45 L25,35 L28,50 M85,45 L75,35 L72,50" fill="${c2}"/><circle cx="38" cy="48" r="5" fill="${bg}"/><circle cx="62" cy="48" r="5" fill="${bg}"/><path d="M38,65 Q50,72 62,65" stroke="${bg}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+      ];
+      shape = variants[variantIdx % variants.length];
+      break;
+    }
+    case "timer": shape = `<circle cx="50" cy="56" r="27" fill="${c1}" stroke="${c2}" stroke-width="4"/><line x1="50" y1="56" x2="50" y2="40" stroke="${bg}" stroke-width="4" stroke-linecap="round"/><line x1="50" y1="56" x2="61" y2="56" stroke="${bg}" stroke-width="4" stroke-linecap="round"/><rect x="42" y="19" width="16" height="8" rx="3" fill="${c2}"/>`; break;
+    case "background": shape = `<rect x="13" y="17" width="74" height="57" rx="6" fill="${bg}" stroke="${c2}" stroke-width="3"/><circle cx="30" cy="34" r="6" fill="${c2}"/><path d="M13,64 L38,44 L55,59 L70,41 L87,64 Z" fill="${c1}"/>`; break;
+    case "keyboard": shape = `<rect x="13" y="36" width="74" height="38" rx="6" fill="${c1}"/>${[0,1,2,3].map(i=>`<rect x="${19+i*17}" y="44" width="12" height="9" rx="2" fill="${c2}"/><rect x="${19+i*17}" y="58" width="12" height="9" rx="2" fill="${c2}"/>`).join("")}`; break;
+    case "wheel": shape = `<circle cx="50" cy="50" r="30" fill="none" stroke="${c1}" stroke-width="8"/><circle cx="50" cy="50" r="9" fill="${c2}"/>`; break;
+    case "letters": shape = `<text x="50" y="68" font-size="52" font-family="'Unbounded',sans-serif" font-weight="800" fill="${c1}" text-anchor="middle">A</text>`; break;
+    default: shape = `<circle cx="50" cy="50" r="28" fill="${c1}"/>`;
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="2" width="96" height="96" rx="18" fill="${bg}"/>
+    ${shape}
+  </svg>`;
+}
+// Кеш каталогу пулів (щоб не смикати сервер щоразу) + пошук, якому
+// пулу належить конкретна назва — потрібно, щоб малювати правильну
+// іконку для вже отриманого предмета (де відома лише назва).
+let SKINS_CATALOG_CACHE = null;
+async function loadSkinsCatalog(){
+  if (SKINS_CATALOG_CACHE) return SKINS_CATALOG_CACHE;
+  try {
+    const r = await api("skins_catalog");
+    if (r.ok) SKINS_CATALOG_CACHE = r.pools;
+  } catch(e) {}
+  return SKINS_CATALOG_CACHE || [];
+}
+function findPoolKeyForItem(name, pools){
+  if (!name || !pools) return null;
+  for (const p of pools) { if (p.items.includes(name)) return p.key; }
+  return null;
+}
+
+function chestArtSvg(chestId, size, animated){
+  size = size || 44;
+  const m = CHEST_META[chestId] || { base:"#333a52", lid:"#8890AA", accent:"#232a45", gem:"#F3F1EA" };
+  const lid = `
+    <path d="M8,40 Q8,15 50,15 Q92,15 92,40 Z" fill="${m.lid}"/>
+    <path d="M8,40 Q8,15 50,15 Q92,15 92,40 L92,29 Q92,21 50,21 Q8,21 8,29 Z" fill="#fff" opacity="0.18"/>
+    <rect x="43" y="11" width="14" height="30" rx="2" fill="${m.accent}"/>`;
+  return `<svg viewBox="0 0 100 82" width="${size}" height="${Math.round(size*0.82)}" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="50" cy="76" rx="36" ry="4" fill="#000" opacity="0.28"/>
+    <rect x="10" y="40" width="80" height="32" rx="7" fill="${m.base}"/>
+    <rect x="10" y="40" width="80" height="9" fill="${m.accent}" opacity="0.55"/>
+    <rect x="10" y="60" width="80" height="6" fill="${m.accent}" opacity="0.4"/>
+    ${animated ? `<g class="chest-lid-anim">${lid}</g>` : lid}
+    <rect x="42" y="35" width="16" height="19" rx="3" fill="${m.accent}"/>
+    <circle cx="50" cy="42" r="3.4" fill="${m.gem}"/>
+    <rect x="48.6" y="42" width="2.8" height="7" fill="${m.gem}"/>
+  </svg>`;
+}
+
+// Повна сценка відкриття кейсу для модалки: кришка прочиняється,
+// спалах + пара іскор, і з невеликою затримкою — сам приз "виринає".
+function chestOpenSceneHtml(chestId, chestName, resultText){
+  const sparks = ["✨","⭐","💫"].map((s,i) => {
+    const dx = [-34, 30, -14][i], delay = 0.28 + i*0.06;
+    return `<div class="chest-spark" style="--dx:${dx}px; animation-delay:${delay}s; left:${45+i*8}%;">${s}</div>`;
+  }).join("");
+  return `
+    <div class="chest-open-wrap">
+      <div class="chest-glow"></div>
+      ${sparks}
+      ${chestArtSvg(chestId, 76, true)}
+    </div>
+    <div class="mh reward-pop" style="text-align:center;">🎉 ${esc(chestName)} відкрито!</div>
+    <div class="sub reward-pop" style="text-align:center;">${esc(resultText).replace(/\*/g,'')}</div>
+  `;
+}
+
+function dropLabel(d){
+  if (d.label) return d.label;
+  if (d.pool) return `Косметика рівня ${d.rarity} (сюрприз)`;
+  if (d.type === "coins") return d.amount + " á-coin";
+  if (d.type === "shard") return d.amount + " осколок";
+  if (d.type === "vipHours") return d.amount + " год. VIP (у банк)";
+  return d.type;
+}
+let CHESTS_STATE = null;
+let CHEST_ITEMS_STATE = [];
+let CHEST_SLOTS_STATE = [];
+let SLOT_TICK_TIMER = null;
+const CHEST_SLOTS_MAX_CLIENT = 4;
+
+async function renderInventory(){
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `<div class="h1">🎒 Інвентар</div><div id="invBody">${loadingBlock()}</div>`;
+  await loadInventoryData();
+  paintInventory();
+}
+let VIP_TICKETS_STATE = [];
+const VIP_TICKET_DEFS = {
+  "24h":  { hours:24,  price:20,  label:"24 години" },
+  "48h":  { hours:48,  price:35,  label:"48 годин" },
+  "week": { hours:168, price:100, label:"Тиждень" },
+  "month":{ hours:720, price:300, label:"Місяць" },
+};
+let EQUIPPED_SKINS_CACHE = {};
+async function loadInventoryData(){
+  try {
+    const [r, myItems, slotsRes, ticketsRes, equippedRes] = await Promise.all([apiRaw("get_inventory"), api("my_items"), api("chest_slots_get"), api("vip_my_tickets"), api("get_equipped_skins"), loadSkinsCatalog()]);
+    CHESTS_STATE = r.ok ? r : null;
+    CHEST_ITEMS_STATE = (myItems.ok ? myItems.items : []).filter(it => !it.isMerch && /^Кейс:|^Крафт:/.test(it.name||""));
+    CHEST_SLOTS_STATE = slotsRes.ok ? slotsRes.slots : [];
+    VIP_TICKETS_STATE = ticketsRes.ok ? ticketsRes.tickets : [];
+    EQUIPPED_SKINS_CACHE = equippedRes.ok ? equippedRes.equipped : {};
+  } catch(e) { CHESTS_STATE = null; }
+}
+function paintInventory(){
+  const wrap = document.getElementById("invBody");
+  if (!wrap) return;
+  if (!CHESTS_STATE) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); return; }
+  const eff = CHESTS_STATE.effects || {};
+  const vip = (DASH && DASH.vip) || { active:false, until:null, bankedHours: eff.vipBankedHours||0 };
+  wrap.innerHTML = `
+    <div class="h2">👑 VIP-статус</div>
+    <div class="card">
+      <div class="row between">
+        <div style="font-weight:700; font-size:13.5px;">${vip.active ? '✅ VIP активний' : '😴 VIP не активний'}</div>
+        <div class="badge ${vip.active?'ok':''}">${vip.active ? ('до '+fmtDate(vip.until)) : 'немає'}</div>
+      </div>
+      <div class="sub" style="margin:8px 0;">У банку: <b>${vip.bankedHours} год.</b></div>
+      ${vip.bankedHours > 0 ? `
+        <button class="btn" onclick="activateVipHours(${vip.bankedHours})">👑 Активувати ${vip.bankedHours} год.</button>` : `<div class="sub">Години падають з кейсів (Абсолют, Золота/Епічна/Легендарна скриня).</div>`}
+      <div class="sub" style="margin-top:8px; font-size:11px;">VIP дає: максимальну прокачку в іграх, пріоритет у підтримці, безкоштовну підказку в ребусі, зміну відповіді в ребусі, +1 спробу в «Щасливчику», щоденні бонуси нижче.</div>
+    </div>
+
+    <div class="h2">🎟 VIP-тикети</div>
+    <div class="sub" style="margin:-6px 2px 10px;">Активується одразу цілим тикетом (без розбиття на години), стакується з наявним VIP.</div>
+    ${VIP_TICKETS_STATE.length ? `<div class="list" style="margin-bottom:10px;">${VIP_TICKETS_STATE.map(t => `
+      <div class="item"><div class="ic">🎟</div><div class="txt"><div class="t">${esc((VIP_TICKET_DEFS[t.type]||{}).label || t.type)}</div><div class="s">Не активовано</div></div>
+      <button class="btn sm" style="width:auto; padding:8px 12px;" onclick="activateVipTicket(${t.row})">Активувати</button></div>
+    `).join("")}</div>` : ""}
+    <div class="btn-row" style="flex-wrap:wrap;">
+      ${Object.entries(VIP_TICKET_DEFS).map(([id,t]) => `<button class="btn secondary sm" style="flex:1 1 45%;" ${CHESTS_STATE.balance<t.price?'disabled':''} onclick="buyVipTicket('${id}')">${esc(t.label)}<br><span class="mono">${t.price} 💰</span></button>`).join("")}
+    </div>
+
+    <div class="h2">🎁 Щоденні VIP-бонуси</div>
+    <div class="list">
+      <div class="item"><div class="ic">🥈</div><div class="txt"><div class="t">Безкоштовний Silver Chest</div><div class="s">Раз на добу, потрапляє в слот</div></div>
+        <button class="btn sm" style="width:auto; padding:8px 12px;" ${(!vip.active||vip.dailySilverClaimed)?'disabled':''} onclick="claimVipDaily('silver')">${vip.dailySilverClaimed?'Отримано':'Забрати'}</button></div>
+      <div class="item"><div class="ic">💰</div><div class="txt"><div class="t">Безкоштовний «Авангард»</div><div class="s">Раз на добу, відкривається одразу</div></div>
+        <button class="btn sm" style="width:auto; padding:8px 12px;" ${(!vip.active||vip.dailyAvangardClaimed)?'disabled':''} onclick="claimVipDaily('avangard')">${vip.dailyAvangardClaimed?'Отримано':'Забрати'}</button></div>
+      <div class="item"><div class="ic">⚡️</div><div class="txt"><div class="t">Миттєве розблокування</div><div class="s">1 раз на добу, для кейсу що розблоковується</div></div>
+        <div class="badge ${vip.dailyInstantUnlockClaimed?'ok':''}">${vip.dailyInstantUnlockClaimed?'Використано':(vip.active?'Доступно':'—')}</div></div>
+    </div>
+
+    <div class="h2">📦 Кейси-слоти <span class="hint">${CHEST_SLOTS_STATE.length}${(DASH && DASH.isAdmin) ? ' (без ліміту)' : ('/'+CHEST_SLOTS_MAX_CLIENT)}</span></div>
+    <div class="sub" style="margin:-6px 2px 10px;">Тут лише безкоштовні кейси з ігор (Runner — кожні 1000 очок). Розблоковується 1 одночасно. Платні кейси («Магазин» → «Кейси») відкриваються одразу після покупки, без слотів.</div>
+    <div id="chestSlotsGrid">${slotsSectionHtml()}</div>
+
+    <div class="h2">Заряди</div>
+    <div class="list">
+      <div class="item"><div class="ic">💡</div><div class="txt"><div class="t">Безкоштовна підказка</div><div class="s">Ребус — приз не зменшується</div></div><div class="right mono">${eff.freeHint||0}</div></div>
+      <div class="item"><div class="ic">🎲</div><div class="txt"><div class="t">Бонус-спроба</div><div class="s">+1 спроба у «Щасливчику»</div></div><div class="right mono">${eff.diceBonus||0}</div></div>
+      <div class="item"><div class="ic">🛡</div><div class="txt"><div class="t">Імунітет стріку</div><div class="s">Спрацьовує автоматично</div></div><div class="right mono">${eff.streakImmunity||0}</div></div>
+      <div class="item"><div class="ic">⚡️</div><div class="txt"><div class="t">x3 щоденний бонус</div><div class="s">${eff.x3Active?('Діє до '+fmtDate(eff.x3Until)):'Не активний'}</div></div><div class="right">${eff.x3Active?'<span class="badge ok">АКТИВНО</span>':'<span class="mono">0</span>'}</div></div>
+    </div>
+
+    <div class="h2">Крафт з осколків <span class="hint">🔮 ${fmt(CHESTS_STATE.shards)}</span></div>
+    <div class="btn-row" style="flex-wrap:wrap;">
+      ${(CHESTS_STATE.craftRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${CHESTS_STATE.shards<rc.cost?'disabled':''} onclick="craftItem('${rc.id}')">${esc(rc.name)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
+    </div>
+
+    <div class="h2">🎨 Мої скіни</div>
+    <div id="mySkinsSection"></div>
+  `;
+  paintMySkins();
+  startSlotTicker();
+}
+
+// ── Мої скіни: спочатку обираємо гру, потім бачимо скіни саме з неї ──
+let MY_SKINS_GAME = "runner";
+function skinGameOf(poolKey){
+  if (!poolKey) return null;
+  if (poolKey.indexOf("runner") === 0) return "runner";
+  if (poolKey.indexOf("wordle") === 0) return "wordle";
+  if (poolKey.indexOf("circle") === 0) return "circle";
+  return null;
+}
+function paintMySkins(){
+  const sec = document.getElementById("mySkinsSection");
+  if (!sec) return;
+  if (!CHEST_ITEMS_STATE.length) { sec.innerHTML = emptyBlock("🎒","Поки що порожньо","Відкривайте кейси або крафтіть із осколків"); return; }
+
+  const groups = {};
+  CHEST_ITEMS_STATE.forEach(it => {
+    const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
+    if (!groups[shortName]) groups[shortName] = { name: shortName, comment: it.comment, items: [] };
+    groups[shortName].items.push(it);
+  });
+  const pools = SKINS_CATALOG_CACHE || [];
+  const resolvedGroups = Object.values(groups).map(g => {
+    const pureName = g.name.replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,"");
+    const poolKey = findPoolKeyForItem(pureName, pools);
+    return Object.assign(g, { poolKey, game: skinGameOf(poolKey) });
+  });
+
+  const games = [
+    { id:"runner", ic:"🏃", lb:"Runner" },
+    { id:"wordle", ic:"🔤", lb:"Вгадай слово" },
+    { id:"circle", ic:"🔵", lb:"Слова по колу" },
+  ];
+  const tabsHtml = games.map(g => {
+    const count = resolvedGroups.filter(x => x.game === g.id).length;
+    return `<div class="t2" data-my-skins-game="${g.id}">${g.ic} ${g.lb} <span class="badge" style="margin-left:3px;">${count}</span></div>`;
+  }).join("");
+
+  const shown = resolvedGroups.filter(g => g.game === MY_SKINS_GAME);
+  const gridHtml = shown.length ? `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:10px;">` +
+    shown.map(g => {
+      const available = g.items.filter(x => x.status === "Не використано");
+      const countLabel = g.items.length > 1 ? `<div class="badge" style="position:absolute; top:-4px; right:-4px;">×${g.items.length}</div>` : "";
+      const cleanName = g.name.replace(/^Крафт: предмет рівня /,"").replace(/^Крафт: |^Кейс: /,"");
+      const isEquipped = !!g.poolKey && EQUIPPED_SKINS_CACHE[g.poolKey] === cleanName;
+      return `<div data-chest-group="${esc(g.name)}" style="cursor:pointer; text-align:center; position:relative;">
+        ${countLabel}
+        <div style="opacity:${available.length>0?1:.4}; ${isEquipped?'filter:drop-shadow(0 0 6px var(--success));':''}">${skinIconSvg(g.poolKey, g.name, 68)}</div>
+        <div class="sub" style="font-size:10px; margin-top:3px; line-height:1.25;">${esc(cleanName)}</div>
+        ${isEquipped ? `<div class="badge ok" style="margin-top:2px;">✓ Екіпіровано</div>` : (available.length>0 ? `<div class="badge new" style="margin-top:2px;">Обрати →</div>` : `<div class="badge ok" style="margin-top:2px;">Отримано</div>`)}
+      </div>`;
+    }).join("") + `</div>` : emptyBlock("🎨","Тут поки порожньо","Скіни цієї гри ще не випадали");
+
+  sec.innerHTML = `<div class="tabs2" style="flex-wrap:wrap; gap:4px;">${tabsHtml}</div>${gridHtml}`;
+  sec.querySelectorAll("[data-my-skins-game]").forEach(el => {
+    if (el.getAttribute("data-my-skins-game") === MY_SKINS_GAME) el.classList.add("active");
+    el.addEventListener("click", () => { MY_SKINS_GAME = el.getAttribute("data-my-skins-game"); paintMySkins(); });
+  });
+  sec.querySelectorAll("[data-chest-group]").forEach(el => el.addEventListener("click", () => openItemGroup(el.getAttribute("data-chest-group"))));
+}
+
+// ── Слоти кейсів ──
+function fmtSecs(sec){
+  if (sec<=0) return "готово!";
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+  if (h>0) return `${h}г ${m}хв`;
+  if (m>0) return `${m}хв ${s}с`;
+  return `${s}с`;
+}
+function slotsSectionHtml(){
+  const slots = CHEST_SLOTS_STATE;
+  const cells = [];
+  const totalCells = Math.max(CHEST_SLOTS_MAX_CLIENT, slots.length); // адмінам ліміт не застосовується — покажемо всі
+  for (let i=0;i<totalCells;i++){
+    const s = slots[i];
+    if (!s) { cells.push(`<div class="card" style="text-align:center; opacity:.5;"><div style="font-size:24px;">➕</div><div class="sub" style="margin-top:4px;">Порожньо</div></div>`); continue; }
+    let body;
+    if (s.status === "Очікує") {
+      const anyUnlocking = slots.some(x=>x.status==="Розблоковується");
+      body = `<div class="btn-row" style="margin-top:8px;">
+        <button class="btn secondary sm" ${anyUnlocking?'disabled':''} onclick="chestSlotStart(${s.row})">🔓 Почати</button>
+        <button class="btn danger sm" style="flex:none; width:auto; padding:9px 11px;" onclick="chestSlotDispose(${s.row},'${s.kind}')">${s.kind==='paid'?'♻️':'💰'}</button>
+      </div>`;
+    } else if (s.status === "Розблоковується" && !s.ready) {
+      const vip = (DASH && DASH.vip) || {};
+      const canInstant = vip.active && !vip.dailyInstantUnlockClaimed;
+      body = `<div class="sub mono" style="text-align:center; font-size:14px; margin:6px 0 8px;">⏳ ${fmtSecs(s.secondsLeft)}</div>
+        <div class="btn-row">
+          <button class="btn secondary sm" onclick="openRushModal(${s.row})">⚡</button>
+          <button class="btn danger sm" style="flex:none; width:auto; padding:9px 11px;" onclick="chestSlotDispose(${s.row},'${s.kind}')">${s.kind==='paid'?'♻️':'💰'}</button>
+        </div>
+        ${canInstant ? `<button class="btn sm" style="margin-top:6px; background:linear-gradient(155deg,#F2A93B,#B15EF0); color:#1a0f2e;" onclick="claimVipInstantUnlock(${s.row})">👑 Миттєво (безкоштовно)</button>` : ""}`;
+    } else {
+      body = `<button class="btn sm" style="margin-top:8px;" onclick="chestSlotOpen(${s.row})">🎁 Відкрити!</button>`;
+    }
+    cells.push(`<div class="card" style="text-align:center;">
+      <div style="display:flex; justify-content:center;">${chestArtSvg(s.chestId, 52)}</div>
+      <div style="font-weight:700; font-size:11.5px; margin-top:4px; line-height:1.3;">${esc(s.name)}</div>
+      ${body}
+    </div>`);
+  }
+  return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">${cells.join("")}</div>`;
+}
+function startSlotTicker(){
+  if (SLOT_TICK_TIMER) clearInterval(SLOT_TICK_TIMER);
+  SLOT_TICK_TIMER = setInterval(() => {
+    if (TAB !== "inventory") { clearInterval(SLOT_TICK_TIMER); SLOT_TICK_TIMER = null; return; }
+    CHEST_SLOTS_STATE.forEach(s => {
+      if (s.status === "Розблоковується" && s.secondsLeft > 0) {
+        s.secondsLeft -= 1;
+        if (s.secondsLeft <= 0) s.ready = true;
+      }
+    });
+    const grid = document.getElementById("chestSlotsGrid");
+    if (grid) grid.innerHTML = slotsSectionHtml();
+  }, 1000);
+}
+async function chestSlotStart(row){
+  try {
+    const r = await api("chest_slot_start", { row });
+    if (!r.ok) { toast(r.error === "another_unlocking" ? "Спочатку завершіть поточне розкриття" : "Помилка", "err"); return; }
+    toast("Розблокування розпочато! 🔓", "ok");
+    await loadInventoryData(); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+function chestSlotDispose(row, kind){
+  if (kind === "paid") {
+    if (!confirm("Розібрати кейс на осколки? Шанс отримати 1 осколок — 50%.")) return;
+    disposeChestSlot(row, "dismantle");
+  } else {
+    if (!confirm("Продати кейс боту за фіксовану ціну á-coin?")) return;
+    disposeChestSlot(row, "sell");
   }
 }
-
-function sendCoin(){
-  const{uid}=getTg();
-  if(!uid||_sessionStart===0)return;
-  try{new Image().src=GAS+'?type=apple_coin&game=runner&userId='+uid+'&secret=aclub2026runnertest&_t='+Date.now();}catch(e){}
+async function disposeChestSlot(row, mode){
+  try {
+    const r = await api(mode === "dismantle" ? "chest_slot_dismantle" : "chest_slot_sell", { row });
+    if (!r.ok) { toast("Помилка", "err"); return; }
+    if (mode === "dismantle") toast(r.won ? "🔮 +1 осколок!" : "Нічого не випало", r.won?"ok":undefined);
+    else toast(`Продано за ${r.price} á-coin`, "ok");
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+function openRushModal(row){
+  showModal(`
+    <div class="mh">⚡ Прискорити розкриття</div>
+    <div class="sub" style="margin-bottom:10px;">1 á-coin = 2 години. Баланс: ${fmt(DASH.balance)} 💰</div>
+    <input class="field" id="rushAcoin" type="number" min="1" placeholder="Кількість á-coin" style="margin-bottom:10px;">
+    <button class="btn" onclick="submitRush(${row})">⚡ Прискорити</button>
+  `);
+}
+async function submitRush(row){
+  const acoin = parseInt(document.getElementById("rushAcoin").value);
+  if (!acoin || acoin<=0) { toast("Вкажіть кількість", "err"); return; }
+  try {
+    const r = await api("chest_slot_rush", { row, acoin });
+    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+    toast(`Витрачено ${r.spent} á-coin`, "ok");
+    closeModal();
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function chestSlotOpen(row){
+  try {
+    const r = await api("chest_slot_open", { row });
+    if (!r.ok) { toast(r.error === "not_ready" ? "Ще не готово" : "Помилка", "err"); return; }
+    showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText));
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 
-function handleSaveClick(e,u){e.preventDefault();const tg=window.Telegram&&window.Telegram.WebApp;if(tg&&tg.openTelegramLink){try{tg.openTelegramLink(u);return;}catch(x){}}window.location.href=u;}
+// ── Покупка кейсу — платні кейси відкриваються МИТТЄВО (не через
+// слоти — слоти лише для безкоштовних кейсів з ігор) ──
+function buyChestListHtml(){
+  const r = CHESTS_STATE;
+  if (!r) return "";
+  return (r.chests||[]).map(c => {
+    const locked = r.balance < c.cost;
+    return `<div class="item" data-buy-chest="${c.id}" style="cursor:pointer">
+      <div style="flex:none;">${chestArtSvg(c.id, 34)}</div>
+      <div class="txt"><div class="t">${esc(c.name)}</div><div class="s">${esc(c.desc)}</div></div>
+      <div class="right mono" style="color:${locked?'var(--text-faint)':'var(--brass-bright)'}; font-weight:700;">${c.cost} 💰</div>
+    </div>`;
+  }).join("");
+}
+function openBuyChestSheet(chestId){
+  const c = CHESTS_STATE.chests.find(x => x.id === chestId);
+  if (!c) return;
+  const locked = CHESTS_STATE.balance < c.cost;
+  showModal(`
+    <div style="display:flex; justify-content:center; margin-bottom:8px;">${chestArtSvg(c.id, 84)}</div>
+    <div class="mh" style="text-align:center;">${esc(c.name)}</div>
+    <div class="sub" style="margin-bottom:10px; text-align:center;">${esc(c.desc)}</div>
+    <div class="list" style="margin-bottom:14px;">${c.drops.map(d => `
+      <div class="item"><div class="ic mono" style="font-size:12px;">${d.chance}%</div><div class="txt"><div class="t">${esc(dropLabel(d))}</div></div></div>
+    `).join("")}</div>
+    <button class="btn" ${locked?'disabled':''} onclick="buyChest('${c.id}')">${locked?'Недостатньо á-coin':('🎁 Відкрити зараз — '+c.cost+' 💰')}</button>
+  `);
+}
+async function buyChest(chestId){
+  closeModal();
+  toast("Відкриваємо кейс...", "ok");
+  try {
+    const r = await apiRaw("chest_open", { chestId });
+    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+    showModal(chestOpenSceneHtml(r.chest.id, r.chest.name, r.resultText));
+    await refreshDashboard();
+    await loadShopChests();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
 
-// ── INIT ──────────────────────────────────────────────────────
-state='idle';lastTime=0;P.y=FL||H-80;P.vy=0;P.onGround=true;P.jc=0;P.af=0;P.at=0;
-obstacles=[];apples=[];boosters=[];particles=[];flyingEnemies=[];bossBullets=[];speedMods=[];
-initBL();
-requestAnimationFrame(idleLoop);
+// ── Предмети з кейсів (самообслуговування) ──
+function openItemGroup(name){
+  const items = CHEST_ITEMS_STATE.filter(it => (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim() === name);
+  const rarityMatch = name.match(/^Крафт: предмет рівня (Rare|Epic|Legendary)$/);
+  const pools = SKINS_CATALOG_CACHE || [];
+  const pureName = name.replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,"");
+  const poolKey = findPoolKeyForItem(pureName, pools);
+  const isEquippable = !!poolKey; // будь-який предмет зі SKIN_POOLS можна екіпірувати
+  const isEquipped = isEquippable && EQUIPPED_SKINS_CACHE[poolKey] === pureName;
+  showModal(`
+    <div style="display:flex; justify-content:center; margin-bottom:8px;">${skinIconSvg(poolKey, name, 84)}</div>
+    <div class="mh" style="text-align:center;">${esc(name)} <span class="hint">×${items.length}</span></div>
+    ${isEquippable ? `
+      <div class="sub" style="text-align:center; margin-bottom:10px;">${isEquipped ? '✅ Зараз екіпіровано — застосовано в грі' : '🎨 Косметичний скін'}</div>
+      ${!isEquipped ? `<button class="btn" onclick="equipSkin('${poolKey}','${esc(pureName).replace(/'/g,"\\'")}')">🎨 Екіпірувати</button>` : ''}
+    ` : `
+      <div class="list">${items.map(it => `
+        <div class="item">
+          <div class="txt"><div class="t">${it.status==='Не використано' ? '⏳ Не використано' : '✅ Використано'}</div><div class="s">${esc(it.comment||'')}</div></div>
+          ${it.status==='Не використано' ? (rarityMatch
+            ? `<button class="btn sm" style="width:auto; padding:8px 14px;" onclick="openCraftPicker(${it.row}, '${rarityMatch[1]}')">Обрати предмет</button>`
+            : `<button class="btn sm" style="width:auto; padding:8px 14px;" onclick="selfUseItem(${it.row})">Використати</button>`) : ''}
+        </div>
+      `).join("")}</div>
+    `}
+  `);
+}
+async function equipSkin(poolKey, itemName){
+  try {
+    const r = await api("equip_skin", { poolKey, itemName });
+    if (!r.ok) { toast(r.error === "not_owned" ? "У вас немає цього предмета" : "Помилка", "err"); return; }
+    EQUIPPED_SKINS_CACHE[poolKey] = itemName;
+    toast("Екіпіровано! Побачите у Runner 🎉", "ok");
+    closeModal();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function openCraftPicker(row, rarity){
+  showModal(`<div class="mh">🎁 Оберіть предмет <span class="hint">${esc(rarity)}</span></div>${loadingBlock()}`);
+  try {
+    const [r, pools] = await Promise.all([api("craft_catalog_get"), loadSkinsCatalog()]);
+    const items = (r.ok && r.catalog[rarity]) || [];
+    showModal(`
+      <div class="mh">🎁 Оберіть предмет <span class="hint">${esc(rarity)}</span></div>
+      <div class="list">${items.map(it => {
+        const poolKey = findPoolKeyForItem(it, pools);
+        return `<div class="item" style="cursor:pointer" onclick="pickCraftItem(${row}, '${esc(it).replace(/'/g,"\\'")}')">
+          <div style="flex:none;">${skinIconSvg(poolKey, it, 36)}</div>
+          <div class="txt"><div class="t">${esc(it)}</div></div><div class="right">→</div>
+        </div>`;
+      }).join("")}</div>
+    `);
+  } catch(e) { showModal(`<div class="mh">⚠️ Немає з'єднання</div>`); }
+}
+async function pickCraftItem(row, itemName){
+  try {
+    const r = await api("craft_pick_item", { row, itemName });
+    if (!r.ok) { toast(r.error === "already_used" ? "Вже використано" : "Помилка", "err"); return; }
+    toast(`Отримано: ${itemName} ✅`, "ok");
+    closeModal();
+    if (TAB === "inventory") { await loadInventoryData(); paintInventory(); }
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function activateVipHours(hours){
+  hours = parseInt(hours);
+  if (!hours || hours <= 0) { toast("Немає годин для активації", "err"); return; }
+  try {
+    const r = await api("vip_activate", { hours });
+    if (!r.ok) { toast(r.error === "insufficient_hours" ? "Недостатньо годин у банку" : "Помилка", "err"); return; }
+    toast(`VIP активовано на ${hours} год.! 👑`, "ok");
+    await refreshDashboard();
+    paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function buyVipTicket(ticketId){
+  const t = VIP_TICKET_DEFS[ticketId];
+  if (!confirm(`Придбати VIP-тикет «${t.label}» за ${t.price} á-coin?`)) return;
+  try {
+    const r = await api("vip_buy_ticket", { ticketId });
+    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+    toast("Тикет придбано! Активуйте, коли захочете", "ok");
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function activateVipTicket(row){
+  if (!confirm("Активувати цей VIP-тикет цілком прямо зараз?")) return;
+  try {
+    const r = await api("vip_activate_ticket", { row });
+    if (!r.ok) { toast("Помилка", "err"); return; }
+    toast("VIP активовано! 👑", "ok");
+    await refreshDashboard();
+    if (TAB === "inventory") { await loadInventoryData(); paintInventory(); }
+    else if (TAB === "games") { closeModal(); renderGames(); }
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function claimVipDaily(kind){
+  try {
+    const r = await api(kind === "silver" ? "vip_daily_silver" : "vip_daily_avangard");
+    if (!r.ok) {
+      const msg = r.error === "already_claimed" ? "Вже отримано сьогодні" : (r.error === "vip_required" ? "Потрібен активний VIP" : (r.error === "inventory_full" ? "Інвентар кейсів заповнений" : "Помилка"));
+      toast(msg, "err"); return;
+    }
+    if (kind === "avangard") {
+      showModal(chestOpenSceneHtml(r.chestId || "avangard", r.chestName || "«Авангард»", r.resultText));
+    } else {
+      toast("Кейс додано в слот! 🥈", "ok");
+    }
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function claimVipInstantUnlock(row){
+  try {
+    const r = await api("vip_daily_instant_unlock", { row });
+    if (!r.ok) {
+      const msg = r.error === "already_claimed" ? "Вже використано сьогодні" : (r.error === "vip_required" ? "Потрібен активний VIP" : "Помилка");
+      toast(msg, "err"); return;
+    }
+    toast("Розблоковано миттєво! 👑", "ok");
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+function fmtDate(iso){
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString("uk-UA",{day:"2-digit",month:"2-digit"}) + " " + d.toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
+}
+async function craftItem(rarity){
+  if (!confirm("Витратити осколки на крафт?")) return;
+  try {
+    const r = await apiRaw("craft_item", { rarity });
+    if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
+    toast("Крафт виконано! Дивіться нижче в «Мої скіни»", "ok");
+    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+// ============================================================
+// ПІДТРИМКА
+// ============================================================
+let SUPPORT_TYPE = "Питання";
+function renderSupport(){
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `
+    <div class="h1">🆘 Підтримка</div>
+    <div class="tabs2">
+      <div class="t2 ${SUPPORT_TYPE==='Питання'?'active':''}" data-st="Питання">❓ Питання</div>
+      <div class="t2 ${SUPPORT_TYPE==='Технічна заявка'?'active':''}" data-st="Технічна заявка">🐞 Технічна заявка</div>
+    </div>
+    <div class="card">
+      <textarea class="field" id="supportQ" rows="4" placeholder="${SUPPORT_TYPE==='Технічна заявка' ? 'Опишіть проблему детально...' : 'Опишіть ваше питання...'}"></textarea>
+      <button class="btn" style="margin-top:10px;" onclick="askSupport()">📨 Надіслати</button>
+      <div class="sub" style="margin-top:8px;">${SUPPORT_TYPE==='Технічна заявка' ? 'Якщо потрібно прикріпити фото/відео — надішліть його прямо в чат з ботом після цього.' : ''}</div>
+    </div>
+    <div id="supportAnswer"></div>
+    <div class="h2">Мої звернення<span class="hint" id="refreshTickets" style="cursor:pointer">оновити</span></div>
+    <div class="list" id="myTickets">${loadingBlock()}</div>
+  `;
+  screen.querySelectorAll("[data-st]").forEach(el => el.addEventListener("click", () => { SUPPORT_TYPE = el.getAttribute("data-st"); renderSupport(); }));
+  document.getElementById("refreshTickets").addEventListener("click", loadMyTickets);
+  loadMyTickets();
+}
+async function askSupport(){
+  const q = document.getElementById("supportQ").value.trim();
+  if (!q) { toast("Введіть текст", "err"); return; }
+  try {
+    const r = await api("support_ask", { question:q, ticketType:SUPPORT_TYPE });
+    if (!r.ok) { toast(r.error === "has_open_ticket" ? "У вас вже є необроблене звернення" : "Помилка", "err"); return; }
+    const wrap = document.getElementById("supportAnswer");
+    if (r.faqMatch) {
+      wrap.innerHTML = `<div class="card"><div style="font-weight:700; margin-bottom:6px;">🤖 Відповідь:</div><div class="sub" style="margin:0 0 10px;">${esc(r.answer)}</div>
+        <div class="btn-row"><button class="btn secondary sm" onclick="cancelSupport()">✅ Дякую, допомогло</button><button class="btn sm" onclick="escalateSupport()">📨 До адміна</button></div></div>`;
+    } else {
+      wrap.innerHTML = `<div class="card"><div class="sub" style="margin:0 0 10px;">Автоматичної відповіді не знайдено. Передати адміну?</div>
+        <div class="btn-row"><button class="btn secondary sm" onclick="cancelSupport()">❌ Скасувати</button><button class="btn sm" onclick="escalateSupport()">📨 Так, передати</button></div></div>`;
+    }
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function escalateSupport(){
+  try {
+    const r = await api("support_escalate");
+    if (!r.ok) { toast("Помилка", "err"); return; }
+    toast(`Заявку №${r.ticketId} передано адміну`, "ok");
+    document.getElementById("supportAnswer").innerHTML = "";
+    document.getElementById("supportQ").value = "";
+    loadMyTickets();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function cancelSupport(){
+  await api("support_cancel");
+  document.getElementById("supportAnswer").innerHTML = "";
+  document.getElementById("supportQ").value = "";
+}
+async function loadMyTickets(){
+  const wrap = document.getElementById("myTickets");
+  if (!wrap) return;
+  try {
+    const r = await api("support_my_tickets");
+    if (!r.ok || !r.tickets.length) { wrap.innerHTML = emptyBlock("📭","Звернень немає",""); return; }
+    wrap.innerHTML = r.tickets.map(t => `
+      <div class="item"><div class="ic">${t.type==='Технічна заявка'?'🐞':'❓'}</div>
+        <div class="txt"><div class="t">№${t.ticketId} · ${esc(t.status)}</div><div class="s">${esc(t.question).slice(0,60)}</div></div>
+        <div class="right badge ${t.status==='Нове'?'new':(t.status==='Закрито'?'ok':'')}">${esc(t.status)}</div></div>`).join("");
+  } catch(e) {}
+}
+
+// ============================================================
+// АДМІНКА
+// ============================================================
+let ADMIN_SUB = "state";
+function renderAdmin(){
+  const screen = document.getElementById("screen");
+  const tabs = [
+    ["state","📊","Огляд"], ["rebus","🧩","Ребус"], ["tournament","🏆","Турнір"],
+    ["award","💰","Нарахування"], ["skins","🎨","Скіни"], ["admins","👤","Адміни"], ["support","📨","Звернення"], ["merch","📦","Мерч"]
+  ];
+  screen.innerHTML = `
+    <div class="h1">🔐 Адмін-панель</div>
+    <div class="admin-tabs">
+      ${tabs.map(([id,icon,lb]) => `<div class="admin-tab" data-asub="${id}"><div class="aicon">${icon}</div><div class="alabel">${lb}</div></div>`).join("")}
+    </div>
+    <div id="adminBody">${loadingBlock()}</div>
+  `;
+  screen.querySelectorAll("[data-asub]").forEach(el => {
+    if (el.getAttribute("data-asub") === ADMIN_SUB) el.classList.add("active");
+    el.addEventListener("click", () => { ADMIN_SUB = el.getAttribute("data-asub"); renderAdmin(); });
+  });
+  const loaders = { state:loadAdminState, rebus:loadAdminRebus, tournament:loadAdminTournament, award:loadAdminAward, skins:loadAdminSkins, admins:loadAdminAdmins, support:loadAdminSupport, merch:loadAdminMerch };
+  (loaders[ADMIN_SUB] || loadAdminState)();
+}
+
+let ADMIN_SKINS_CATALOG = null;
+async function loadAdminSkins(){
+  const wrap = document.getElementById("adminBody");
+  try {
+    if (!ADMIN_SKINS_CATALOG) {
+      const r = await api("admin_skins_catalog");
+      if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+      ADMIN_SKINS_CATALOG = r.pools;
+      SKINS_CATALOG_CACHE = r.pools; // той самий кеш, що й для іконок власних скінів
+    }
+    wrap.innerHTML = `
+      <div class="card">
+        <div style="font-weight:700; font-size:13.5px; margin-bottom:8px;">🎁 Видати скін вручну</div>
+        <div class="field-label">LDAP співробітника</div>
+        <input class="field" id="skinGrantLdap" placeholder="AB120996RGN">
+        <div class="field-label">Категорія</div>
+        <select class="field" id="skinGrantPool" onchange="renderSkinItemSelect()">
+          ${ADMIN_SKINS_CATALOG.map(p => `<option value="${p.key}">${esc(p.label)}</option>`).join("")}
+        </select>
+        <div class="field-label">Конкретний предмет</div>
+        <div class="row" style="gap:8px;">
+          <select class="field" id="skinGrantItem" onchange="updateSkinPreview()" style="flex:1;"></select>
+          <div id="skinPreview" style="flex:none;"></div>
+        </div>
+        <button class="btn sm" style="margin-top:10px;" onclick="submitGrantSkin()">✅ Видати</button>
+      </div>
+
+      <div class="h2">Каталог усіх скінів <span class="hint">${ADMIN_SKINS_CATALOG.reduce((s,p)=>s+p.items.length,0)} шт.</span></div>
+      ${ADMIN_SKINS_CATALOG.map(p => `
+        <div class="card" style="margin-bottom:10px;">
+          <div class="row between" style="margin-bottom:10px;">
+            <div style="font-weight:700; font-size:13.5px;">${esc(p.label)}</div>
+            <div class="badge">${p.items.length} шт.</div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:10px;">
+            ${p.items.map(it => `
+              <div style="text-align:center;">
+                ${skinIconSvg(p.key, it, 64)}
+                <div class="sub" style="font-size:10.5px; margin-top:4px; line-height:1.25;">${esc(it)}</div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `).join("")}
+    `;
+    renderSkinItemSelect();
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+function updateSkinPreview(){
+  const poolKey = document.getElementById("skinGrantPool").value;
+  const itemName = document.getElementById("skinGrantItem").value;
+  const el = document.getElementById("skinPreview");
+  if (el) el.innerHTML = skinIconSvg(poolKey, itemName, 44);
+}
+function renderSkinItemSelect(){
+  const poolKey = document.getElementById("skinGrantPool").value;
+  const pool = ADMIN_SKINS_CATALOG.find(p => p.key === poolKey);
+  const sel = document.getElementById("skinGrantItem");
+  sel.innerHTML = (pool ? pool.items : []).map(it => `<option value="${esc(it)}">${esc(it)}</option>`).join("");
+  updateSkinPreview();
+}
+async function submitGrantSkin(){
+  const ldap = document.getElementById("skinGrantLdap").value.trim();
+  const poolKey = document.getElementById("skinGrantPool").value;
+  const itemName = document.getElementById("skinGrantItem").value;
+  if (!ldap) { toast("Введіть LDAP", "err"); return; }
+  if (!itemName) { toast("Оберіть предмет", "err"); return; }
+  try {
+    const r = await api("admin_grant_skin", { ldap, poolKey, itemName });
+    if (!r.ok) {
+      const msg = r.error === "user_not_found" ? "Співробітника з таким LDAP не знайдено (або він ще не зареєстрований у застосунку)" : "Помилка";
+      toast(msg, "err"); return;
+    }
+    toast(`Видано «${itemName}» користувачу ${r.userName}`, "ok");
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+async function loadAdminState(){
+  const wrap = document.getElementById("adminBody");
+  try {
+    const r = await api("admin_state");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    wrap.innerHTML = `
+      <div class="stat-row"><div class="stat-card"><div class="label">Ребус</div><div class="value" style="font-size:14px;">${r.rebusActive?'✅ Активний':'😴 Немає'}</div></div>
+      <div class="stat-card"><div class="label">Турнір</div><div class="value" style="font-size:14px;">${r.tournamentActive?'✅ Активний':'😴 Немає'}</div></div></div>
+      <div class="stat-row" style="margin-top:10px;"><div class="stat-card"><div class="label">Нові звернення</div><div class="value mono">${r.newTickets}</div></div>
+      <div class="stat-card"><div class="label">Нові замовл. мерчу</div><div class="value mono">${r.merchNew}</div></div></div>
+      ${r.rebusText ? `<div class="card" style="margin-top:12px;"><div class="sub">${esc(r.rebusText)}</div></div>` : ""}
+    `;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+
+async function loadAdminRebus(){
+  const wrap = document.getElementById("adminBody");
+  try {
+    const r = await api("admin_state");
+    wrap.innerHTML = `
+      <div class="card">
+        <div class="sub" style="margin-bottom:12px;">${r.rebusActive ? ('Активний: ' + esc(r.rebusText||'')) : 'Немає активного ребусу.'}</div>
+        <div class="btn-row">
+          <button class="btn secondary sm" onclick="adminAction('admin_rebus_publish', null, 'Ребус опубліковано')">📢 Опублікувати</button>
+          <button class="btn sm" onclick="adminAction('admin_rebus_close', null, 'Ребус закрито, призи нараховано')">🔒 Закрити + підсумки</button>
+        </div>
+      </div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
+}
+
+async function loadAdminTournament(){
+  const wrap = document.getElementById("adminBody");
+  const r = await api("admin_state").catch(()=>({ok:false}));
+  wrap.innerHTML = `
+    <div class="card">
+      <div class="sub" style="margin-bottom:12px;">${r.ok && r.tournamentActive ? 'Турнір зараз активний.' : 'Турнір неактивний.'}</div>
+      <div class="btn-row">
+        <button class="btn secondary sm" onclick="adminAction('admin_tournament_start', null, 'Турнір стартував')">🏆 Запустити</button>
+        <button class="btn sm" onclick="adminAction('admin_tournament_close', null, 'Турнір закрито, призи нараховано')">🏁 Закрити</button>
+      </div>
+    </div>
+    <div class="h2">Лідерборд на дату</div>
+    <div class="card">
+      <div class="field-label">Дата й час (напр. 2026-07-03T20:00)</div>
+      <input class="field" type="datetime-local" id="lbCutoff">
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn secondary sm" onclick="adminLeaderboardGet()">👁 Показати</button>
+        <button class="btn danger sm" onclick="adminLeaderboardRollback()">⏪ Відкат (вилучити пізніші)</button>
+      </div>
+      <div class="sub" id="lbResult" style="margin-top:10px; white-space:pre-wrap;"></div>
+    </div>
+  `;
+}
+async function adminLeaderboardGet(){
+  const v = document.getElementById("lbCutoff").value;
+  if (!v) { toast("Вкажіть дату", "err"); return; }
+  const r = await api("admin_leaderboard_get", { cutoffIso: new Date(v).toISOString() });
+  document.getElementById("lbResult").textContent = r.ok ? (r.text || "Немає даних на цю дату") : "Помилка";
+}
+async function adminLeaderboardRollback(){
+  const v = document.getElementById("lbCutoff").value;
+  if (!v) { toast("Вкажіть дату", "err"); return; }
+  if (!confirm("Вилучити всі результати ПІСЛЯ цієї дати? Дію не можна скасувати.")) return;
+  const r = await api("admin_leaderboard_rollback", { cutoffIso: new Date(v).toISOString() });
+  if (r.ok) toast(`Вилучено результатів: ${r.excluded}`, "ok"); else toast("Помилка", "err");
+}
+
+function loadAdminAward(){
+  const wrap = document.getElementById("adminBody");
+  wrap.innerHTML = `
+    <div class="card">
+      <div class="field-label">💰 Нарахування á-coin (LDAP кількість, по рядку)</div>
+      <textarea class="field" id="awardCoins" rows="3" placeholder="AB120996RGN 50\nAB110996RGN -10"></textarea>
+      <button class="btn sm" style="margin-top:8px;" onclick="submitAward('coins')">Нарахувати á-coin</button>
+    </div>
+    <div class="card" style="margin-top:10px;">
+      <div class="field-label">🔮 Нарахування осколків (LDAP кількість, по рядку)</div>
+      <textarea class="field" id="awardShards" rows="3" placeholder="AB120996RGN 20"></textarea>
+      <button class="btn sm" style="margin-top:8px;" onclick="submitAward('shards')">Нарахувати осколки</button>
+    </div>
+    <div class="card" style="margin-top:10px;">
+      <div class="field-label">👑 VIP-статус вручну</div>
+      <input class="field" id="vipLdap" placeholder="LDAP співробітника: AB120996RGN">
+      <div class="btn-row" style="margin-top:8px;">
+        <input class="field" id="vipHours" type="number" placeholder="Годин" style="flex:1;">
+        <button class="btn secondary sm" style="flex:1;" onclick="submitAdminVipGrant()">Видати</button>
+      </div>
+      <button class="btn danger sm" style="margin-top:8px;" onclick="submitAdminVipRevoke()">❌ Забрати VIP</button>
+    </div>
+    <div class="sub" id="awardResult" style="margin-top:10px; white-space:pre-wrap;"></div>
+  `;
+}
+async function submitAdminVipGrant(){
+  const ldap = document.getElementById("vipLdap").value.trim();
+  const hours = parseInt(document.getElementById("vipHours").value);
+  if (!ldap) { toast("Введіть LDAP", "err"); return; }
+  if (!hours || hours<=0) { toast("Вкажіть кількість годин", "err"); return; }
+  try {
+    const r = await api("admin_vip_grant", { ldap, hours });
+    if (!r.ok) { toast(r.error === "user_not_found" ? "Співробітника не знайдено" : "Помилка", "err"); return; }
+    toast(`VIP видано ${r.userName} на ${hours} год.`, "ok");
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function submitAdminVipRevoke(){
+  const ldap = document.getElementById("vipLdap").value.trim();
+  if (!ldap) { toast("Введіть LDAP", "err"); return; }
+  if (!confirm(`Забрати активний VIP-статус у ${ldap}?`)) return;
+  try {
+    const r = await api("admin_vip_revoke", { ldap });
+    if (!r.ok) { toast(r.error === "user_not_found" ? "Співробітника не знайдено" : "Помилка", "err"); return; }
+    toast(r.wasActive ? `VIP забрано у ${r.userName}` : `У ${r.userName} і так не було активного VIP`, "ok");
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function submitAward(kind){
+  const text = document.getElementById(kind==='coins'?'awardCoins':'awardShards').value.trim();
+  if (!text) { toast("Введіть хоча б один рядок", "err"); return; }
+  const r = await api(kind==='coins' ? 'admin_manual_award' : 'admin_manual_award_shards', { text });
+  if (!r.ok) { toast("Помилка", "err"); return; }
+  toast("Готово, перевірте чат", "ok");
+  if (r.results) document.getElementById("awardResult").textContent = r.results.join("\n");
+  await refreshDashboard(); // якщо адмін нарахував самому собі — пілюлі баланс/осколки оновляться одразу
+}
+
+async function loadAdminAdmins(){
+  const wrap = document.getElementById("adminBody");
+  if (!DASH.isMainAdmin) {
+    wrap.innerHTML = emptyBlock("🔒","Доступно лише Головному адміну","Керувати списком адмінів може тільки Головний адмін.");
+    return;
+  }
+  try {
+    const r = await api("admin_admins_list");
+    wrap.innerHTML = `
+      <div class="card">
+        <div class="field-label">Telegram ID</div>
+        <input class="field" id="newAdminId" placeholder="707696805">
+        <div class="field-label">Роль</div>
+        <select class="field" id="newAdminType">
+          <option value="ADMIN">🛡 Адмін</option>
+          <option value="MAIN_ADMIN">⭐ Головний адмін</option>
+        </select>
+        <button class="btn sm" style="margin-top:8px;" onclick="addAdminId()">➕ Надати права</button>
+      </div>
+      <div class="list" style="margin-top:10px;">${r.admins.map(a => `
+        <div class="item"><div class="ic">${a.type==='MAIN_ADMIN'?'⭐':'🛡'}</div>
+        <div class="txt"><div class="t">${esc(a.ldap||a.id)}</div><div class="s">${esc(a.id)} · ${a.type==='MAIN_ADMIN'?'Головний адмін':'Адмін'}</div></div>
+        <button class="btn danger sm" style="width:auto; padding:7px 10px;" onclick="removeAdminId('${a.id}')">🗑</button></div>
+      `).join("")}</div>
+    `;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
+}
+async function addAdminId(){
+  const tgId = document.getElementById("newAdminId").value.trim();
+  const type = document.getElementById("newAdminType").value;
+  if (!tgId) return;
+  const r = await api("admin_admin_add", { tgId, type });
+  if (r.ok) { toast("Права надано", "ok"); loadAdminAdmins(); } else toast(r.error === "forbidden_not_main_admin" ? "Лише Головний адмін може це робити" : "Помилка", "err");
+}
+async function removeAdminId(tgId){
+  if (!confirm("Забрати права адміна в " + tgId + "?")) return;
+  const r = await api("admin_admin_remove", { tgId });
+  if (r.ok) { toast("Права забрано", "ok"); loadAdminAdmins(); }
+  else toast(r.error === "last_main_admin" ? "Не можна видалити останнього Головного адміна" : "Помилка", "err");
+}
+
+async function loadAdminSupport(){
+  const wrap = document.getElementById("adminBody");
+  try {
+    const r = await api("admin_support_list");
+    if (!r.ok || !r.tickets.length) { wrap.innerHTML = emptyBlock("✅","Немає відкритих звернень",""); return; }
+    wrap.innerHTML = `<div class="list">` + r.tickets.map(t => `
+      <div class="item" style="cursor:pointer" onclick="openAdminTicket(${t.row})">
+        <div class="ic">${t.type==='Технічна заявка'?'🐞':'❓'}</div>
+        <div class="txt"><div class="t">№${t.ticketId} · ${esc(t.name)}${t.isVip?' 👑':''}</div><div class="s">${esc(t.question).slice(0,50)}</div></div>
+        <div class="right badge ${t.takenBy?'':'new'}">${t.takenBy?('в роботі: '+esc(t.takenByName)):'нове'}</div>
+      </div>`).join("") + `</div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
+}
+async function openAdminTicket(row){
+  const r = await api("admin_support_ticket", { row });
+  if (!r.ok) { toast("Помилка", "err"); return; }
+  const t = r.ticket;
+  showModal(`
+    <div class="mh">${t.type==='Технічна заявка'?'🐞':'❓'} Заявка №${t.ticketId}</div>
+    <div class="sub">👤 ${esc(t.name)} · LDAP ${esc(t.ldap||'—')}</div>
+    <div class="sub" style="margin:8px 0;">${esc(t.question)}</div>
+    <textarea class="field" id="ticketReply" rows="3" placeholder="Відповідь..."></textarea>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn secondary sm" onclick="adminTicketClose(${row})">🔒 Закрити без відповіді</button>
+      <button class="btn sm" onclick="adminTicketReply(${row})">✍️ Відповісти</button>
+    </div>
+  `);
+}
+async function adminTicketReply(row){
+  const answer = document.getElementById("ticketReply").value.trim();
+  if (!answer) { toast("Введіть відповідь", "err"); return; }
+  const r = await api("admin_support_reply", { row, answer });
+  if (r.ok) { toast("Відповідь надіслано", "ok"); closeModal(); loadAdminSupport(); } else toast("Помилка", "err");
+}
+async function adminTicketClose(row){
+  const r = await api("admin_support_close", { row });
+  if (r.ok) { toast("Закрито", "ok"); closeModal(); loadAdminSupport(); } else toast("Помилка", "err");
+}
+
+async function loadAdminMerch(){
+  const wrap = document.getElementById("adminBody");
+  try {
+    const r = await api("admin_merch_list", { onlyNew:true });
+    if (!r.ok || !r.orders.length) { wrap.innerHTML = emptyBlock("✅","Нових замовлень немає",""); return; }
+    wrap.innerHTML = `<div class="list">` + r.orders.map(m => `
+      <div class="card">
+        <div style="font-weight:700; font-size:13px;">${esc(m.name)}</div>
+        <div class="sub" style="margin:4px 0;">🎁 ${esc(m.item)}<br>👥 ${esc(m.recipient||m.name)} · ${esc(m.city)} відд.${esc(m.branch)} · 📱 ${esc(m.phone)}</div>
+        <div class="btn-row">
+          <button class="btn secondary sm" onclick="adminMerchAct('accept', ${m.row})">✅ Прийнято</button>
+          <button class="btn secondary sm" onclick="adminMerchAct('sent', ${m.row})">📬 Відправлено</button>
+          <button class="btn danger sm" onclick="adminMerchAct('cancel', ${m.row})">❌</button>
+        </div>
+      </div>`).join("") + `</div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
+}
+async function adminMerchAct(kind, row){
+  const action = { accept:"admin_merch_accept", sent:"admin_merch_sent", cancel:"admin_merch_cancel" }[kind];
+  const r = await api(action, { row });
+  if (r.ok) { toast("Готово", "ok"); loadAdminMerch(); } else toast("Помилка", "err");
+}
+
+async function adminAction(action, payload, okMsg){
+  try {
+    const r = await api(action, payload || {});
+    if (!r.ok) { toast("Помилка", "err"); return; }
+    toast(okMsg || "Готово", "ok");
+    renderAdmin();
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+
+// ============================================================
+// СТАРТ
+// ============================================================
+boot();
 </script>
 </body>
 </html>
