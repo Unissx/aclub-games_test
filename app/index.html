@@ -652,10 +652,11 @@ function renderGames(){
 
     <div class="game-card">
       <div class="gt">🎰 Щасливчик</div>
-      <div class="gd">Вгадайте число від 1 до 6 і отримайте +${DASH.lucky && DASH.lucky.reward || 3} á-coin миттєво. Спроба ${lucky.used}/${lucky.cap}.</div>
+      <div class="gd" id="luckyGd">Вгадайте число від 1 до 6 і отримайте +${DASH.lucky && DASH.lucky.reward || 3} á-coin миттєво. Спроба ${lucky.used}/${lucky.cap}.</div>
       <div id="luckyPicker" class="btn-row" style="flex-wrap:wrap; gap:6px;">
         ${[1,2,3,4,5,6].map(n => `<button class="btn secondary sm" style="flex:1 1 27%;" onclick="rollLucky(${n})" ${lucky.used>=lucky.cap?'disabled':''}>${n}</button>`).join("")}
       </div>
+      <div id="luckyResult"></div>
     </div>
 
     <div class="game-card">
@@ -744,11 +745,14 @@ function diceFaceSvg(value, extraClass){
   </svg>`;
 }
 async function rollLucky(guess){
+  const resultEl = document.getElementById("luckyResult");
   document.querySelectorAll("#luckyPicker button").forEach(b => b.disabled = true);
-  showModal(`
-    <div class="mh" style="text-align:center;">🎲 Кидаємо...</div>
-    <div style="display:flex; justify-content:center; margin:12px 0;" id="diceFace">${diceFaceSvg(1,'dice-spin')}</div>
-  `);
+  if (!resultEl) return;
+  resultEl.innerHTML = `
+    <div class="card" style="margin-top:10px; background:var(--panel3); border:none;">
+      <div style="display:flex; justify-content:center; margin:4px 0;" id="diceFace">${diceFaceSvg(1,'dice-spin')}</div>
+      <div class="sub" style="text-align:center;">Кидаємо...</div>
+    </div>`;
   const faceEl = document.getElementById("diceFace");
   let spins = 0;
   const spinTimer = setInterval(() => {
@@ -761,7 +765,8 @@ async function rollLucky(guess){
     r = await api("lucky_roll", { guess });
   } catch(e) {
     clearInterval(spinTimer);
-    showModal(`<div class="mh">⚠️ Немає з'єднання</div><div class="sub">Спробуйте ще раз.</div>`);
+    resultEl.innerHTML = `<div class="card" style="margin-top:10px; background:var(--panel3); border:none;"><div class="sub" style="text-align:center; color:var(--danger);">⚠️ Немає з'єднання. Спробуйте ще раз.</div></div>`;
+    document.querySelectorAll("#luckyPicker button").forEach(b => b.disabled = false);
     return;
   }
   await new Promise(res => setTimeout(res, Math.max(0, 550 - spins*90)));
@@ -769,24 +774,30 @@ async function rollLucky(guess){
 
   if (!r.ok) {
     const msg = r.error === "no_attempts_left" ? "Спроби на сьогодні вичерпано. Повертайтесь завтра 🌅" : "Сталася помилка, спробуйте ще раз.";
-    showModal(`<div class="mh">❌ Не вийшло</div><div class="sub">${msg}</div>`);
-    await refreshDashboard(); renderGames();
+    resultEl.innerHTML = `<div class="card" style="margin-top:10px; background:var(--panel3); border:none;"><div class="sub" style="text-align:center;">❌ ${msg}</div></div>`;
+    await refreshDashboard();
+    updateLuckyStatus();
     return;
   }
-  const canRollAgain = r.attemptsLeft > 0;
-  showModal(`
-    <div style="display:flex; justify-content:center; margin:6px 0;">${diceFaceSvg(r.diceVal, 'dice-land')}</div>
-    <div class="mh" style="text-align:center;">${r.isWin ? '🎉 Перемога!' : '😅 Не цього разу'}</div>
-    <div class="sub" style="text-align:center; font-size:14px; margin-bottom:6px;">Випало число: <b style="color:var(--brass-bright); font-size:18px;">${r.diceVal}</b> (ви обрали ${guess})</div>
-    <div class="sub" style="text-align:center;">${r.isWin ? `Нараховано <b style="color:var(--success);">+${r.reward} á-coin</b>` : "Спробуйте ще раз, якщо є спроби."}</div>
-    <div class="sub" style="text-align:center; margin-top:6px;">Спроб залишилось сьогодні: <b>${r.attemptsLeft}</b></div>
-    ${canRollAgain ? `
-      <div class="sub" style="text-align:center; margin-top:12px 0 6px;">Кинути ще раз — оберіть число:</div>
-      <div class="btn-row" style="flex-wrap:wrap; gap:6px; margin-top:6px;">
-        ${[1,2,3,4,5,6].map(n => `<button class="btn secondary sm" style="flex:1 1 27%;" onclick="rollLucky(${n})">${n}</button>`).join("")}
-      </div>` : ''}
-  `);
-  await refreshDashboard(); renderGames();
+  resultEl.innerHTML = `
+    <div class="card" style="margin-top:10px; background:var(--panel3); border:none;">
+      <div style="display:flex; justify-content:center; margin:4px 0;">${diceFaceSvg(r.diceVal, 'dice-land')}</div>
+      <div class="mh" style="text-align:center; font-size:14px;">${r.isWin ? '🎉 Перемога!' : '😅 Не цього разу'}</div>
+      <div class="sub" style="text-align:center; font-size:13px; margin-bottom:4px;">Випало число: <b style="color:var(--brass-bright); font-size:16px;">${r.diceVal}</b> (ви обрали ${guess})</div>
+      <div class="sub" style="text-align:center;">${r.isWin ? `Нараховано <b style="color:var(--success);">+${r.reward} á-coin</b>` : "Спробуйте ще раз, якщо є спроби."}</div>
+      <div class="sub" style="text-align:center; margin-top:4px;">Спроб залишилось сьогодні: <b>${r.attemptsLeft}</b></div>
+    </div>`;
+  await refreshDashboard();
+  updateLuckyStatus();
+}
+// Точкове оновлення статусу "Щасливчика" (лічильник спроб, доступність
+// кнопок) — без повного перемальовування екрана, щоб не стирати
+// щойно показаний результат кидка.
+function updateLuckyStatus(){
+  const gd = document.getElementById("luckyGd");
+  const lucky = (DASH && DASH.lucky) || { used:0, cap:3, reward:3 };
+  if (gd) gd.textContent = `Вгадайте число від 1 до 6 і отримайте +${lucky.reward||3} á-coin миттєво. Спроба ${lucky.used}/${lucky.cap}.`;
+  document.querySelectorAll("#luckyPicker button").forEach(b => b.disabled = lucky.used >= lucky.cap);
 }
 
 // ============================================================
