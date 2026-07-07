@@ -150,14 +150,11 @@ textarea::placeholder, input.field::placeholder{color:var(--text-faint);}
   100%{transform:scale(1) translateY(0); opacity:1;}
 }
 
-/* Кубик "Щасливчика" */
-.dice-spin{animation:diceTumble .55s cubic-bezier(.36,.07,.19,.97) infinite;}
-@keyframes diceTumble{
-  0%{transform:rotate(0deg) scale(1);}
-  25%{transform:rotate(95deg) scale(1.08);}
-  50%{transform:rotate(180deg) scale(.96);}
-  75%{transform:rotate(265deg) scale(1.08);}
-  100%{transform:rotate(360deg) scale(1);}
+/* Кубик "Щасливчика" — рамка стоїть на місці, "крутяться" лише крапки */
+.dice-pips-spin{animation:pipsShuffle .16s ease-in-out infinite alternate; transform-origin:50px 50px;}
+@keyframes pipsShuffle{
+  0%{opacity:.45; transform:scale(.8);}
+  100%{opacity:1; transform:scale(1.12);}
 }
 .dice-land{animation:diceLand .45s cubic-bezier(.34,1.56,.64,1) both;}
 @keyframes diceLand{
@@ -745,9 +742,12 @@ const DICE_PIPS = {
 };
 function diceFaceSvg(value, extraClass){
   const pips = DICE_PIPS[value] || DICE_PIPS[1];
-  return `<svg class="${extraClass||''}" width="76" height="76" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  const isSpinning = extraClass === "dice-spin";
+  return `<svg class="${isSpinning ? '' : (extraClass||'')}" width="76" height="76" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
     <rect x="4" y="4" width="92" height="92" rx="20" fill="var(--panel3)" stroke="var(--brass-bright)" stroke-width="3"/>
-    ${pips.map(([cx,cy]) => `<circle cx="${cx}" cy="${cy}" r="8" fill="var(--brass-bright)"/>`).join("")}
+    <g class="${isSpinning ? 'dice-pips-spin' : ''}">
+      ${pips.map(([cx,cy]) => `<circle cx="${cx}" cy="${cy}" r="8" fill="var(--brass-bright)"/>`).join("")}
+    </g>
   </svg>`;
 }
 async function rollLucky(guess){
