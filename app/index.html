@@ -1802,8 +1802,38 @@ function loadAdminAward(){
       <textarea class="field" id="awardShards" rows="3" placeholder="AB120996RGN 20"></textarea>
       <button class="btn sm" style="margin-top:8px;" onclick="submitAward('shards')">Нарахувати осколки</button>
     </div>
+    <div class="card" style="margin-top:10px;">
+      <div class="field-label">👑 VIP-статус вручну</div>
+      <input class="field" id="vipLdap" placeholder="LDAP співробітника: AB120996RGN">
+      <div class="btn-row" style="margin-top:8px;">
+        <input class="field" id="vipHours" type="number" placeholder="Годин" style="flex:1;">
+        <button class="btn secondary sm" style="flex:1;" onclick="submitAdminVipGrant()">Видати</button>
+      </div>
+      <button class="btn danger sm" style="margin-top:8px;" onclick="submitAdminVipRevoke()">❌ Забрати VIP</button>
+    </div>
     <div class="sub" id="awardResult" style="margin-top:10px; white-space:pre-wrap;"></div>
   `;
+}
+async function submitAdminVipGrant(){
+  const ldap = document.getElementById("vipLdap").value.trim();
+  const hours = parseInt(document.getElementById("vipHours").value);
+  if (!ldap) { toast("Введіть LDAP", "err"); return; }
+  if (!hours || hours<=0) { toast("Вкажіть кількість годин", "err"); return; }
+  try {
+    const r = await api("admin_vip_grant", { ldap, hours });
+    if (!r.ok) { toast(r.error === "user_not_found" ? "Співробітника не знайдено" : "Помилка", "err"); return; }
+    toast(`VIP видано ${r.userName} на ${hours} год.`, "ok");
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function submitAdminVipRevoke(){
+  const ldap = document.getElementById("vipLdap").value.trim();
+  if (!ldap) { toast("Введіть LDAP", "err"); return; }
+  if (!confirm(`Забрати активний VIP-статус у ${ldap}?`)) return;
+  try {
+    const r = await api("admin_vip_revoke", { ldap });
+    if (!r.ok) { toast(r.error === "user_not_found" ? "Співробітника не знайдено" : "Помилка", "err"); return; }
+    toast(r.wasActive ? `VIP забрано у ${r.userName}` : `У ${r.userName} і так не було активного VIP`, "ok");
+  } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 async function submitAward(kind){
   const text = document.getElementById(kind==='coins'?'awardCoins':'awardShards').value.trim();
