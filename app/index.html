@@ -318,8 +318,12 @@ async function boot(){
   clearTimeout(BOOT_WATCHDOG);
 
   if (!ok) {
-    document.getElementById("screen").innerHTML = emptyBlock("⚠️","Не вдалось завантажити","Перевірте інтернет-з'єднання і спробуйте ще раз.")
-      + `<button class="btn" style="margin-top:14px;" onclick="location.reload()">🔄 Спробувати ще раз</button>`;
+    if (LAST_DASHBOARD_ERROR === "admin_only_mode") {
+      document.getElementById("screen").innerHTML = emptyBlock("🚧","Застосунок ще тестується","Зараз доступ мають лише адміни. Незабаром відкриємо для всіх — слідкуйте за оновленнями в чаті з ботом!");
+    } else {
+      document.getElementById("screen").innerHTML = emptyBlock("⚠️","Не вдалось завантажити","Перевірте інтернет-з'єднання і спробуйте ще раз.")
+        + `<button class="btn" style="margin-top:14px;" onclick="location.reload()">🔄 Спробувати ще раз</button>`;
+    }
     renderNav();
     return;
   }
@@ -327,6 +331,7 @@ async function boot(){
   render();
 }
 
+let LAST_DASHBOARD_ERROR = null;
 async function refreshDashboard(){
   try {
     const d = await api("dashboard");
@@ -336,6 +341,7 @@ async function refreshDashboard(){
       document.getElementById("pillShard").textContent = fmt(d.shards||0);
       return true;
     }
+    LAST_DASHBOARD_ERROR = d.error || null;
     return false;
   } catch(e) { toast("Немає з'єднання з сервером", "err"); return false; }
 }
