@@ -149,8 +149,8 @@ const P={
     if(inv>0&&Math.floor(inv/4)%2===0)return;
     const px=this.x,py=Math.round(this.y);
     const run=this.onGround?Math.sin(this.af*Math.PI/2):0;
-    ctx.save();ctx.globalAlpha=.18;ctx.fillStyle='#000';
-    ctx.beginPath();ctx.ellipse(px+s(14),GY+s(2),s(12),s(3),0,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.save();ctx.globalAlpha=.28;ctx.fillStyle='#000';
+    ctx.beginPath();ctx.ellipse(px+s(14),GY+s(2),s(13),s(3.5),0,0,Math.PI*2);ctx.fill();ctx.restore();
     if(shield){ctx.save();ctx.globalAlpha=.5;ctx.strokeStyle='#00e5ff';ctx.lineWidth=s(3);
       ctx.shadowColor='#00e5ff';ctx.shadowBlur=14;ctx.beginPath();ctx.arc(px+s(14),py+PH/2,s(24),0,Math.PI*2);ctx.stroke();
       // Таймер-дуга щита
@@ -167,16 +167,18 @@ const P={
           LC=d?'#ff6090':(SKIN_HUE!=null?`hsl(${SKIN_HUE},${Math.max(0,SKIN_SAT-10)}%,${Math.min(90,SKIN_LIGHT+10)}%)`:'#00a152'),
           SK=d?'#ff6090':'#a5d6a7',
           HC=d?'#c0003c':(SKIN_HUE!=null?`hsl(${SKIN_HUE},${SKIN_SAT}%,${SKIN_LIGHT}%)`:'#00c853');
-    ctx.fillStyle=LC;ctx.beginPath();ctx.roundRect(px+s(4),py+s(26),s(9),s(13)+lo,s(3));ctx.fill();
-    ctx.beginPath();ctx.roundRect(px+s(15),py+s(26),s(9),s(13)-lo,s(3));ctx.fill();
-    ctx.fillStyle=DC;ctx.beginPath();ctx.roundRect(px+s(2),py+s(37)+lo,s(13),s(4),s(2));ctx.fill();
+    ctx.fillStyle=volumeGrad(px+s(4),py+s(26),px+s(4),py+s(39)+lo,LC,14,-18);ctx.beginPath();ctx.roundRect(px+s(4),py+s(26),s(9),s(13)+lo,s(3));ctx.fill();
+    ctx.fillStyle=volumeGrad(px+s(15),py+s(26),px+s(15),py+s(39)-lo,LC,14,-18);ctx.beginPath();ctx.roundRect(px+s(15),py+s(26),s(9),s(13)-lo,s(3));ctx.fill();
+    ctx.fillStyle=shadeColor(DC,-8);ctx.beginPath();ctx.roundRect(px+s(2),py+s(37)+lo,s(13),s(4),s(2));ctx.fill();
     ctx.beginPath();ctx.roundRect(px+s(13),py+s(37)-lo,s(13),s(4),s(2));ctx.fill();
-    ctx.fillStyle=BC;ctx.beginPath();ctx.roundRect(px+s(3),py+s(12),s(22),s(18),s(5));ctx.fill();
+    ctx.fillStyle=volumeGrad(px+s(3),py+s(12),px+s(25),py+s(30),BC,16,-16);ctx.beginPath();ctx.roundRect(px+s(3),py+s(12),s(22),s(18),s(5));ctx.fill();
+    // Блик — легкий об'ємний акцент у верхньому лівому куті торсу
+    ctx.save();ctx.globalAlpha=.22;ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(px+s(9),py+s(16),s(5),s(3),-.3,0,Math.PI*2);ctx.fill();ctx.restore();
     ctx.fillStyle=DC;ctx.font=`bold ${s(11)}px Nunito`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('á',px+s(14),py+s(21));
-    ctx.fillStyle=BC;ctx.beginPath();ctx.roundRect(px-s(3),py+s(13)+arm,s(7),s(12),s(3));ctx.fill();
-    ctx.beginPath();ctx.roundRect(px+s(24),py+s(13)-arm,s(7),s(12),s(3));ctx.fill();
+    ctx.fillStyle=volumeGrad(px-s(3),py+s(13)+arm,px+s(4),py+s(25)+arm,BC,10,-14);ctx.beginPath();ctx.roundRect(px-s(3),py+s(13)+arm,s(7),s(12),s(3));ctx.fill();
+    ctx.fillStyle=volumeGrad(px+s(24),py+s(13)-arm,px+s(31),py+s(25)-arm,BC,10,-14);ctx.beginPath();ctx.roundRect(px+s(24),py+s(13)-arm,s(7),s(12),s(3));ctx.fill();
     ctx.fillStyle=SK;ctx.beginPath();ctx.roundRect(px+s(4),py,s(20),s(16),s(8));ctx.fill();
-    ctx.fillStyle=HC;ctx.beginPath();ctx.roundRect(px+s(3),py-s(3),s(22),s(8),[s(6),s(6),0,0]);ctx.fill();
+    ctx.fillStyle=volumeGrad(px+s(3),py-s(3),px+s(3),py+s(5),HC,18,-12);ctx.beginPath();ctx.roundRect(px+s(3),py-s(3),s(22),s(8),[s(6),s(6),0,0]);ctx.fill();
     ctx.fillStyle='#1a237e';ctx.fillRect(px+s(8),py+s(5),s(3),s(3));ctx.fillRect(px+s(17),py+s(5),s(3),s(3));
     ctx.strokeStyle='#1a237e';ctx.lineWidth=s(1.5);ctx.beginPath();ctx.arc(px+s(14),py+s(11),s(4),0.2,Math.PI-0.2);ctx.stroke();
     // Аксесуар/силует конкретного скіна персонажа — реальна візуальна
@@ -227,6 +229,35 @@ const P={
   box(){return{x:this.x+s(4),y:this.y+s(2),w:s(20),h:PH-s(2)};}
 };
 function s(v){return Math.round(v*SCALE);}
+// ── Об'єм замість плоских кольорів ──────────────────────────
+// shadeColor освітлює/затемнює будь-який колір (і hex, і hsl(...)) на
+// заданий відсоток по яскравості — використовується, щоб будувати
+// градієнти (світліше зверху/збоку — темніше знизу/збоку) замість
+// суцільної заливки, це і дає ефект об'єму без реального 3D-рендеру.
+function _hexToHsl(hex){
+  hex=hex.replace('#','');
+  if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');
+  const r=parseInt(hex.substr(0,2),16)/255, g=parseInt(hex.substr(2,2),16)/255, b=parseInt(hex.substr(4,2),16)/255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b); let h=0,s2=0; const l=(max+min)/2;
+  if(max!==min){const d=max-min; s2=l>0.5?d/(2-max-min):d/(max+min);
+    if(max===r)h=(g-b)/d+(g<b?6:0); else if(max===g)h=(b-r)/d+2; else h=(r-g)/d+4; h*=60;}
+  return [h,s2*100,l*100];
+}
+function shadeColor(c,delta){
+  let h,sa,li;
+  if(c.startsWith('hsl(')){
+    const m=c.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
+    h=parseFloat(m[1]);sa=parseFloat(m[2]);li=parseFloat(m[3]);
+  } else { [h,sa,li]=_hexToHsl(c); }
+  li=Math.max(0,Math.min(100,li+delta));
+  return `hsl(${h},${sa}%,${li}%)`;
+}
+function volumeGrad(x0,y0,x1,y1,base,lightDelta,darkDelta){
+  const g=ctx.createLinearGradient(x0,y0,x1,y1);
+  g.addColorStop(0,shadeColor(base,lightDelta));
+  g.addColorStop(1,shadeColor(base,darkDelta));
+  return g;
+}
 resize();P.y=FL;
 
 const KB=[{w:44,h:58,t:'b'},{w:18,h:92,t:'t'},{w:62,h:46,t:'b'},{w:28,h:72,t:'d'},{w:36,h:52,t:'b'},{w:52,h:62,t:'b'},{w:22,h:82,t:'t'},{w:46,h:42,t:'b'},{w:32,h:98,t:'m'}];
@@ -604,7 +635,7 @@ function drawBoss(){
   boss.anim+=dt;
   const px=boss.x,py=boss.y,bob=Math.sin(boss.anim*.05)*s(4);
   const bc=BOSS_HUE!=null?`hsl(${BOSS_HUE},${BOSS_SAT}%,${BOSS_LIGHT}%)`:(boss.level===1?'#880000':(boss.level===2?'#4a0080':'#004d40'));
-  ctx.fillStyle=bc;ctx.beginPath();ctx.roundRect(px,py+bob,boss.w,boss.h,s(8));ctx.fill();
+  ctx.fillStyle=volumeGrad(px,py+bob,px,py+bob+boss.h,bc,14,-16);ctx.beginPath();ctx.roundRect(px,py+bob,boss.w,boss.h,s(8));ctx.fill();
   ctx.fillStyle=BOSS_HUE!=null?`hsl(${BOSS_HUE},${BOSS_SAT}%,${Math.min(80,BOSS_LIGHT+20)}%)`:(boss.level===1?'#c62828':(boss.level===2?'#7b1fa2':'#00695c'));
   ctx.beginPath();ctx.roundRect(px+boss.w*.13,py+boss.h*.14+bob,boss.w*.74,boss.h*.72,s(6));ctx.fill();
   ctx.save();ctx.shadowColor='#ff1744';ctx.shadowBlur=14;ctx.fillStyle='#ff1744';
@@ -1096,10 +1127,10 @@ function drawBirdHelper(){
   // інакше стандартний жовтий/жовтогарячий залежно від рівня.
   const bodyColor = BIRD_HUE!=null ? `hsl(${BIRD_HUE},${BIRD_SAT}%,${BIRD_LIGHT}%)` : (lvl>=3?'#ff9800':'#ffd740');
   const wingColor = BIRD_HUE!=null ? `hsl(${BIRD_HUE},${BIRD_SAT}%,${Math.max(10,BIRD_LIGHT-15)}%)` : (lvl>=3?'#ff6d00':'#ffcc02');
-  ctx.fillStyle=bodyColor;
+  ctx.fillStyle=volumeGrad(bx-s(14),by-s(9),bx+s(14),by+s(9),bodyColor,16,-16);
   ctx.beginPath();ctx.ellipse(bx,by,s(14),s(9),0,0,Math.PI*2);ctx.fill();
   // Крила
-  ctx.fillStyle=wingColor;
+  ctx.fillStyle=shadeColor(wingColor,-6);
   ctx.beginPath();ctx.moveTo(bx,by-s(3));ctx.quadraticCurveTo(bx-s(18),by-s(14)+flap,bx-s(22),by+s(2));ctx.quadraticCurveTo(bx-s(8),by+s(8),bx,by-s(3));ctx.fill();
   ctx.beginPath();ctx.moveTo(bx,by-s(3));ctx.quadraticCurveTo(bx+s(18),by-s(14)+flap,bx+s(22),by+s(2));ctx.quadraticCurveTo(bx+s(8),by+s(8),bx,by-s(3));ctx.fill();
   // Очі
