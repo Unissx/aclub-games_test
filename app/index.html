@@ -150,6 +150,20 @@ textarea::placeholder, input.field::placeholder{color:var(--text-faint);}
 .chest-glow{position:absolute; left:50%; top:8px; width:70px; height:70px; margin-left:-35px; border-radius:50%;
   background:radial-gradient(circle, rgba(242,200,121,.55), transparent 70%); opacity:0; animation:chestGlow .6s ease-out .25s both;}
 @keyframes chestGlow{0%{opacity:0; transform:scale(.4);} 60%{opacity:1;} 100%{opacity:0; transform:scale(1.6);}}
+.chest-shock{position:absolute; left:50%; top:26px; width:16px; height:16px; margin-left:-8px; border-radius:50%;
+  border:3px solid rgba(255,255,255,.9); opacity:0; animation:chestShock .55s cubic-bezier(.2,.8,.3,1) .18s both;}
+@keyframes chestShock{0%{opacity:.9; transform:scale(.2);} 100%{opacity:0; transform:scale(6);}}
+.chest-flash{position:absolute; left:50%; top:8px; width:90px; height:90px; margin-left:-45px; border-radius:50%;
+  background:radial-gradient(circle, rgba(255,255,255,.95), rgba(255,255,255,0) 65%); opacity:0; animation:chestFlash .35s ease-out .22s both;}
+@keyframes chestFlash{0%{opacity:0; transform:scale(.3);} 40%{opacity:1; transform:scale(1);} 100%{opacity:0; transform:scale(1.3);}}
+.chest-shake{animation:chestShake .4s ease-out .2s both;}
+@keyframes chestShake{
+  0%,100%{transform:translateX(0) rotate(0);}
+  20%{transform:translateX(-4px) rotate(-3deg);}
+  40%{transform:translateX(4px) rotate(3deg);}
+  60%{transform:translateX(-3px) rotate(-2deg);}
+  80%{transform:translateX(3px) rotate(2deg);}
+}
 .chest-spark{position:absolute; top:30px; left:50%; font-size:16px; opacity:0; animation:chestSpark .7s ease-out .3s both;}
 @keyframes chestSpark{
   0%{opacity:0; transform:translate(-50%,0) scale(.4);}
@@ -162,6 +176,14 @@ textarea::placeholder, input.field::placeholder{color:var(--text-faint);}
   60%{transform:scale(1.12) translateY(-5px); opacity:1;}
   100%{transform:scale(1) translateY(0); opacity:1;}
 }
+/* Картка нагороди — яскраво і чітко видно, що саме випало, замість
+   тьмяного дрібного тексту .sub, який губився на фоні. */
+.reward-card{display:flex; align-items:center; gap:10px; margin-top:10px; padding:12px 14px;
+  border-radius:14px; background:var(--panel2); border:1.5px solid var(--rc); box-shadow:0 0 18px rgba(63,224,160,.35), inset 0 1px 0 rgba(255,255,255,.08);
+  background:linear-gradient(155deg, color-mix(in srgb, var(--rc) 18%, var(--panel2)), var(--panel2));
+  box-shadow:0 0 18px color-mix(in srgb, var(--rc) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.08);}
+.reward-card-icon{font-size:28px; flex:none; filter:drop-shadow(0 0 6px var(--rc));}
+.reward-card-text{font-weight:800; font-size:14.5px; color:var(--text); line-height:1.35;}
 
 /* Кубик "Щасливчика" — рамка стоїть на місці, "крутяться" лише крапки */
 .dice-pips-spin{animation:pipsShuffle .16s ease-in-out infinite alternate; transform-origin:50px 50px;}
@@ -1143,19 +1165,33 @@ function chestArtSvg(chestId, size, animated){
 
 // Повна сценка відкриття кейсу для модалки: кришка прочиняється,
 // спалах + пара іскор, і з невеликою затримкою — сам приз "виринає".
+function _rewardVisual(text){
+  const t = String(text||"");
+  if (/осколк/i.test(t))      return { icon:"🔮", color:"#8B7CF6" };
+  if (/VIP|год\.\s*VIP/i.test(t)) return { icon:"👑", color:"#F2C879" };
+  if (/á-coin|💰/i.test(t))   return { icon:"💰", color:"#3FE0A0" };
+  if (/скін|предмет|косметик/i.test(t)) return { icon:"🎨", color:"#3FE0A0" };
+  return { icon:"🎁", color:"#3FE0A0" };
+}
 function chestOpenSceneHtml(chestId, chestName, resultText){
-  const sparks = ["✨","⭐","💫"].map((s,i) => {
-    const dx = [-34, 30, -14][i], delay = 0.28 + i*0.06;
-    return `<div class="chest-spark" style="--dx:${dx}px; animation-delay:${delay}s; left:${45+i*8}%;">${s}</div>`;
+  const sparks = ["✨","⭐","💫","✨"].map((s,i) => {
+    const dx = [-40, 36, -18, 22][i], delay = 0.3 + i*0.07;
+    return `<div class="chest-spark" style="--dx:${dx}px; animation-delay:${delay}s; left:${42+i*6}%;">${s}</div>`;
   }).join("");
+  const rv = _rewardVisual(resultText);
   return `
     <div class="chest-open-wrap">
+      <div class="chest-shock"></div>
+      <div class="chest-flash"></div>
       <div class="chest-glow"></div>
       ${sparks}
-      ${chestArtSvg(chestId, 76, true)}
+      <div class="chest-shake">${chestArtSvg(chestId, 76, true)}</div>
     </div>
     <div class="mh reward-pop" style="text-align:center;">🎉 ${esc(chestName)} відкрито!</div>
-    <div class="sub reward-pop" style="text-align:center;">${esc(resultText).replace(/\*/g,'')}</div>
+    <div class="reward-card reward-pop" style="--rc:${rv.color};">
+      <div class="reward-card-icon">${rv.icon}</div>
+      <div class="reward-card-text">${esc(resultText).replace(/\*/g,'')}</div>
+    </div>
   `;
 }
 
