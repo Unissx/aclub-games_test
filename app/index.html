@@ -83,6 +83,17 @@ body::before{
 .tabs2{display:flex; gap:6px; background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:4px; margin-bottom:12px;}
 .tabs2 .t2{flex:1; text-align:center; padding:8px 4px; border-radius:9px; font-size:12.5px; font-weight:700; color:var(--text-dim);}
 .tabs2 .t2.active{background:var(--panel3); color:var(--text);}
+.admin-tabs{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;}
+.admin-tab{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  padding:12px 6px; border-radius:14px; background:var(--panel2); border:1px solid var(--line);
+  cursor:pointer; transition:background .15s,border-color .15s,transform .1s;}
+.admin-tab:active{transform:scale(.96);}
+.admin-tab .aicon{width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:16px; background:var(--panel3); border:1px solid var(--line);}
+.admin-tab .alabel{font-size:11.5px; font-weight:700; color:var(--text-dim); text-align:center; line-height:1.2;}
+.admin-tab.active{background:rgba(15,169,104,.14); border-color:var(--brass);}
+.admin-tab.active .aicon{background:linear-gradient(155deg,var(--brass-bright),var(--brass)); border-color:transparent; box-shadow:0 2px 8px rgba(15,169,104,.35);}
+.admin-tab.active .alabel{color:var(--text);}
 
 textarea, input.field, select.field{width:100%; background:var(--panel3); border:1px solid var(--line); border-radius:12px; color:var(--text);
   padding:11px 12px; font-size:13.5px; resize:vertical;}
@@ -1652,13 +1663,13 @@ let ADMIN_SUB = "state";
 function renderAdmin(){
   const screen = document.getElementById("screen");
   const tabs = [
-    ["state","📊 Огляд"], ["rebus","🧩 Ребус"], ["tournament","🏆 Турнір"],
-    ["award","💰 Нарахування"], ["skins","🎨 Скіни"], ["admins","👤 Адміни"], ["support","📨 Звернення"], ["merch","📦 Мерч"]
+    ["state","📊","Огляд"], ["rebus","🧩","Ребус"], ["tournament","🏆","Турнір"],
+    ["award","💰","Нарахування"], ["skins","🎨","Скіни"], ["admins","👤","Адміни"], ["support","📨","Звернення"], ["merch","📦","Мерч"]
   ];
   screen.innerHTML = `
     <div class="h1">🔐 Адмін-панель</div>
-    <div class="tabs2" style="flex-wrap:wrap; gap:4px;">
-      ${tabs.map(([id,lb]) => `<div class="t2" style="flex:1 1 30%;" data-asub="${id}">${lb}</div>`).join("")}
+    <div class="admin-tabs">
+      ${tabs.map(([id,icon,lb]) => `<div class="admin-tab" data-asub="${id}"><div class="aicon">${icon}</div><div class="alabel">${lb}</div></div>`).join("")}
     </div>
     <div id="adminBody">${loadingBlock()}</div>
   `;
