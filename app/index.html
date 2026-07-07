@@ -668,6 +668,7 @@ async function playRunner(){
   const style = params.equippedCharacter
     ? (CHARACTER_SKIN_STYLES[params.equippedCharacter] || { hue: _hashHue(params.equippedCharacter), sat: 70, light: 45 })
     : null;
+  const skinShape = params.equippedCharacter ? (CHARACTER_SHAPES[params.equippedCharacter] || "") : "";
   const birdStyle = params.equippedBird
     ? (BIRD_SKIN_STYLES[params.equippedBird] || { hue: _hashHue(params.equippedBird), sat: 70, light: 45 })
     : null;
@@ -678,7 +679,7 @@ async function playRunner(){
     ? (BOSS_SKIN_STYLES[params.equippedBoss] || { hue: _hashHue(params.equippedBoss), sat: 60, light: 35 })
     : null;
   const weatherPreset = params.equippedWeather ? (WEATHER_SKIN_PRESETS[params.equippedWeather] || "") : "";
-  const url = RUNNER_URL + `&bird=${params.bird}&shield=${params.shield}&magnet=${params.magnet}&uspeed=${params.uspeed}&ulives=${params.ulives}${style?`&skinhue=${style.hue}&skinsat=${style.sat}&skinlight=${style.light}`:""}${birdStyle?`&birdhue=${birdStyle.hue}&birdsat=${birdStyle.sat}&birdlight=${birdStyle.light}`:""}${obstacleStyle?`&obshue=${obstacleStyle.hue}&obssat=${obstacleStyle.sat}&obslight=${obstacleStyle.light}`:""}${bossStyle?`&bosshue=${bossStyle.hue}&bosssat=${bossStyle.sat}&bosslight=${bossStyle.light}`:""}${weatherPreset?`&weather=${weatherPreset}`:""}`;
+  const url = RUNNER_URL + `&bird=${params.bird}&shield=${params.shield}&magnet=${params.magnet}&uspeed=${params.uspeed}&ulives=${params.ulives}${style?`&skinhue=${style.hue}&skinsat=${style.sat}&skinlight=${style.light}`:""}${skinShape?`&skinshape=${skinShape}`:""}${birdStyle?`&birdhue=${birdStyle.hue}&birdsat=${birdStyle.sat}&birdlight=${birdStyle.light}`:""}${obstacleStyle?`&obshue=${obstacleStyle.hue}&obssat=${obstacleStyle.sat}&obslight=${obstacleStyle.light}`:""}${bossStyle?`&bosshue=${bossStyle.hue}&bosssat=${bossStyle.sat}&bosslight=${bossStyle.light}`:""}${weatherPreset?`&weather=${weatherPreset}`:""}`;
   openGameFrame(url, "🏃 áClub Runner");
 }
 
@@ -1028,25 +1029,23 @@ function skinIconSvg(poolKey, itemName, size){
   size = size || 44;
   const cat = skinCategoryOf(poolKey);
   const key = itemName || poolKey || "x";
-  const hue = _hashHue(key);
-  const variantIdx = _hashHue(key + "#v") ; // друге, незалежне число для вибору пози/дизайну
-  const c1 = `hsl(${hue},62%,55%)`, c2 = `hsl(${hue},70%,74%)`, c3 = `hsl(${hue},50%,38%)`, bg = `hsl(${hue},38%,16%)`;
+  // Для скіна персонажа використовуємо ТІ Ж САМІ кольори й форму, що й у
+  // самій грі (CHARACTER_SKIN_STYLES / CHARACTER_ICON_ART), а не окремий
+  // хеш-колір — інакше іконка в каталозі могла відрізнятись від реального
+  // вигляду скіна в Runner.
+  const curatedStyle = cat === "character" ? CHARACTER_SKIN_STYLES[key] : null;
+  const hue = curatedStyle ? curatedStyle.hue : _hashHue(key);
+  const sat = curatedStyle ? curatedStyle.sat : 62;
+  const light = curatedStyle ? curatedStyle.light : 55;
+  const variantIdx = _hashHue(key + "#v") ; // друге, незалежне число для вибору пози/дизайну (інші категорії)
+  const c1 = `hsl(${hue},${sat}%,${light}%)`, c2 = `hsl(${hue},${Math.max(0,sat-8)}%,${Math.min(90,light+19)}%)`, c3 = `hsl(${hue},${Math.max(0,sat-12)}%,${Math.max(10,light-17)}%)`, bg = `hsl(${hue},${Math.max(0,sat-24)}%,16%)`;
   let shape = "";
   switch(cat){
     case "character": {
-      const variants = [
-        // 0: бізнес-кежуал — піджак + краватка
+      shape = (CHARACTER_ICON_ART[key] ? CHARACTER_ICON_ART[key](c1,c2,c3,bg) : null) || [
         `<circle cx="50" cy="28" r="13" fill="${c2}"/><path d="M31,88 Q31,52 50,52 Q69,52 69,88 Z" fill="${c1}"/><path d="M46,52 L50,64 L54,52 Z" fill="${c3}"/><rect x="30" y="52" width="8" height="30" rx="2" fill="${c3}" opacity=".6"/><rect x="62" y="52" width="8" height="30" rx="2" fill="${c3}" opacity=".6"/>`,
-        // 1: спортивний біг — нахил уперед, зігнута нога
         `<circle cx="42" cy="26" r="13" fill="${c2}"/><path d="M30,50 Q40,48 50,55 L66,46" stroke="${c1}" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50,55 L44,88 M50,55 L66,80" stroke="${c1}" stroke-width="9" fill="none" stroke-linecap="round"/>`,
-        // 2: скейтер — дошка під ногами
-        `<circle cx="50" cy="26" r="13" fill="${c2}"/><path d="M33,86 Q33,50 50,50 Q67,50 67,86 Z" fill="${c1}"/><rect x="22" y="86" width="56" height="9" rx="4" fill="${c3}"/><circle cx="32" cy="97" r="4" fill="${bg}"/><circle cx="68" cy="97" r="4" fill="${bg}"/>`,
-        // 3: йога — руки вгору, медитація
-        `<circle cx="50" cy="30" r="13" fill="${c2}"/><path d="M35,90 Q35,55 50,55 Q65,55 65,90 Z" fill="${c1}"/><path d="M50,55 L28,32 M50,55 L72,32" stroke="${c1}" stroke-width="8" fill="none" stroke-linecap="round"/>`,
-        // 4: зимовий — шарф і об'ємніший силует
-        `<circle cx="50" cy="30" r="13" fill="${c2}"/><path d="M28,90 Q28,52 50,52 Q72,52 72,90 Z" fill="${c1}"/><rect x="38" y="48" width="24" height="10" rx="4" fill="${c3}"/><rect x="55" y="55" width="8" height="22" rx="3" fill="${c3}"/>`,
-      ];
-      shape = variants[variantIdx % variants.length];
+      ][variantIdx % 2];
       break;
     }
     case "bird": {
