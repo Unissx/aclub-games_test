@@ -516,14 +516,19 @@ async function openItemDetail(row, isMerch, it){
     }
     const pureName = (it.name||"").replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,"");
     const poolKey = findPoolKeyForItem(pureName, pools);
-    const isEquippable = poolKey === "runner_rare_character";
-    const isEquipped = isEquippable && EQUIPPED_SKINS_CACHE["runner_rare_character"] === pureName;
+    // ВАЖЛИВО: раніше екіпіруваним вважався лише скін персонажа Runner
+    // (poolKey === "runner_rare_character"), а всі інші скіни (птиці, погода,
+    // боси, перешкоди, скіни Wordle/Circle) потрапляли в гілку "Використати" —
+    // бекенд позначав предмет використаним, і скін просто зникав з інвентаря
+    // без жодного ефекту. Тепер екіпірується будь-який предмет зі SKIN_POOLS.
+    const isEquippable = !!poolKey;
+    const isEquipped = isEquippable && EQUIPPED_SKINS_CACHE[poolKey] === pureName;
     body = rarityMatch
       ? `<div class="sub" style="margin-bottom:10px;">Оберіть конкретний предмет цієї рідкості.</div>
         <button class="btn" onclick="closeModal(); openCraftPicker(${row}, '${rarityMatch[1]}')">🎁 Обрати предмет</button>
         <button class="btn danger" style="margin-top:8px;" onclick="cancelItem(${row})">❌ Скасувати</button>`
       : isEquippable
-      ? `<div class="sub" style="margin-bottom:10px;">${isEquipped ? '✅ Зараз екіпіровано — застосовано у Runner' : '👤 Скін персонажа для Runner'}</div>
+      ? `<div class="sub" style="margin-bottom:10px;">${isEquipped ? '✅ Зараз екіпіровано — застосовано в грі' : '🎨 Косметичний скін'}</div>
         ${!isEquipped ? `<button class="btn" onclick="equipSkin('${poolKey}','${esc(pureName).replace(/'/g,"\\'")}')">🎨 Екіпірувати</button>` : ''}`
       : selfUse
       ? `<div class="sub" style="margin-bottom:10px;">Предмет з кейсу/крафту — можна використати самостійно, без адміна.</div>
@@ -1269,7 +1274,7 @@ function paintMySkins(){
       const available = g.items.filter(x => x.status === "Не використано");
       const countLabel = g.items.length > 1 ? `<div class="badge" style="position:absolute; top:-4px; right:-4px;">×${g.items.length}</div>` : "";
       const cleanName = g.name.replace(/^Крафт: предмет рівня /,"").replace(/^Крафт: |^Кейс: /,"");
-      const isEquipped = g.poolKey === "runner_rare_character" && EQUIPPED_SKINS_CACHE["runner_rare_character"] === cleanName;
+      const isEquipped = !!g.poolKey && EQUIPPED_SKINS_CACHE[g.poolKey] === cleanName;
       return `<div data-chest-group="${esc(g.name)}" style="cursor:pointer; text-align:center; position:relative;">
         ${countLabel}
         <div style="opacity:${available.length>0?1:.4}; ${isEquipped?'filter:drop-shadow(0 0 6px var(--success));':''}">${skinIconSvg(g.poolKey, g.name, 68)}</div>
@@ -1443,13 +1448,13 @@ function openItemGroup(name){
   const pools = SKINS_CATALOG_CACHE || [];
   const pureName = name.replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,"");
   const poolKey = findPoolKeyForItem(pureName, pools);
-  const isEquippable = poolKey === "runner_rare_character"; // поки що інтегровано лише з Runner
-  const isEquipped = isEquippable && EQUIPPED_SKINS_CACHE["runner_rare_character"] === pureName;
+  const isEquippable = !!poolKey; // будь-який предмет зі SKIN_POOLS можна екіпірувати
+  const isEquipped = isEquippable && EQUIPPED_SKINS_CACHE[poolKey] === pureName;
   showModal(`
     <div style="display:flex; justify-content:center; margin-bottom:8px;">${skinIconSvg(poolKey, name, 84)}</div>
     <div class="mh" style="text-align:center;">${esc(name)} <span class="hint">×${items.length}</span></div>
     ${isEquippable ? `
-      <div class="sub" style="text-align:center; margin-bottom:10px;">${isEquipped ? '✅ Зараз екіпіровано — застосовано у Runner' : '👤 Скін персонажа для Runner'}</div>
+      <div class="sub" style="text-align:center; margin-bottom:10px;">${isEquipped ? '✅ Зараз екіпіровано — застосовано в грі' : '🎨 Косметичний скін'}</div>
       ${!isEquipped ? `<button class="btn" onclick="equipSkin('${poolKey}','${esc(pureName).replace(/'/g,"\\'")}')">🎨 Екіпірувати</button>` : ''}
     ` : `
       <div class="list">${items.map(it => `
