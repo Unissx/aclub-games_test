@@ -95,7 +95,7 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   color:#00e676;line-height:1.5;letter-spacing:1px;}
 .ov-title.lose{color:#ff6090;}
 .ov-word{font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;letter-spacing:4px;color:#ffd740;}
-.ov-reward{font-family:'Press Start 2P',monospace;font-size:16px;color:#ffd740;
+.ov-reward{font-family:'Nunito',sans-serif;font-weight:800;font-size:13.5px;color:#ffd740;line-height:1.4;text-align:center;max-width:300px;
   background:rgba(255,215,64,.1);border:1px solid rgba(255,215,64,.3);border-radius:12px;padding:10px 18px;}
 .ov-text{font-size:13px;color:#90a4ae;max-width:320px;line-height:1.6;}
 .ov-timer{font-size:13px;color:#5b7090;margin-top:4px;}
@@ -461,10 +461,7 @@ function updateGameBadges() {
   const realIsBonusAttempt = isBonusAttempt && slotsLevel > 0;
 
   const nextAttemptNum = Math.min(MAX_ATTEMPTS, attempts.length + 1);
-  const maxReward = realIsBonusAttempt ? 1 : Math.ceil((REWARD_BY_ATTEMPT[nextAttemptNum] || 1) * REWARD_MULT);
-  $('rewardHint').textContent = realIsBonusAttempt
-    ? `💰 фіксована нагорода = 1 á-coin`
-    : `💰 спроба ${nextAttemptNum} = ${maxReward} á-coin`;
+  $('rewardHint').textContent = `🎁 За перемогу — кейс`;
 
   const bonusBadge = $('bonusBadge');
   if (realIsBonusAttempt) {
@@ -781,10 +778,8 @@ async function endGame(won, isTimeout) {
   const attemptCount = attempts.length;
 
   if (won) {
-    const baseReward = REWARD_BY_ATTEMPT[attemptCount] || 1;
-    const reward = Math.ceil(baseReward * REWARD_MULT);
     $('winWord').textContent = WORD;
-    $('winReward').textContent = `+${reward} á`;
+    $('winReward').textContent = '🎁 Рахуємо приз...';
     $('winSaveStatus').textContent = '⏳ Зберігаємо результат...';
     showOverlay('ovWin');
   } else {
@@ -801,7 +796,12 @@ async function endGame(won, isTimeout) {
   const statusEl = won ? $('winSaveStatus') : $('loseSaveStatus');
   if (saved && saved.ok) {
     resultSent = true;
-    statusEl.textContent = won ? '✅ Збережено! 💰' : '✅ Результат збережено.';
+    if (won) {
+      $('winReward').textContent = saved.resultText ? saved.resultText.replace(/\*/g,'') : 'Приз нараховано';
+      statusEl.textContent = '✅ Збережено!';
+    } else {
+      statusEl.textContent = '✅ Результат збережено.';
+    }
     if (!won && saved.attemptsLeft > 0) {
       $('retryBtn').classList.remove('hide');
       statusEl.textContent += ' У тебе ще є спроба!';
@@ -809,7 +809,8 @@ async function endGame(won, isTimeout) {
       statusEl.textContent += ' Наступна гра — через 12 годин.';
     }
   } else {
-    statusEl.innerHTML = '⚠️ Не вдалось зберегти результат.<br>Напиши адміну, якщо монети не з\'явились.';
+    if (won) $('winReward').textContent = '⚠️ Не вдалось порахувати приз';
+    statusEl.innerHTML = '⚠️ Не вдалось зберегти результат.<br>Напиши адміну, якщо приз не з\'явився.';
   }
 }
 
