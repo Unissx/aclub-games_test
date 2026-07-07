@@ -650,7 +650,7 @@ function renderGames(){
           <button class="btn sm" onclick="submitRebusAnswer()">✍️ Відповісти</button>
         </div>` : ""}
       ${rebus.active && rebus.answered ? `
-        <button class="btn secondary sm" onclick="openChangeAnswer(${vipActive})">${vipActive ? '✏️ Змінити відповідь' : '🔒 Змінити відповідь (VIP)'}</button>` : ""}
+        <button class="btn secondary sm" style="${vipActive ? 'background:var(--success); color:#0a2a1c; border-color:var(--success);' : ''}" onclick="openChangeAnswer(${vipActive})">${vipActive ? '✏️ Змінити відповідь' : '🔒 Змінити відповідь (VIP)'}</button>` : ""}
     </div>
 
     <div class="game-card">
@@ -682,9 +682,25 @@ function renderGames(){
   `;
 }
 
-function openChangeAnswer(vipActive){
+async function openChangeAnswer(vipActive){
   if (!vipActive) {
-    showModal(`<div class="mh">🔒 Доступно з VIP</div><div class="sub" style="margin-bottom:12px;">Зміна відповіді після відправки — привілей VIP-статусу.</div><button class="btn" onclick="closeModal(); nav('chests');">👑 Придбати VIP</button>`);
+    const ticketsCount = (DASH.vip && DASH.vip.ticketsCount) || 0;
+    let ticketsHtml = "";
+    if (ticketsCount > 0) {
+      try {
+        const tr = await api("vip_my_tickets");
+        if (tr.ok && tr.tickets.length) {
+          ticketsHtml = `<div class="sub" style="margin:10px 0 6px;">У вас є непроактивований VIP-тикет:</div>
+            <div class="list">${tr.tickets.map(t => `
+              <div class="item"><div class="ic">🎟</div><div class="txt"><div class="t">${esc((VIP_TICKET_DEFS[t.type]||{}).label || t.type)}</div></div>
+              <button class="btn sm" style="width:auto; padding:8px 12px;" onclick="activateVipTicket(${t.row})">Активувати</button></div>
+            `).join("")}</div>`;
+        }
+      } catch(e) {}
+    }
+    showModal(`<div class="mh">🔒 Доступно з VIP</div><div class="sub" style="margin-bottom:12px;">Зміна відповіді після відправки — привілей VIP-статусу.</div>
+      ${ticketsHtml}
+      <button class="btn" style="margin-top:10px;" onclick="closeModal(); nav('inventory');">👑 Придбати VIP</button>`);
     return;
   }
   showModal(`
@@ -1307,7 +1323,9 @@ async function activateVipTicket(row){
     const r = await api("vip_activate_ticket", { row });
     if (!r.ok) { toast("Помилка", "err"); return; }
     toast("VIP активовано! 👑", "ok");
-    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
+    await refreshDashboard();
+    if (TAB === "inventory") { await loadInventoryData(); paintInventory(); }
+    else if (TAB === "games") { closeModal(); renderGames(); }
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 async function claimVipDaily(kind){
