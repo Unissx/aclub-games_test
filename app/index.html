@@ -241,6 +241,14 @@ async function apiRaw(type, payload){
 
 function fmt(n){ return (n ?? 0).toLocaleString("uk-UA"); }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// ПІБ зберігається як "Прізвище Ім'я По-батькові" — для привітання показуємо
+// лише ім'я (друге слово), а не все ПІБ повністю. Скрізь, де ім'я
+// використовується для звірки/пошуку записів (замовлення, ефекти тощо),
+// продовжуємо використовувати повне DASH.name — ця функція лише для показу.
+function firstNameOf(fullName){
+  const parts = String(fullName||"").trim().split(/\s+/);
+  return parts[1] || parts[0] || fullName || "";
+}
 
 function toast(msg, kind){
   const t = document.getElementById("toast");
@@ -390,7 +398,7 @@ function renderHome(){
   if (vip.active) badges.push('<span class="badge ok" style="font-weight:800;">👑 VIP</span>');
   const screen = document.getElementById("screen");
   screen.innerHTML = `
-    <div class="h1">👋 Привіт, ${esc(DASH.name)}!</div>
+    <div class="h1">👋 Привіт, ${esc(firstNameOf(DASH.name))}!</div>
     ${badges.length ? `<div class="row" style="flex-wrap:wrap; gap:6px; margin:-6px 2px 12px;">${badges.join("")}</div>` : ""}
     <div class="stat-row">
       <div class="stat-card coin"><div class="label">Баланс</div><div class="value mono">${fmt(DASH.balance)} 💰</div></div>
@@ -651,7 +659,7 @@ window.addEventListener("message", (e) => {
 // Підтягуємо рівні апгрейдів (максимум, якщо VIP активний) і передаємо
 // їх у query-параметрах, які Runner читає сам при старті.
 async function playRunner(){
-  let params = { bird:0, shield:0, magnet:0, uspeed:0, ulives:0, equippedCharacter:null };
+  let params = { bird:0, shield:0, magnet:0, uspeed:0, ulives:0, equippedCharacter:null, equippedBird:null };
   try {
     const r = await api("runner_launch_params");
     if (r.ok) params = r;
@@ -659,7 +667,10 @@ async function playRunner(){
   const style = params.equippedCharacter
     ? (CHARACTER_SKIN_STYLES[params.equippedCharacter] || { hue: _hashHue(params.equippedCharacter), sat: 70, light: 45 })
     : null;
-  const url = RUNNER_URL + `&bird=${params.bird}&shield=${params.shield}&magnet=${params.magnet}&uspeed=${params.uspeed}&ulives=${params.ulives}${style?`&skinhue=${style.hue}&skinsat=${style.sat}&skinlight=${style.light}`:""}`;
+  const birdStyle = params.equippedBird
+    ? (BIRD_SKIN_STYLES[params.equippedBird] || { hue: _hashHue(params.equippedBird), sat: 70, light: 45 })
+    : null;
+  const url = RUNNER_URL + `&bird=${params.bird}&shield=${params.shield}&magnet=${params.magnet}&uspeed=${params.uspeed}&ulives=${params.ulives}${style?`&skinhue=${style.hue}&skinsat=${style.sat}&skinlight=${style.light}`:""}${birdStyle?`&birdhue=${birdStyle.hue}&birdsat=${birdStyle.sat}&birdlight=${birdStyle.light}`:""}`;
   openGameFrame(url, "🏃 áClub Runner");
 }
 
@@ -1004,6 +1015,30 @@ const CHARACTER_SKIN_STYLES = {
   "Скейтер-новачок":         { hue: 190, sat: 85, light: 50 },
   "Йогин у потоці":          { hue: 275, sat: 60, light: 62 },
   "Зимовий бігун":           { hue: 198, sat: 35, light: 68 },
+};
+// Скін птаха-помічника (runner_epic_bird) — ПОВНІСТЮ окрема категорія від
+// скіна персонажа (runner_rare_character). Раніше в грі взагалі не було
+// візуалізації для скіна птаха (він завжди малювався фіксованим жовтим
+// кольором), тому екіпірування скіна птаха ніяк не мало впливати на людину —
+// якщо це виглядало так, ніби "змінився не той" скін, то тому, що екіпірувати
+// й побачити ефект саме від скіна птаха раніше було просто нізвідки.
+const BIRD_SKIN_STYLES = {
+  "Папужка-помічник": { hue: 145, sat: 75, light: 50 },
+  "Сова-мудрець":     { hue: 30,  sat: 35, light: 42 },
+  "Фламінго-піарник": { hue: 335, sat: 80, light: 65 },
+  "Пінгвін-бухгалтер":{ hue: 210, sat: 15, light: 30 },
+  "Голуб-кур'єр":     { hue: 220, sat: 15, light: 70 },
+  "Тукан-дизайнер":   { hue: 20,  sat: 90, light: 55 },
+  "Синичка-стажерка": { hue: 55,  sat: 85, light: 60 },
+  "Ластівка-таймкіпер":{ hue: 205, sat: 60, light: 35 },
+  "Ворон-дедлайн":    { hue: 260, sat: 30, light: 20 },
+  "Яструб-аудитор":   { hue: 15,  sat: 45, light: 35 },
+  "Грак-конкурент":   { hue: 250, sat: 20, light: 25 },
+  "Сич-критик":       { hue: 40,  sat: 40, light: 45 },
+  "Орел-начальник":   { hue: 35,  sat: 70, light: 40 },
+  "Дрізд-саботажник": { hue: 90,  sat: 30, light: 35 },
+  "Крук-стрес":       { hue: 275, sat: 40, light: 18 },
+  "Сорока-пліткарка": { hue: 0,   sat: 5,  light: 22 },
 };
 function _hashHue(str){
   let h = 0;
