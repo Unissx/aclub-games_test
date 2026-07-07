@@ -640,8 +640,10 @@ async function playRunner(){
     const r = await api("runner_launch_params");
     if (r.ok) params = r;
   } catch(e) {}
-  const hue = params.equippedCharacter ? _hashHue(params.equippedCharacter) : "";
-  const url = RUNNER_URL + `&bird=${params.bird}&shield=${params.shield}&magnet=${params.magnet}&uspeed=${params.uspeed}&ulives=${params.ulives}${hue!==""?`&skinhue=${hue}`:""}`;
+  const style = params.equippedCharacter
+    ? (CHARACTER_SKIN_STYLES[params.equippedCharacter] || { hue: _hashHue(params.equippedCharacter), sat: 70, light: 45 })
+    : null;
+  const url = RUNNER_URL + `&bird=${params.bird}&shield=${params.shield}&magnet=${params.magnet}&uspeed=${params.uspeed}&ulives=${params.ulives}${style?`&skinhue=${style.hue}&skinsat=${style.sat}&skinlight=${style.light}`:""}`;
   openGameFrame(url, "🏃 áClub Runner");
 }
 
@@ -969,6 +971,24 @@ const CHEST_META = {
 // колір під кожну конкретну назву (з хешу тексту) — щоб усі ~96
 // скінів виглядали розрізнювано, без потреби малювати кожен окремо.
 // ============================================================
+// Кураторська палітра для кожного конкретного скіна-персонажа Runner —
+// раніше колір рахувався автоматично через хеш назви (_hashHue), через що
+// частина скінів отримувала майже однаковий або ледь помітний відтінок
+// (наприклад, близький до дефолтного зеленого). Тепер кожен скін має власну,
+// свідомо підібрану комбінацію hue/saturation/lightness — це і усуває
+// "непомітні" скіни, і робить весь набір візуально різноманітнішим.
+const CHARACTER_SKIN_STYLES = {
+  "Класичний бігун":         { hue: 142, sat: 70, light: 45 },
+  "Бізнес-кежуал":           { hue: 212, sat: 55, light: 42 },
+  "Спортивна дівчина":       { hue: 328, sat: 80, light: 58 },
+  "Офісна леді":             { hue: 268, sat: 45, light: 40 },
+  "Ретро-спортсмен":         { hue: 24,  sat: 85, light: 50 },
+  "Хіпстер-кур'єр":          { hue: 42,  sat: 65, light: 38 },
+  "Бізнес-леді на підборах": { hue: 345, sat: 60, light: 32 },
+  "Скейтер-новачок":         { hue: 190, sat: 85, light: 50 },
+  "Йогин у потоці":          { hue: 275, sat: 60, light: 62 },
+  "Зимовий бігун":           { hue: 198, sat: 35, light: 68 },
+};
 function _hashHue(str){
   let h = 0;
   for (let i=0;i<str.length;i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
