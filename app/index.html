@@ -989,6 +989,7 @@ function chestOpenSceneHtml(chestId, chestName, resultText){
 
 function dropLabel(d){
   if (d.label) return d.label;
+  if (d.pool) return `Косметика рівня ${d.rarity} (сюрприз)`;
   if (d.type === "coins") return d.amount + " á-coin";
   if (d.type === "shard") return d.amount + " осколок";
   if (d.type === "vipHours") return d.amount + " год. VIP (у банк)";
@@ -1256,11 +1257,6 @@ function chestItemsListHtml(){
     </div>`;
   }).join("");
 }
-const CRAFT_ITEM_CATALOG_CLIENT = {
-  Rare: ["Жіночий скін у Runner", "Нестандартний чоловічий скін у Runner", "Візуал таймера"],
-  Epic: ["Зміна фону у «Вгадай слово»", "Набір скінів на перешкоди Runner", "Скін на птаха у Runner"],
-  Legendary: ["Погода у Runner", "Скін на боса", "Візуал клавіатури у «Вгадай слово»"],
-};
 function openItemGroup(name){
   const items = CHEST_ITEMS_STATE.filter(it => (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim() === name);
   const rarityMatch = name.match(/^Крафт: предмет рівня (Rare|Epic|Legendary)$/);
@@ -1276,16 +1272,20 @@ function openItemGroup(name){
     `).join("")}</div>
   `);
 }
-function openCraftPicker(row, rarity){
-  const items = CRAFT_ITEM_CATALOG_CLIENT[rarity] || [];
-  showModal(`
-    <div class="mh">🎁 Оберіть предмет <span class="hint">${esc(rarity)}</span></div>
-    <div class="list">${items.map(it => `
-      <div class="item" style="cursor:pointer" onclick="pickCraftItem(${row}, '${esc(it).replace(/'/g,"\\'")}')">
-        <div class="txt"><div class="t">${esc(it)}</div></div><div class="right">→</div>
-      </div>
-    `).join("")}</div>
-  `);
+async function openCraftPicker(row, rarity){
+  showModal(`<div class="mh">🎁 Оберіть предмет <span class="hint">${esc(rarity)}</span></div>${loadingBlock()}`);
+  try {
+    const r = await api("craft_catalog_get");
+    const items = (r.ok && r.catalog[rarity]) || [];
+    showModal(`
+      <div class="mh">🎁 Оберіть предмет <span class="hint">${esc(rarity)}</span></div>
+      <div class="list">${items.map(it => `
+        <div class="item" style="cursor:pointer" onclick="pickCraftItem(${row}, '${esc(it).replace(/'/g,"\\'")}')">
+          <div class="txt"><div class="t">${esc(it)}</div></div><div class="right">→</div>
+        </div>
+      `).join("")}</div>
+    `);
+  } catch(e) { showModal(`<div class="mh">⚠️ Немає з'єднання</div>`); }
 }
 async function pickCraftItem(row, itemName){
   try {
@@ -1446,7 +1446,7 @@ function renderAdmin(){
   const screen = document.getElementById("screen");
   const tabs = [
     ["state","📊 Огляд"], ["rebus","🧩 Ребус"], ["tournament","🏆 Турнір"],
-    ["award","💰 Нарахування"], ["admins","👤 Адміни"], ["support","📨 Звернення"], ["merch","📦 Мерч"]
+    ["award","💰 Нарахування"], ["skins","🎨 Скіни"], ["admins","👤 Адміни"], ["support","📨 Звернення"], ["merch","📦 Мерч"]
   ];
   screen.innerHTML = `
     <div class="h1">🔐 Адмін-панель</div>
@@ -1459,8 +1459,64 @@ function renderAdmin(){
     if (el.getAttribute("data-asub") === ADMIN_SUB) el.classList.add("active");
     el.addEventListener("click", () => { ADMIN_SUB = el.getAttribute("data-asub"); renderAdmin(); });
   });
-  const loaders = { state:loadAdminState, rebus:loadAdminRebus, tournament:loadAdminTournament, award:loadAdminAward, admins:loadAdminAdmins, support:loadAdminSupport, merch:loadAdminMerch };
+  const loaders = { state:loadAdminState, rebus:loadAdminRebus, tournament:loadAdminTournament, award:loadAdminAward, skins:loadAdminSkins, admins:loadAdminAdmins, support:loadAdminSupport, merch:loadAdminMerch };
   (loaders[ADMIN_SUB] || loadAdminState)();
+}
+
+let ADMIN_SKINS_CATALOG = null;
+async function loadAdminSkins(){
+  const wrap = document.getElementById("adminBody");
+  try {
+    if (!ADMIN_SKINS_CATALOG) {
+      const r = await api("admin_skins_catalog");
+      if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+      ADMIN_SKINS_CATALOG = r.pools;
+    }
+    wrap.innerHTML = `
+      <div class="card">
+        <div style="font-weight:700; font-size:13.5px; margin-bottom:8px;">🎁 Видати скін вручну</div>
+        <div class="field-label">LDAP співробітника</div>
+        <input class="field" id="skinGrantLdap" placeholder="AB120996RGN">
+        <div class="field-label">Категорія</div>
+        <select class="field" id="skinGrantPool" onchange="renderSkinItemSelect()">
+          ${ADMIN_SKINS_CATALOG.map(p => `<option value="${p.key}">${esc(p.label)}</option>`).join("")}
+        </select>
+        <div class="field-label">Конкретний предмет</div>
+        <select class="field" id="skinGrantItem"></select>
+        <button class="btn sm" style="margin-top:10px;" onclick="submitGrantSkin()">✅ Видати</button>
+      </div>
+
+      <div class="h2">Каталог усіх скінів <span class="hint">${ADMIN_SKINS_CATALOG.reduce((s,p)=>s+p.items.length,0)} шт.</span></div>
+      <div class="list">${ADMIN_SKINS_CATALOG.map(p => `
+        <div class="card">
+          <div style="font-weight:700; font-size:13px; margin-bottom:6px;">${esc(p.label)} <span class="badge">${p.items.length}</span></div>
+          <div class="sub" style="line-height:1.6;">${p.items.map(it => esc(it)).join(" · ")}</div>
+        </div>
+      `).join("")}</div>
+    `;
+    renderSkinItemSelect();
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+function renderSkinItemSelect(){
+  const poolKey = document.getElementById("skinGrantPool").value;
+  const pool = ADMIN_SKINS_CATALOG.find(p => p.key === poolKey);
+  const sel = document.getElementById("skinGrantItem");
+  sel.innerHTML = (pool ? pool.items : []).map(it => `<option value="${esc(it)}">${esc(it)}</option>`).join("");
+}
+async function submitGrantSkin(){
+  const ldap = document.getElementById("skinGrantLdap").value.trim();
+  const poolKey = document.getElementById("skinGrantPool").value;
+  const itemName = document.getElementById("skinGrantItem").value;
+  if (!ldap) { toast("Введіть LDAP", "err"); return; }
+  if (!itemName) { toast("Оберіть предмет", "err"); return; }
+  try {
+    const r = await api("admin_grant_skin", { ldap, poolKey, itemName });
+    if (!r.ok) {
+      const msg = r.error === "user_not_found" ? "Співробітника з таким LDAP не знайдено (або він ще не зареєстрований у застосунку)" : "Помилка";
+      toast(msg, "err"); return;
+    }
+    toast(`Видано «${itemName}» користувачу ${r.userName}`, "ok");
+  } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 
 async function loadAdminState(){
