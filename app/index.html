@@ -84,8 +84,10 @@ body::before{
 .tabs2 .t2{flex:1; text-align:center; padding:8px 4px; border-radius:9px; font-size:12.5px; font-weight:700; color:var(--text-dim);}
 .tabs2 .t2.active{background:var(--panel3); color:var(--text);}
 
-textarea, input.field{width:100%; background:var(--panel3); border:1px solid var(--line); border-radius:12px; color:var(--text);
+textarea, input.field, select.field{width:100%; background:var(--panel3); border:1px solid var(--line); border-radius:12px; color:var(--text);
   padding:11px 12px; font-size:13.5px; resize:vertical;}
+select.field{appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238890AA' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; background-size:16px; padding-right:34px;}
+select.field option{background:var(--panel3); color:var(--text);}
 textarea::placeholder, input.field::placeholder{color:var(--text-faint);}
 .field-label{font-size:11.5px; color:var(--text-faint); margin:10px 2px 5px;}
 
@@ -492,7 +494,7 @@ async function loadMyItems(containerId){
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
 }
 
-function openItemDetail(row, isMerch, it){
+async function openItemDetail(row, isMerch, it){
   const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
   let body = "";
   if (isMerch) {
@@ -508,10 +510,21 @@ function openItemDetail(row, isMerch, it){
   } else {
     const selfUse = /^Кейс:|^Крафт:/.test(it.name || "");
     const rarityMatch = (it.name || "").match(/^Крафт: предмет рівня (Rare|Epic|Legendary)$/);
+    const pools = SKINS_CATALOG_CACHE || (await loadSkinsCatalog());
+    if (!Object.keys(EQUIPPED_SKINS_CACHE).length) {
+      try { const eq = await api("get_equipped_skins"); if (eq.ok) EQUIPPED_SKINS_CACHE = eq.equipped; } catch(e) {}
+    }
+    const pureName = (it.name||"").replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,"");
+    const poolKey = findPoolKeyForItem(pureName, pools);
+    const isEquippable = poolKey === "runner_rare_character";
+    const isEquipped = isEquippable && EQUIPPED_SKINS_CACHE["runner_rare_character"] === pureName;
     body = rarityMatch
       ? `<div class="sub" style="margin-bottom:10px;">Оберіть конкретний предмет цієї рідкості.</div>
         <button class="btn" onclick="closeModal(); openCraftPicker(${row}, '${rarityMatch[1]}')">🎁 Обрати предмет</button>
         <button class="btn danger" style="margin-top:8px;" onclick="cancelItem(${row})">❌ Скасувати</button>`
+      : isEquippable
+      ? `<div class="sub" style="margin-bottom:10px;">${isEquipped ? '✅ Зараз екіпіровано — застосовано у Runner' : '👤 Скін персонажа для Runner'}</div>
+        ${!isEquipped ? `<button class="btn" onclick="equipSkin('${poolKey}','${esc(pureName).replace(/'/g,"\\'")}')">🎨 Екіпірувати</button>` : ''}`
       : selfUse
       ? `<div class="sub" style="margin-bottom:10px;">Предмет з кейсу/крафту — можна використати самостійно, без адміна.</div>
         <button class="btn" onclick="selfUseItem(${row})">✅ Використати</button>
@@ -1415,16 +1428,19 @@ function openItemGroup(name){
   showModal(`
     <div style="display:flex; justify-content:center; margin-bottom:8px;">${skinIconSvg(poolKey, name, 84)}</div>
     <div class="mh" style="text-align:center;">${esc(name)} <span class="hint">×${items.length}</span></div>
-    ${isEquippable ? `<div class="sub" style="text-align:center; margin-bottom:10px;">${isEquipped ? '✅ Зараз екіпіровано — застосовано у Runner' : '👤 Скін персонажа для Runner'}</div>` : ''}
-    ${isEquippable && !isEquipped ? `<button class="btn" style="margin-bottom:10px;" onclick="equipSkin('${poolKey}','${esc(pureName).replace(/'/g,"\\'")}')">🎨 Екіпірувати</button>` : ''}
-    <div class="list">${items.map(it => `
-      <div class="item">
-        <div class="txt"><div class="t">${it.status==='Не використано' ? '⏳ Не використано' : '✅ Використано'}</div><div class="s">${esc(it.comment||'')}</div></div>
-        ${it.status==='Не використано' ? (rarityMatch
-          ? `<button class="btn sm" style="width:auto; padding:8px 14px;" onclick="openCraftPicker(${it.row}, '${rarityMatch[1]}')">Обрати предмет</button>`
-          : `<button class="btn sm" style="width:auto; padding:8px 14px;" onclick="selfUseItem(${it.row})">Використати</button>`) : ''}
-      </div>
-    `).join("")}</div>
+    ${isEquippable ? `
+      <div class="sub" style="text-align:center; margin-bottom:10px;">${isEquipped ? '✅ Зараз екіпіровано — застосовано у Runner' : '👤 Скін персонажа для Runner'}</div>
+      ${!isEquipped ? `<button class="btn" onclick="equipSkin('${poolKey}','${esc(pureName).replace(/'/g,"\\'")}')">🎨 Екіпірувати</button>` : ''}
+    ` : `
+      <div class="list">${items.map(it => `
+        <div class="item">
+          <div class="txt"><div class="t">${it.status==='Не використано' ? '⏳ Не використано' : '✅ Використано'}</div><div class="s">${esc(it.comment||'')}</div></div>
+          ${it.status==='Не використано' ? (rarityMatch
+            ? `<button class="btn sm" style="width:auto; padding:8px 14px;" onclick="openCraftPicker(${it.row}, '${rarityMatch[1]}')">Обрати предмет</button>`
+            : `<button class="btn sm" style="width:auto; padding:8px 14px;" onclick="selfUseItem(${it.row})">Використати</button>`) : ''}
+        </div>
+      `).join("")}</div>
+    `}
   `);
 }
 async function equipSkin(poolKey, itemName){
