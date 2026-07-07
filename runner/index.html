@@ -179,6 +179,50 @@ const P={
     ctx.fillStyle=HC;ctx.beginPath();ctx.roundRect(px+s(3),py-s(3),s(22),s(8),[s(6),s(6),0,0]);ctx.fill();
     ctx.fillStyle='#1a237e';ctx.fillRect(px+s(8),py+s(5),s(3),s(3));ctx.fillRect(px+s(17),py+s(5),s(3),s(3));
     ctx.strokeStyle='#1a237e';ctx.lineWidth=s(1.5);ctx.beginPath();ctx.arc(px+s(14),py+s(11),s(4),0.2,Math.PI-0.2);ctx.stroke();
+    // Аксесуар/силует конкретного скіна персонажа — реальна візуальна
+    // відмінність, а не лише колір. SKIN_SHAPE приходить із застосунку
+    // (CHARACTER_SHAPES) і однозначно відповідає екіпірованому скіну.
+    if(SKIN_SHAPE){
+      ctx.save();
+      if(SKIN_SHAPE==='suit'){
+        // Краватка поверх торсу
+        ctx.fillStyle=DC;ctx.beginPath();ctx.moveTo(px+s(12),py+s(14));ctx.lineTo(px+s(16),py+s(14));ctx.lineTo(px+s(15),py+s(26));ctx.lineTo(px+s(14),py+s(29));ctx.lineTo(px+s(13),py+s(26));ctx.fill();
+        ctx.fillStyle='#fff';ctx.fillRect(px+s(3),py+s(12),s(4),s(6));ctx.fillRect(px+s(21),py+s(12),s(4),s(6));
+      } else if(SKIN_SHAPE==='sporty_girl'){
+        // Хвостик волосся ззаду + пов'язка
+        ctx.fillStyle=DC;ctx.beginPath();ctx.ellipse(px+s(24),py+s(2),s(4),s(7),0.4,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=LC;ctx.fillRect(px+s(2),py-s(1),s(24),s(4));
+      } else if(SKIN_SHAPE==='office_lady'){
+        // Спідниця замість штанів (трапеція над ногами)
+        ctx.fillStyle=DC;ctx.beginPath();ctx.moveTo(px+s(2),py+s(26));ctx.lineTo(px+s(26),py+s(26));ctx.lineTo(px+s(23),py+s(36));ctx.lineTo(px+s(5),py+s(36));ctx.fill();
+      } else if(SKIN_SHAPE==='retro'){
+        // Пов'язка на голові + смуга на торсі
+        ctx.fillStyle='#fff';ctx.fillRect(px+s(2),py+s(2),s(24),s(3));
+        ctx.fillStyle=DC;ctx.fillRect(px+s(3),py+s(18),s(22),s(3));
+      } else if(SKIN_SHAPE==='hipster'){
+        // Сумка-месенджер через плече
+        ctx.strokeStyle=DC;ctx.lineWidth=s(3);ctx.beginPath();ctx.moveTo(px+s(2),py+s(12));ctx.lineTo(px+s(24),py+s(30));ctx.stroke();
+        ctx.fillStyle=DC;ctx.beginPath();ctx.roundRect(px+s(18),py+s(28),s(9),s(8),s(2));ctx.fill();
+      } else if(SKIN_SHAPE==='heels'){
+        // Тонкі підбори замість звичайних ступень
+        ctx.fillStyle=DC;ctx.fillRect(px+s(6),py+s(39)+lo,s(2),s(4));ctx.fillRect(px+s(20),py+s(39)-lo,s(2),s(4));
+        ctx.fillStyle=DC;ctx.beginPath();ctx.moveTo(px+s(3),py+s(14));ctx.lineTo(px+s(25),py+s(14));ctx.lineTo(px+s(20),py+s(24));ctx.lineTo(px+s(8),py+s(24));ctx.fill();
+      } else if(SKIN_SHAPE==='skater'){
+        // Дошка під ногами
+        ctx.fillStyle=DC;ctx.beginPath();ctx.roundRect(px-s(2),py+s(41),s(30),s(3),s(2));ctx.fill();
+        ctx.fillStyle=HC;ctx.beginPath();ctx.arc(px+s(14),py+s(2),s(11),Math.PI,0);ctx.fill();
+      } else if(SKIN_SHAPE==='yoga'){
+        // Крапка на лобі (акцент медитації) + схрещені ноги внизу
+        ctx.fillStyle=DC;ctx.beginPath();ctx.arc(px+s(14),py+s(4),s(1.5),0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=BC;ctx.beginPath();ctx.ellipse(px+s(14),py+s(40),s(13),s(5),0,0,Math.PI*2);ctx.fill();
+      } else if(SKIN_SHAPE==='winter'){
+        // Шарф + пухнаста шапка
+        ctx.fillStyle=DC;ctx.beginPath();ctx.roundRect(px+s(2),py+s(13),s(24),s(5),s(2));ctx.fill();
+        ctx.fillRect(px+s(16),py+s(17),s(5),s(9));
+        ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px+s(14),py-s(4),s(5),0,Math.PI*2);ctx.fill();
+      }
+      ctx.restore();
+    }
   },
   box(){return{x:this.x+s(4),y:this.y+s(2),w:s(20),h:PH-s(2)};}
 };
@@ -898,7 +942,7 @@ function getTg(){
 
 // Апгрейди читаються динамічно при старті гри
 let _upgrades={bird:0,shield:0,magnet:0,speed:0,lives:0};
-let SKIN_HUE=null, SKIN_SAT=70, SKIN_LIGHT=45; // колір екіпірованого скіна персонажа (з застосунку áClub), null = стандартний вигляд
+let SKIN_HUE=null, SKIN_SAT=70, SKIN_LIGHT=45, SKIN_SHAPE=null; // колір + силует екіпірованого скіна персонажа, null = стандартний вигляд
 let BIRD_HUE=null, BIRD_SAT=70, BIRD_LIGHT=50; // колір екіпірованого скіна ПТАХА-помічника — окремо від персонажа
 let OBS_HUE=null, OBS_SAT=70, OBS_LIGHT=50;    // тон екіпірованого скіна набору перешкод
 let BOSS_HUE=null, BOSS_SAT=60, BOSS_LIGHT=35; // тон екіпірованого скіна боса
@@ -920,6 +964,7 @@ function readUpgrades(){
   const lightRaw=fromQuery.get('skinlight')||fromHash.get('skinlight');
   SKIN_SAT=(satRaw!==null && satRaw!=='') ? parseInt(satRaw) : 70;
   SKIN_LIGHT=(lightRaw!==null && lightRaw!=='') ? parseInt(lightRaw) : 45;
+  SKIN_SHAPE=fromQuery.get('skinshape')||fromHash.get('skinshape')||null;
 
   // Скін птаха-помічника — окремі параметри, ніяк не пов'язані з SKIN_HUE
   // персонажа. Раніше такого механізму не було взагалі, тому екіпірування
