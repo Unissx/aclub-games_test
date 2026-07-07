@@ -142,10 +142,10 @@ textarea::placeholder, input.field::placeholder{color:var(--text-faint);}
 
 /* Анімація відкриття кейсу */
 .chest-open-wrap{position:relative; display:flex; justify-content:center; align-items:flex-end; height:96px; margin-bottom:6px;}
-.chest-lid-anim{transform-origin:50px 16px; animation:chestLidOpen .5s cubic-bezier(.25,.9,.35,1) .1s both;}
+.chest-lid-anim{transform-origin:50px 40px; animation:chestLidOpen .5s cubic-bezier(.25,.9,.35,1) .1s both;}
 @keyframes chestLidOpen{
-  0%{transform:rotate(0deg) translateY(0);}
-  100%{transform:rotate(-58deg) translateY(-3px);}
+  0%{transform:translateY(0) rotate(0deg);}
+  100%{transform:translateY(-16px) rotate(-24deg);}
 }
 .chest-glow{position:absolute; left:50%; top:8px; width:70px; height:70px; margin-left:-35px; border-radius:50%;
   background:radial-gradient(circle, rgba(242,200,121,.55), transparent 70%); opacity:0; animation:chestGlow .6s ease-out .25s both;}
