@@ -326,6 +326,20 @@ function drawBG(){
     ctx.fillStyle=loc.sky[1];ctx.beginPath();ctx.arc(W-s(49),s(24),s(12),0,Math.PI*2);ctx.fill();ctx.restore();
   }
 
+  // Веселка — для пресету "Веселка успіху" (WEATHER_PRESET==='rainbow')
+  // Раніше цей скін відрізнявся лише кольорами неба/землі, як і будь-який
+  // інший пресет — тепер додається СПРАВЖНЯ дуга веселки на небі.
+  if(WEATHER_PRESET==='rainbow'){
+    ctx.save();
+    const cx=W*.62, cy=GY+s(30), rBase=Math.min(W,H)*.42;
+    const bandColors=['#ff1744','#ff9100','#ffea00','#00e676','#2979ff','#8e24aa'];
+    bandColors.forEach((col,i)=>{
+      ctx.strokeStyle=col;ctx.lineWidth=s(6);ctx.globalAlpha=.85;
+      ctx.beginPath();ctx.arc(cx,cy,rBase-i*s(7),Math.PI,2*Math.PI);ctx.stroke();
+    });
+    ctx.restore();
+  }
+
   // Туман
   if(loc.fog){
     ctx.save();ctx.globalAlpha=0.15+Math.sin(bgOff*.001)*.05;
@@ -474,6 +488,32 @@ const OT=[
   {id:'box',w:30,h:30,draw(x,y,w,h){ctx.fillStyle='#e65100';ctx.beginPath();ctx.roundRect(x,y,w,h,s(4));ctx.fill();ctx.fillStyle='#ff8f00';ctx.beginPath();ctx.roundRect(x+s(2),y+s(2),w-s(4),h/2-s(3),s(3));ctx.fill();ctx.fillStyle='#bf360c';ctx.fillRect(x,y+h/2-s(2),w,s(4));ctx.fillRect(x+w/2-s(2),y,s(4),h);ctx.strokeStyle='#ffcc02';ctx.lineWidth=s(1.5);ctx.beginPath();ctx.roundRect(x+s(1),y+s(1),w-s(2),h-s(2),s(3));ctx.stroke();}},
   {id:'spike',w:26,h:36,draw(x,y,w,h){ctx.fillStyle='#4a148c';ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x+w/2,y);ctx.lineTo(x+w,y+h);ctx.fill();ctx.fillStyle='#9c27b0';ctx.beginPath();ctx.moveTo(x+w*.19,y+h);ctx.lineTo(x+w/2,y+h*.17);ctx.lineTo(x+w*.81,y+h);ctx.fill();ctx.strokeStyle='#e040fb';ctx.lineWidth=s(1);ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x+w/2,y);ctx.lineTo(x+w,y+h);ctx.stroke();}},
 ];
+// Кіберпанк-варіант перешкод — неонові вежі-хмарочоси замість конусів/
+// бар'єрів. Раніше цей скін лише тонував (hue-затемнення) СТАНДАРТНІ
+// форми; тепер, якщо екіпіровано саме "Кіберпанк-набір перешкод"
+// (OBS_SHAPE==='cyberpunk'), перешкоди малюються повністю по-іншому —
+// вузькі неонові вежі зі сканлайнами — і не залежать від початкового id.
+function drawObstacleCyberpunk(o){
+  const x=o.x,y=o.isPit?GY-s(4):o.y,w=o.w,h=o.isPit?s(70):o.h;
+  const hue=OBS_HUE!=null?OBS_HUE:315;
+  const neon=`hsl(${hue},90%,60%)`, dark=`hsl(${hue},60%,14%)`;
+  if(o.isPit){ // яма лишається ямою — просто в неоновому стилі
+    ctx.fillStyle='#020208';ctx.fillRect(x,GY,w,H-GY);
+    ctx.strokeStyle=neon;ctx.lineWidth=s(2);ctx.shadowColor=neon;ctx.shadowBlur=8;
+    ctx.beginPath();ctx.moveTo(x,GY);ctx.lineTo(x,H);ctx.moveTo(x+w,GY);ctx.lineTo(x+w,H);ctx.stroke();
+    ctx.shadowBlur=0;
+    return;
+  }
+  ctx.save();
+  ctx.fillStyle=dark;ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle=neon;ctx.lineWidth=s(2);ctx.shadowColor=neon;ctx.shadowBlur=10;
+  ctx.strokeRect(x+1,y+1,w-2,h-2);
+  ctx.shadowBlur=0;ctx.globalAlpha=.8;
+  for(let sy=y+s(6);sy<y+h-s(3);sy+=s(9)){
+    ctx.fillStyle=neon;ctx.fillRect(x+s(2),sy,w-s(4),s(2));
+  }
+  ctx.restore();
+}
 
 function safeGapPx(){
   const reactionSec=Math.max(1.4,1.4+(speed-4.5)*0.08);
@@ -643,6 +683,68 @@ function drawBoss(){
   ctx.beginPath();ctx.arc(px+boss.w*.7,py+boss.h*.37+bob,s(8),0,Math.PI*2);ctx.fill();ctx.restore();
   ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px+boss.w*.33,py+boss.h*.37+bob,s(3.5),0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.arc(px+boss.w*.67,py+boss.h*.37+bob,s(3.5),0,Math.PI*2);ctx.fill();
+
+  // ─ Аксесуари конкретного боса (BOSS_SHAPE) — реальна візуальна
+  // відмінність, а не лише колір/hue. Раніше всі боси малювались
+  // однаковим "гуманоїдним" блоком, відрізняючись лише кольором за рівнем.
+  if(BOSS_SHAPE){
+    ctx.save();
+    if(BOSS_SHAPE==='dragon'){
+      // Роги + крила + хвіст-шип
+      ctx.fillStyle=shadeColor(bc,-20);
+      ctx.beginPath();ctx.moveTo(px+boss.w*.2,py+bob);ctx.lineTo(px+boss.w*.12,py+bob-s(16));ctx.lineTo(px+boss.w*.32,py+bob+s(2));ctx.fill();
+      ctx.beginPath();ctx.moveTo(px+boss.w*.8,py+bob);ctx.lineTo(px+boss.w*.88,py+bob-s(16));ctx.lineTo(px+boss.w*.68,py+bob+s(2));ctx.fill();
+      ctx.fillStyle=shadeColor(bc,10);ctx.globalAlpha=.9;
+      ctx.beginPath();ctx.moveTo(px-s(4),py+bob+boss.h*.3);ctx.lineTo(px-s(22),py+bob+boss.h*.05);ctx.lineTo(px-s(6),py+bob+boss.h*.55);ctx.fill();
+      ctx.beginPath();ctx.moveTo(px+boss.w+s(4),py+bob+boss.h*.3);ctx.lineTo(px+boss.w+s(22),py+bob+boss.h*.05);ctx.lineTo(px+boss.w+s(6),py+bob+boss.h*.55);ctx.fill();
+      ctx.globalAlpha=1;ctx.fillStyle=shadeColor(bc,-10);
+      ctx.beginPath();ctx.moveTo(px+boss.w*.5,py+bob+boss.h);ctx.lineTo(px+boss.w*.5+s(6),py+bob+boss.h+s(14));ctx.lineTo(px+boss.w*.5-s(6),py+bob+boss.h+s(10));ctx.fill();
+    } else if(BOSS_SHAPE==='robot'){
+      // Антена + прямокутний "екранний" рот
+      ctx.strokeStyle=shadeColor(bc,20);ctx.lineWidth=s(2);
+      ctx.beginPath();ctx.moveTo(px+boss.w*.5,py+bob);ctx.lineTo(px+boss.w*.5,py+bob-s(12));ctx.stroke();
+      ctx.fillStyle='#ff1744';ctx.beginPath();ctx.arc(px+boss.w*.5,py+bob-s(12),s(3),0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#0a0a0a';ctx.fillRect(px+boss.w*.32,py+bob+boss.h*.55,boss.w*.36,s(6));
+      ctx.fillStyle='#4fc3f7';for(let i=0;i<3;i++)ctx.fillRect(px+boss.w*.32+i*s(9),py+bob+boss.h*.55+s(1),s(5),s(4));
+    } else if(BOSS_SHAPE==='printer'){
+      // Слот подачі паперу зверху + аркуш що виходить
+      ctx.fillStyle=shadeColor(bc,-14);ctx.fillRect(px+boss.w*.1,py+bob-s(6),boss.w*.8,s(8));
+      ctx.fillStyle='#f5f5f5';ctx.fillRect(px+boss.w*.3,py+bob+boss.h*.4,boss.w*.4,s(16));
+      ctx.strokeStyle='#bbb';ctx.lineWidth=s(1);
+      for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(px+boss.w*.34,py+bob+boss.h*.4+s(4)+i*s(4));ctx.lineTo(px+boss.w*.66,py+bob+boss.h*.4+s(4)+i*s(4));ctx.stroke();}
+    } else if(BOSS_SHAPE==='queen'){
+      // Корона
+      ctx.fillStyle='#ffd740';
+      ctx.beginPath();ctx.moveTo(px+boss.w*.22,py+bob-s(2));ctx.lineTo(px+boss.w*.3,py+bob-s(16));ctx.lineTo(px+boss.w*.4,py+bob-s(2));ctx.lineTo(px+boss.w*.5,py+bob-s(18));ctx.lineTo(px+boss.w*.6,py+bob-s(2));ctx.lineTo(px+boss.w*.7,py+bob-s(16));ctx.lineTo(px+boss.w*.78,py+bob-s(2));ctx.closePath();ctx.fill();
+    } else if(BOSS_SHAPE==='ghost'){
+      // Хвиляста напівпрозора нижня частина замість чіткого прямокутника
+      ctx.globalAlpha=.55;
+      ctx.fillStyle=bc;
+      ctx.beginPath();
+      const gy=py+bob+boss.h;
+      ctx.moveTo(px,gy-s(10));
+      for(let i=0;i<=4;i++){ctx.quadraticCurveTo(px+boss.w*(i+.5)/4,gy+(i%2===0?s(8):-s(4)),px+boss.w*(i+1)/4,gy-s(10));}
+      ctx.lineTo(px+boss.w,py+bob+boss.h*.3);ctx.lineTo(px,py+bob+boss.h*.3);ctx.closePath();ctx.fill();
+      ctx.globalAlpha=1;
+    } else if(BOSS_SHAPE==='kraken'){
+      // Щупальця знизу
+      ctx.fillStyle=shadeColor(bc,-10);
+      for(let i=0;i<4;i++){
+        const tx=px+boss.w*(0.15+i*0.25);
+        ctx.beginPath();ctx.moveTo(tx,py+bob+boss.h*.85);
+        ctx.quadraticCurveTo(tx+Math.sin(boss.anim*.06+i)*s(8),py+bob+boss.h+s(14),tx+Math.sin(boss.anim*.06+i)*s(4),py+bob+boss.h+s(22));
+        ctx.quadraticCurveTo(tx-s(3),py+bob+boss.h+s(10),tx-s(2),py+bob+boss.h*.85);
+        ctx.fill();
+      }
+    } else if(BOSS_SHAPE==='golem'){
+      // Тріщини на "кам'яному" тілі
+      ctx.strokeStyle=shadeColor(bc,-30);ctx.lineWidth=s(1.5);
+      ctx.beginPath();ctx.moveTo(px+boss.w*.25,py+bob+s(6));ctx.lineTo(px+boss.w*.35,py+bob+boss.h*.4);ctx.lineTo(px+boss.w*.28,py+bob+boss.h*.7);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(px+boss.w*.75,py+bob+s(10));ctx.lineTo(px+boss.w*.65,py+bob+boss.h*.5);ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   ctx.fillStyle='#111';ctx.beginPath();ctx.roundRect(px-s(10),py+bob-s(20),boss.w+s(20),s(12),s(4));ctx.fill();
   ctx.fillStyle=boss.hp/boss.maxHp>.5?'#ff1744':'#ff6d00';ctx.beginPath();ctx.roundRect(px-s(10),py+bob-s(20),(boss.w+s(20))*(boss.hp/boss.maxHp),s(12),s(4));ctx.fill();
   ctx.fillStyle='#fff';ctx.font=`bold ${s(10)}px Nunito`;ctx.textAlign='center';
@@ -880,15 +982,19 @@ function gameLoop(ts){
     }
   }
   ctx.clearRect(0,0,W,H);drawBG();
-  obstacles.forEach(o=>o.draw(o.x,o.y,o.w,o.h));
-  if(OBS_HUE!=null){
-    obstacles.forEach(o=>{
-      ctx.save();
-      ctx.globalCompositeOperation='hue';
-      ctx.fillStyle=`hsl(${OBS_HUE},${OBS_SAT}%,${OBS_LIGHT}%)`;
-      ctx.fillRect(o.x-2, o.isPit?GY-2:o.y-2, o.w+4, o.isPit?(H-GY)+4:o.h+4);
-      ctx.restore();
-    });
+  if(OBS_SHAPE==='cyberpunk'){
+    obstacles.forEach(o=>drawObstacleCyberpunk(o));
+  } else {
+    obstacles.forEach(o=>o.draw(o.x,o.y,o.w,o.h));
+    if(OBS_HUE!=null){
+      obstacles.forEach(o=>{
+        ctx.save();
+        ctx.globalCompositeOperation='hue';
+        ctx.fillStyle=`hsl(${OBS_HUE},${OBS_SAT}%,${OBS_LIGHT}%)`;
+        ctx.fillRect(o.x-2, o.isPit?GY-2:o.y-2, o.w+4, o.isPit?(H-GY)+4:o.h+4);
+        ctx.restore();
+      });
+    }
   }
   apples.filter(a=>!a.collected).forEach(drawApple);
   boosters.filter(b=>!b.collected).forEach(drawBooster);
@@ -974,9 +1080,9 @@ function getTg(){
 // Апгрейди читаються динамічно при старті гри
 let _upgrades={bird:0,shield:0,magnet:0,speed:0,lives:0};
 let SKIN_HUE=null, SKIN_SAT=70, SKIN_LIGHT=45, SKIN_SHAPE=null; // колір + силует екіпірованого скіна персонажа, null = стандартний вигляд
-let BIRD_HUE=null, BIRD_SAT=70, BIRD_LIGHT=50; // колір екіпірованого скіна ПТАХА-помічника — окремо від персонажа
-let OBS_HUE=null, OBS_SAT=70, OBS_LIGHT=50;    // тон екіпірованого скіна набору перешкод
-let BOSS_HUE=null, BOSS_SAT=60, BOSS_LIGHT=35; // тон екіпірованого скіна боса
+let BIRD_HUE=null, BIRD_SAT=70, BIRD_LIGHT=50, BIRD_SHAPE=null; // колір + силует екіпірованого скіна ПТАХА-помічника — окремо від персонажа
+let OBS_HUE=null, OBS_SAT=70, OBS_LIGHT=50, OBS_SHAPE=null;     // тон + форма екіпірованого скіна набору перешкод
+let BOSS_HUE=null, BOSS_SAT=60, BOSS_LIGHT=35, BOSS_SHAPE=null; // тон + силует екіпірованого скіна боса
 let WEATHER_PRESET=null;                        // ключ екіпірованого скіна погоди (фіксує локацію)
 function readUpgrades(){
   const fromQuery=new URLSearchParams(window.location.search);
@@ -998,26 +1104,34 @@ function readUpgrades(){
   SKIN_SHAPE=fromQuery.get('skinshape')||fromHash.get('skinshape')||null;
 
   // Скін птаха-помічника — окремі параметри, ніяк не пов'язані з SKIN_HUE
-  // персонажа. Раніше такого механізму не було взагалі, тому екіпірування
-  // скіна птаха ніяк не відображалось у грі.
+  // персонажа.
   const bHueRaw=fromQuery.get('birdhue')||fromHash.get('birdhue');
   BIRD_HUE=(bHueRaw!==null && bHueRaw!=='') ? parseInt(bHueRaw) : null;
   const bSatRaw=fromQuery.get('birdsat')||fromHash.get('birdsat');
   const bLightRaw=fromQuery.get('birdlight')||fromHash.get('birdlight');
   BIRD_SAT=(bSatRaw!==null && bSatRaw!=='') ? parseInt(bSatRaw) : 70;
   BIRD_LIGHT=(bLightRaw!==null && bLightRaw!=='') ? parseInt(bLightRaw) : 50;
+  // ВАЖЛИВО: раніше всі 16 скінів птаха малювались ОДНІЄЮ й тією ж формою
+  // (еліпс+2 крила), відрізняючись лише кольором. BIRD_SHAPE дозволяє
+  // намалювати реально інший силует (сова, папуга, довгошиї, хижак,
+  // пінгвін) для конкретного екіпірованого скіна.
+  BIRD_SHAPE=fromQuery.get('birdshape')||fromHash.get('birdshape')||null;
 
-  // Скін набору перешкод — тонування вже намальованих перешкод.
+  // Скін набору перешкод — тонування вже намальованих перешкод, або (для
+  // "cyberpunk") повністю інша форма — див. drawObstacleCyberpunk().
   const oHueRaw=fromQuery.get('obshue')||fromHash.get('obshue');
   OBS_HUE=(oHueRaw!==null && oHueRaw!=='') ? parseInt(oHueRaw) : null;
   OBS_SAT=parseInt(fromQuery.get('obssat')||fromHash.get('obssat')||'70');
   OBS_LIGHT=parseInt(fromQuery.get('obslight')||fromHash.get('obslight')||'50');
+  OBS_SHAPE=fromQuery.get('obsshape')||fromHash.get('obsshape')||null;
 
-  // Скін боса — тонування тіла боса замість фіксованого кольору за рівнем.
+  // Скін боса — тонування тіла боса + додаткові аксесуари/силует
+  // (роги-крила дракона, антена робота, щупальця кракена тощо).
   const boHueRaw=fromQuery.get('bosshue')||fromHash.get('bosshue');
   BOSS_HUE=(boHueRaw!==null && boHueRaw!=='') ? parseInt(boHueRaw) : null;
   BOSS_SAT=parseInt(fromQuery.get('bosssat')||fromHash.get('bosssat')||'60');
   BOSS_LIGHT=parseInt(fromQuery.get('bosslight')||fromHash.get('bosslight')||'35');
+  BOSS_SHAPE=fromQuery.get('bossshape')||fromHash.get('bossshape')||null;
 
   // Скін погоди — фіксує конкретний пресет локації на всю гру замість
   // стандартної ротації 4 пресетів по score.
@@ -1115,6 +1229,73 @@ function updateBirdHelper(){
   }
 }
 
+// Малювання птаха-помічника — реальний силует залежно від BIRD_SHAPE
+// (сова/папуга/довгошиї/хижак/пінгвін), не тільки колір. Раніше всі 16
+// скінів малювались однаковою формою еліпс+крила.
+function drawBirdBody(bx,by,flap,bodyColor,wingColor,shape){
+  if(shape==='owl'){
+    ctx.fillStyle=volumeGrad(bx-s(13),by-s(11),bx+s(13),by+s(11),bodyColor,16,-16);
+    ctx.beginPath();ctx.ellipse(bx,by,s(13),s(13),0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=shadeColor(wingColor,-10);
+    ctx.beginPath();ctx.moveTo(bx-s(10),by-s(9));ctx.lineTo(bx-s(14),by-s(19));ctx.lineTo(bx-s(4),by-s(12));ctx.fill();
+    ctx.beginPath();ctx.moveTo(bx+s(10),by-s(9));ctx.lineTo(bx+s(14),by-s(19));ctx.lineTo(bx+s(4),by-s(12));ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx-s(5),by-s(2),s(5),0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(bx+s(5),by-s(2),s(5),0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a237e';ctx.beginPath();ctx.arc(bx-s(5),by-s(2),s(2.4),0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(bx+s(5),by-s(2),s(2.4),0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#e65100';ctx.beginPath();ctx.moveTo(bx-s(2),by+s(3));ctx.lineTo(bx+s(2),by+s(3));ctx.lineTo(bx,by+s(8));ctx.fill();
+  } else if(shape==='parrot'){
+    ctx.fillStyle=volumeGrad(bx-s(13),by-s(8),bx+s(13),by+s(8),bodyColor,16,-16);
+    ctx.beginPath();ctx.ellipse(bx,by,s(13),s(8.5),0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=shadeColor(wingColor,10);
+    ctx.beginPath();ctx.moveTo(bx-s(2),by-s(9));ctx.lineTo(bx-s(6),by-s(20));ctx.lineTo(bx+s(2),by-s(11));ctx.fill();
+    ctx.fillStyle=shadeColor(wingColor,-6);
+    ctx.beginPath();ctx.moveTo(bx,by-s(2));ctx.quadraticCurveTo(bx-s(20),by-s(10)+flap,bx-s(24),by+s(3));ctx.quadraticCurveTo(bx-s(8),by+s(9),bx,by-s(2));ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx+s(4),by-s(1),s(3),0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a237e';ctx.beginPath();ctx.arc(bx+s(5),by-s(1),s(1.5),0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ffca28';ctx.beginPath();ctx.moveTo(bx+s(11),by);ctx.quadraticCurveTo(bx+s(20),by,bx+s(11),by+s(6));ctx.fill();
+  } else if(shape==='wader'){
+    ctx.fillStyle=volumeGrad(bx-s(11),by-s(7),bx+s(11),by+s(7),bodyColor,16,-16);
+    ctx.beginPath();ctx.ellipse(bx-s(2),by+s(4),s(11),s(7),0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=bodyColor;ctx.lineWidth=s(4);ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(bx+s(6),by);ctx.quadraticCurveTo(bx+s(16),by-s(6),bx+s(14),by-s(16));ctx.stroke();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx+s(13),by-s(16),s(3),0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a237e';ctx.beginPath();ctx.arc(bx+s(14),by-s(16),s(1.4),0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#e65100';ctx.beginPath();ctx.moveTo(bx+s(16),by-s(17));ctx.lineTo(bx+s(23),by-s(15));ctx.lineTo(bx+s(16),by-s(13));ctx.fill();
+    ctx.strokeStyle=shadeColor(bodyColor,-20);ctx.lineWidth=s(2);
+    ctx.beginPath();ctx.moveTo(bx-s(4),by+s(10));ctx.lineTo(bx-s(4),by+s(20));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(bx+s(2),by+s(10));ctx.lineTo(bx+s(2),by+s(20));ctx.stroke();
+  } else if(shape==='penguin'){
+    ctx.fillStyle=volumeGrad(bx-s(10),by-s(12),bx+s(10),by+s(12),shadeColor(bodyColor,-25),16,-16);
+    ctx.beginPath();ctx.ellipse(bx,by+s(1),s(11),s(13),0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#f5f5f5';ctx.beginPath();ctx.ellipse(bx,by+s(4),s(6.5),s(9),0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=bodyColor;ctx.beginPath();ctx.ellipse(bx-s(11),by-s(2)+flap*.2,s(4),s(8),.3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(bx+s(11),by-s(2)-flap*.2,s(4),s(8),-.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx-s(4),by-s(6),s(2.6),0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(bx+s(4),by-s(6),s(2.6),0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a237e';ctx.beginPath();ctx.arc(bx-s(3.5),by-s(6),s(1.3),0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(bx+s(4.5),by-s(6),s(1.3),0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ffca28';ctx.beginPath();ctx.moveTo(bx-s(2),by-s(4));ctx.lineTo(bx+s(2),by-s(4));ctx.lineTo(bx,by-s(1));ctx.fill();
+  } else if(shape==='raptor'){
+    ctx.fillStyle=volumeGrad(bx-s(12),by-s(8),bx+s(12),by+s(8),bodyColor,10,-20);
+    ctx.beginPath();ctx.ellipse(bx,by,s(12),s(8),0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=shadeColor(wingColor,-14);
+    ctx.beginPath();ctx.moveTo(bx-s(1),by-s(4));ctx.quadraticCurveTo(bx-s(24),by-s(16)+flap,bx-s(30),by+s(2));ctx.quadraticCurveTo(bx-s(10),by+s(8),bx-s(1),by-s(4));ctx.fill();
+    ctx.beginPath();ctx.moveTo(bx+s(1),by-s(4));ctx.quadraticCurveTo(bx+s(24),by-s(16)+flap,bx+s(30),by+s(2));ctx.quadraticCurveTo(bx+s(10),by+s(8),bx+s(1),by-s(4));ctx.fill();
+    ctx.strokeStyle=shadeColor(bodyColor,-30);ctx.lineWidth=s(2);
+    ctx.beginPath();ctx.moveTo(bx-s(6),by-s(7));ctx.lineTo(bx-s(1),by-s(5));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(bx+s(6),by-s(7));ctx.lineTo(bx+s(1),by-s(5));ctx.stroke();
+    ctx.fillStyle='#ffca28';ctx.beginPath();ctx.arc(bx,by-s(2),s(2.2),0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#212121';ctx.beginPath();ctx.moveTo(bx+s(9),by);ctx.lineTo(bx+s(17),by-s(1));ctx.lineTo(bx+s(9),by+s(4));ctx.fill();
+  } else {
+    // songbird / стандартний вигляд (fallback, як і раніше)
+    ctx.fillStyle=volumeGrad(bx-s(14),by-s(9),bx+s(14),by+s(9),bodyColor,16,-16);
+    ctx.beginPath();ctx.ellipse(bx,by,s(14),s(9),0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=shadeColor(wingColor,-6);
+    ctx.beginPath();ctx.moveTo(bx,by-s(3));ctx.quadraticCurveTo(bx-s(18),by-s(14)+flap,bx-s(22),by+s(2));ctx.quadraticCurveTo(bx-s(8),by+s(8),bx,by-s(3));ctx.fill();
+    ctx.beginPath();ctx.moveTo(bx,by-s(3));ctx.quadraticCurveTo(bx+s(18),by-s(14)+flap,bx+s(22),by+s(2));ctx.quadraticCurveTo(bx+s(8),by+s(8),bx,by-s(3));ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx+s(5),by-s(1),s(3),0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a237e';ctx.beginPath();ctx.arc(bx+s(6),by-s(1),s(1.5),0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#e65100';ctx.beginPath();ctx.moveTo(bx+s(13),by);ctx.lineTo(bx+s(20),by-s(2));ctx.lineTo(bx+s(13),by+s(3));ctx.fill();
+  }
+}
+
 function drawBirdHelper(){
   if(_upgrades.bird<=0)return;
   // Птах летить над персонажем, трохи правіше
@@ -1123,21 +1304,9 @@ function drawBirdHelper(){
   const flap=Math.sin(_birdAnim*.22)*s(10);
   const lvl=_upgrades.bird;
   ctx.save();
-  // Тіло — якщо екіпіровано скін птаха (BIRD_HUE), використовуємо його колір,
-  // інакше стандартний жовтий/жовтогарячий залежно від рівня.
   const bodyColor = BIRD_HUE!=null ? `hsl(${BIRD_HUE},${BIRD_SAT}%,${BIRD_LIGHT}%)` : (lvl>=3?'#ff9800':'#ffd740');
   const wingColor = BIRD_HUE!=null ? `hsl(${BIRD_HUE},${BIRD_SAT}%,${Math.max(10,BIRD_LIGHT-15)}%)` : (lvl>=3?'#ff6d00':'#ffcc02');
-  ctx.fillStyle=volumeGrad(bx-s(14),by-s(9),bx+s(14),by+s(9),bodyColor,16,-16);
-  ctx.beginPath();ctx.ellipse(bx,by,s(14),s(9),0,0,Math.PI*2);ctx.fill();
-  // Крила
-  ctx.fillStyle=shadeColor(wingColor,-6);
-  ctx.beginPath();ctx.moveTo(bx,by-s(3));ctx.quadraticCurveTo(bx-s(18),by-s(14)+flap,bx-s(22),by+s(2));ctx.quadraticCurveTo(bx-s(8),by+s(8),bx,by-s(3));ctx.fill();
-  ctx.beginPath();ctx.moveTo(bx,by-s(3));ctx.quadraticCurveTo(bx+s(18),by-s(14)+flap,bx+s(22),by+s(2));ctx.quadraticCurveTo(bx+s(8),by+s(8),bx,by-s(3));ctx.fill();
-  // Очі
-  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx+s(5),by-s(1),s(3),0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#1a237e';ctx.beginPath();ctx.arc(bx+s(6),by-s(1),s(1.5),0,Math.PI*2);ctx.fill();
-  // Дзьоб
-  ctx.fillStyle='#e65100';ctx.beginPath();ctx.moveTo(bx+s(13),by);ctx.lineTo(bx+s(20),by-s(2));ctx.lineTo(bx+s(13),by+s(3));ctx.fill();
+  drawBirdBody(bx,by,flap,bodyColor,wingColor,BIRD_SHAPE);
   // Рівень
   ctx.fillStyle='#fff';ctx.font=`bold ${s(7)}px "Press Start 2P"`;ctx.textAlign='center';
   ctx.fillText('Lv'+lvl,bx,by+s(18));
