@@ -46,25 +46,25 @@ const CHARACTER_SHAPES = {
 // на кожен, а не один і той самий контур, перефарбований у різні кольори.
 const CHARACTER_ICON_ART = {
   "Класичний бігун": (c1,c2,c3,bg) =>
-    `<circle cx="42" cy="26" r="13" fill="${c2}"/><path d="M30,50 Q40,48 50,55 L66,46" stroke="${c1}" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50,55 L44,88 M50,55 L66,80" stroke="${c1}" stroke-width="9" fill="none" stroke-linecap="round"/>`,
+    `<circle cx="42" cy="26" r="13" fill="${c2}"/><path d="M30,50 Q40,48 50,55 L66,46" stroke="${c1}" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50,55 L44,88 M50,55 L66,80" stroke="${c1}" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M18,58 L30,50 M74,42 L66,46" stroke="${c3}" stroke-width="4" opacity=".55" stroke-linecap="round"/>`,
   "Бізнес-кежуал": (c1,c2,c3,bg) =>
-    `<circle cx="50" cy="28" r="13" fill="${c2}"/><path d="M31,88 Q31,52 50,52 Q69,52 69,88 Z" fill="${c1}"/><path d="M46,52 L50,64 L54,52 Z" fill="${c3}"/><rect x="30" y="52" width="8" height="30" rx="2" fill="${c3}" opacity=".6"/><rect x="62" y="52" width="8" height="30" rx="2" fill="${c3}" opacity=".6"/>`,
+    `<path d="M20,92 Q20,44 50,44 Q80,44 80,92 Z" fill="${c1}"/><circle cx="50" cy="26" r="14" fill="${c2}"/><path d="M20,92 Q26,60 34,50 L40,44 L50,58 L60,44 L66,50 Q74,60 80,92 Z" fill="${c3}" opacity=".35"/><path d="M45,44 L50,66 L55,44 L50,50 Z" fill="#e53935"/><rect x="60" y="70" width="24" height="18" rx="3" fill="${c3}"/><rect x="68" y="66" width="8" height="6" rx="1" fill="${c3}"/>`,
   "Спортивна дівчина": (c1,c2,c3,bg) =>
-    `<circle cx="48" cy="26" r="13" fill="${c2}"/><circle cx="63" cy="20" r="6" fill="${c2}"/><path d="M33,88 Q33,52 50,52 Q67,52 67,88 Z" fill="${c1}"/><path d="M35,60 L20,50 M65,55 L80,40" stroke="${c1}" stroke-width="8" fill="none" stroke-linecap="round"/>`,
+    `<path d="M33,92 Q30,50 50,50 Q70,50 67,92 Z" fill="${c1}"/><circle cx="48" cy="26" r="13" fill="${c2}"/><path d="M60,20 Q78,18 74,36 Q68,30 60,28 Z" fill="${c3}"/><rect x="33" y="62" width="34" height="8" fill="#fff" opacity=".8"/><path d="M32,60 L14,48 M68,54 L86,38" stroke="${c1}" stroke-width="8" fill="none" stroke-linecap="round"/>`,
   "Офісна леді": (c1,c2,c3,bg) =>
-    `<circle cx="50" cy="26" r="12" fill="${c2}"/><path d="M35,50 L65,50 L60,60 L40,60 Z" fill="${c3}"/><path d="M32,90 Q32,58 50,58 Q68,58 68,90 Z" fill="${c1}"/>`,
+    `<path d="M30,92 L30,62 Q30,54 50,54 Q70,54 70,62 L70,92 Z" fill="${c1}"/><circle cx="50" cy="26" r="12" fill="${c2}"/><path d="M33,46 L67,46 L60,58 L40,58 Z" fill="${c3}"/><rect x="38" y="20" width="24" height="6" rx="3" fill="${bg}" opacity=".7"/><rect x="30" y="70" width="40" height="4" fill="#fff" opacity=".3"/><rect x="30" y="80" width="40" height="4" fill="#fff" opacity=".3"/>`,
   "Ретро-спортсмен": (c1,c2,c3,bg) =>
-    `<circle cx="50" cy="28" r="13" fill="${c2}"/><rect x="37" y="19" width="26" height="6" rx="3" fill="${c3}"/><path d="M35,52 Q35,50 50,50 Q65,50 65,52 L62,88 L38,88 Z" fill="${c1}"/><rect x="36" y="60" width="28" height="6" fill="${c3}"/>`,
+    `<circle cx="50" cy="28" r="13" fill="${c2}"/><rect x="34" y="17" width="32" height="7" rx="3.5" fill="#e53935"/><path d="M32,52 Q32,50 50,50 Q68,50 68,52 L64,90 L36,90 Z" fill="${c1}"/><rect x="34" y="60" width="32" height="7" fill="${c3}"/><rect x="34" y="76" width="32" height="7" fill="${c3}"/><rect x="30" y="90" width="10" height="8" fill="#fff"/><rect x="60" y="90" width="10" height="8" fill="#fff"/>`,
   "Хіпстер-кур'єр": (c1,c2,c3,bg) =>
-    `<path d="M37,17 Q50,10 63,17 L63,26 L37,26 Z" fill="${c3}"/><circle cx="50" cy="27" r="12" fill="${c2}"/><path d="M32,88 Q32,52 50,52 Q68,52 68,88 Z" fill="${c1}"/><path d="M30,45 L72,80" stroke="${c3}" stroke-width="6" stroke-linecap="round"/><rect x="60" y="68" width="18" height="16" rx="3" fill="${c3}"/>`,
+    `<path d="M35,15 Q50,6 65,15 L65,27 Q50,20 35,27 Z" fill="${c3}"/><circle cx="50" cy="27" r="12" fill="${c2}"/><rect x="40" y="24" width="20" height="6" rx="2" fill="${bg}" opacity=".8"/><path d="M30,92 Q30,52 50,52 Q70,52 70,92 Z" fill="${c1}"/><path d="M22,42 L80,86" stroke="${c3}" stroke-width="6" stroke-linecap="round"/><rect x="58" y="66" width="26" height="22" rx="4" fill="${c3}"/><rect x="66" y="70" width="10" height="6" rx="1" fill="${c1}"/>`,
   "Бізнес-леді на підборах": (c1,c2,c3,bg) =>
-    `<circle cx="50" cy="24" r="12" fill="${c2}"/><path d="M34,50 Q34,48 50,48 Q66,48 66,50 L72,88 L28,88 Z" fill="${c1}"/><path d="M40,88 L38,94 M60,88 L62,94" stroke="${c3}" stroke-width="4" stroke-linecap="round"/>`,
+    `<path d="M32,58 Q32,52 50,52 Q68,52 68,58 L76,92 L24,92 Z" fill="${c1}"/><circle cx="50" cy="24" r="12" fill="${c2}"/><path d="M35,46 L65,46 L60,56 L40,56 Z" fill="${c3}"/><circle cx="38" cy="10" r="7" fill="${c3}"/><path d="M40,92 L36,99 L44,99 Z M60,92 L56,99 L64,99 Z" fill="#111"/>`,
   "Скейтер-новачок": (c1,c2,c3,bg) =>
-    `<circle cx="50" cy="30" r="12" fill="${c2}"/><path d="M33,86 Q33,50 50,50 Q67,50 67,86 Z" fill="${c1}"/><rect x="22" y="86" width="56" height="9" rx="4" fill="${c3}"/><circle cx="32" cy="97" r="4" fill="${bg}"/><circle cx="68" cy="97" r="4" fill="${bg}"/>`,
+    `<path d="M60,14 Q52,8 38,14 Q34,20 42,24 L58,24 Q66,20 60,14 Z" fill="${c3}"/><circle cx="50" cy="28" r="13" fill="${c2}"/><path d="M31,86 Q31,50 50,50 Q69,50 69,86 Z" fill="${c1}"/><rect x="18" y="86" width="64" height="10" rx="5" fill="${c3}"/><circle cx="30" cy="99" r="5" fill="${bg}" stroke="${c2}" stroke-width="2"/><circle cx="70" cy="99" r="5" fill="${bg}" stroke="${c2}" stroke-width="2"/>`,
   "Йогин у потоці": (c1,c2,c3,bg) =>
-    `<circle cx="50" cy="30" r="13" fill="${c2}"/><path d="M35,90 Q35,55 50,55 Q65,55 65,90 Z" fill="${c1}"/><path d="M50,55 L28,32 M50,55 L72,32" stroke="${c1}" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="50" cy="24" r="2.5" fill="${c3}"/>`,
+    `<circle cx="50" cy="50" r="44" fill="none" stroke="${c3}" stroke-width="1.4" opacity=".45"/><circle cx="50" cy="30" r="13" fill="${c2}"/><rect x="42" y="14" width="16" height="5" rx="2.5" fill="${c3}"/><path d="M35,90 Q35,55 50,55 Q65,55 65,90 Z" fill="${c1}"/><path d="M50,55 L26,30 M50,55 L74,30" stroke="${c1}" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="26" cy="28" r="4" fill="${c3}"/><circle cx="74" cy="28" r="4" fill="${c3}"/>`,
   "Зимовий бігун": (c1,c2,c3,bg) =>
-    `<circle cx="50" cy="30" r="13" fill="${c2}"/><circle cx="50" cy="17" r="6" fill="#fff"/><path d="M28,90 Q28,52 50,52 Q72,52 72,90 Z" fill="${c1}"/><rect x="38" y="48" width="24" height="10" rx="4" fill="${c3}"/><rect x="55" y="55" width="8" height="22" rx="3" fill="${c3}"/>`,
+    `<path d="M26,60 Q26,20 50,20 Q74,20 74,60 L70,40 Q50,30 30,40 Z" fill="${c3}"/><circle cx="50" cy="34" r="12" fill="${c2}"/><path d="M24,92 Q24,54 50,54 Q76,54 76,92 Z" fill="${c1}"/><path d="M35,54 Q50,66 65,54 L65,64 Q50,76 35,64 Z" fill="#fff" opacity=".85"/><circle cx="20" cy="86" r="7" fill="#fff"/><circle cx="80" cy="86" r="7" fill="#fff"/>`,
 };
 
 // Скін птаха-помічника (runner_epic_bird) — ПОВНІСТЮ окрема категорія від
