@@ -1246,7 +1246,7 @@ function paintMySkins(){
       const countLabel = g.items.length > 1 ? `<div class="badge" style="position:absolute; top:-4px; right:-4px;">×${g.items.length}</div>` : "";
       const cleanName = g.name.replace(/^Крафт: предмет рівня /,"").replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,"");
       const isEquipped = !!g.poolKey && EQUIPPED_SKINS_CACHE[g.poolKey] === cleanName;
-      return `<div data-chest-group="${esc(g.name)}" style="cursor:pointer; text-align:center; position:relative;">
+      return `<div data-chest-group="${esc(g.name)}" style="cursor:pointer; text-align:center; position:relative; background:var(--panel3); border:1px solid var(--line); border-radius:14px; padding:8px 4px 10px;">
         ${countLabel}
         <div style="opacity:${available.length>0?1:.4}; ${isEquipped?'filter:drop-shadow(0 0 6px var(--success));':''}">${skinIconSvg(g.poolKey, cleanName, 68)}</div>
         <div class="sub" style="font-size:10px; margin-top:3px; line-height:1.25;">${esc(cleanName)}</div>
@@ -1677,9 +1677,9 @@ async function loadAdminSkins(){
           </div>
           <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:10px;">
             ${p.items.map(it => `
-              <div style="text-align:center;">
+              <div style="text-align:center; background:var(--panel3); border:1px solid var(--line); border-radius:14px; padding:8px 4px 10px;">
                 ${skinIconSvg(p.key, it, 64)}
-                <div class="sub" style="font-size:10.5px; margin-top:4px; line-height:1.25;">${esc(it)}</div>
+                <div class="sub" style="font-size:10.5px; margin-top:5px; line-height:1.25;">${esc(it)}</div>
               </div>
             `).join("")}
           </div>
