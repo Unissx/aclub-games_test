@@ -1200,11 +1200,11 @@ function paintMySkins(){
     shown.map(g => {
       const available = g.items.filter(x => x.status === "Не використано");
       const countLabel = g.items.length > 1 ? `<div class="badge" style="position:absolute; top:-4px; right:-4px;">×${g.items.length}</div>` : "";
-      const cleanName = g.name.replace(/^Крафт: предмет рівня /,"").replace(/^Крафт: |^Кейс: /,"");
+      const cleanName = g.name.replace(/^Крафт: предмет рівня /,"").replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,"");
       const isEquipped = !!g.poolKey && EQUIPPED_SKINS_CACHE[g.poolKey] === cleanName;
       return `<div data-chest-group="${esc(g.name)}" style="cursor:pointer; text-align:center; position:relative;">
         ${countLabel}
-        <div style="opacity:${available.length>0?1:.4}; ${isEquipped?'filter:drop-shadow(0 0 6px var(--success));':''}">${skinIconSvg(g.poolKey, g.name, 68)}</div>
+        <div style="opacity:${available.length>0?1:.4}; ${isEquipped?'filter:drop-shadow(0 0 6px var(--success));':''}">${skinIconSvg(g.poolKey, cleanName, 68)}</div>
         <div class="sub" style="font-size:10px; margin-top:3px; line-height:1.25;">${esc(cleanName)}</div>
         ${isEquipped ? `<div class="badge ok" style="margin-top:2px;">✓ Екіпіровано</div>` : (available.length>0 ? `<div class="badge new" style="margin-top:2px;">Обрати →</div>` : `<div class="badge ok" style="margin-top:2px;">Отримано</div>`)}
       </div>`;
@@ -1378,7 +1378,7 @@ function openItemGroup(name){
   const isEquippable = !!poolKey; // будь-який предмет зі SKIN_POOLS можна екіпірувати
   const isEquipped = isEquippable && EQUIPPED_SKINS_CACHE[poolKey] === pureName;
   showModal(`
-    <div style="display:flex; justify-content:center; margin-bottom:8px;">${skinIconSvg(poolKey, name, 84)}</div>
+    <div style="display:flex; justify-content:center; margin-bottom:8px;">${skinIconSvg(poolKey, pureName, 84)}</div>
     <div class="mh" style="text-align:center;">${esc(name)} <span class="hint">×${items.length}</span></div>
     ${isEquippable ? `
       <div class="sub" style="text-align:center; margin-bottom:10px;">${isEquipped ? '✅ Зараз екіпіровано — застосовано в грі' : '🎨 Косметичний скін'}</div>
