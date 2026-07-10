@@ -1048,6 +1048,56 @@ function skinCategoryOf(poolKey){
   if (poolKey.indexOf("letters") >= 0) return "letters";
   return "generic";
 }
+// Розпізнавання по ключових словах у НАЗВІ скіна — щоб скіни з промовистою
+// назвою ("Сова-мудрець", "Дракон-дедлайн", "Веселка успіху", "Кіберпанк-набір
+// перешкод", "Офісна леді", "Спортивна дівчина") малювались саме тим, чим
+// вони насправді є, а не узагальненим силуетом категорії, розфарбованим по
+// хешу. Перевіряється ДО категорійного fallback-у нижче; якщо жодне слово
+// не збіглось — усе працює, як і раніше (силует категорії + колір-хеш).
+// Кожна draw-функція отримує ті самі (c1,c2,c3,bg), що йдуть у градієнт.
+const ITEM_ICON_KEYWORDS = [
+  { test: /сова|сич|пугач/i, draw: (c1,c2,c3,bg) => `
+    <ellipse cx="50" cy="58" rx="26" ry="28" fill="${c1}"/>
+    <circle cx="38" cy="42" r="12" fill="${bg}"/><circle cx="62" cy="42" r="12" fill="${bg}"/>
+    <circle cx="38" cy="42" r="6" fill="${c3}"/><circle cx="62" cy="42" r="6" fill="${c3}"/>
+    <circle cx="38" cy="42" r="2.4" fill="#0a0c14"/><circle cx="62" cy="42" r="2.4" fill="#0a0c14"/>
+    <path d="M46,52 L50,60 L54,52 Z" fill="${c2}"/>
+    <path d="M22,30 L34,40 M78,30 L66,40" stroke="${c1}" stroke-width="7" stroke-linecap="round"/>
+    <path d="M30,78 Q50,88 70,78" stroke="${c2}" stroke-width="6" fill="none" stroke-linecap="round"/>` },
+  { test: /дракон/i, draw: (c1,c2,c3,bg) => `
+    <ellipse cx="50" cy="60" rx="27" ry="24" fill="${c1}"/>
+    <path d="M30,38 L22,18 L36,32 M70,38 L78,18 L64,32" fill="${c2}"/>
+    <circle cx="39" cy="52" r="5" fill="${bg}"/><circle cx="61" cy="52" r="5" fill="${bg}"/>
+    <path d="M50,64 Q56,72 50,78 Q44,72 50,64 Z" fill="${c3}"/>
+    <path d="M20,60 Q10,66 16,76 Q22,70 26,64 Z" fill="${c2}"/>
+    <path d="M80,60 Q90,66 84,76 Q78,70 74,64 Z" fill="${c2}"/>` },
+  { test: /весел|райдуг/i, draw: (c1,c2,c3,bg) => `
+    <path d="M14,78 A36,36 0 0 1 86,78" fill="none" stroke="${c1}" stroke-width="8"/>
+    <path d="M22,78 A28,28 0 0 1 78,78" fill="none" stroke="${c2}" stroke-width="8"/>
+    <path d="M30,78 A20,20 0 0 1 70,78" fill="none" stroke="${c3}" stroke-width="8"/>
+    <ellipse cx="24" cy="76" rx="10" ry="7" fill="#fff" opacity=".85"/>
+    <ellipse cx="76" cy="76" rx="10" ry="7" fill="#fff" opacity=".85"/>` },
+  { test: /кіберпанк|кибер|неон/i, draw: (c1,c2,c3,bg) => `
+    <rect x="14" y="52" width="16" height="34" fill="${c1}"/>
+    <rect x="42" y="30" width="16" height="56" fill="${c2}"/>
+    <rect x="70" y="44" width="16" height="42" fill="${c1}"/>
+    <line x1="10" y1="30" x2="90" y2="30" stroke="${c3}" stroke-width="2" opacity=".7"/>
+    <line x1="10" y1="20" x2="90" y2="20" stroke="${c3}" stroke-width="2" opacity=".4"/>` },
+  { test: /офіс/i, draw: (c1,c2,c3,bg) => `
+    <circle cx="50" cy="27" r="12" fill="${c2}"/>
+    <path d="M32,88 L36,54 Q50,46 64,54 L68,88 Z" fill="${c1}"/>
+    <path d="M44,54 L50,66 L56,54 Z" fill="${c3}"/>
+    <rect x="28" y="60" width="7" height="24" rx="2" fill="${c3}"/><rect x="65" y="60" width="7" height="24" rx="2" fill="${c3}"/>` },
+  { test: /спортив/i, draw: (c1,c2,c3,bg) => `
+    <circle cx="46" cy="24" r="11" fill="${c2}"/>
+    <path d="M32,86 L38,50 Q46,44 54,50 L64,86" stroke="${c1}" stroke-width="11" fill="none" stroke-linecap="round"/>
+    <path d="M38,50 L20,62 M54,50 L78,40" stroke="${c1}" stroke-width="9" fill="none" stroke-linecap="round"/>` },
+];
+function findItemIconOverride(name){
+  const n = String(name||"");
+  for (const it of ITEM_ICON_KEYWORDS) { if (it.test.test(n)) return it.draw; }
+  return null;
+}
 function skinIconSvg(poolKey, itemName, size){
   size = size || 44;
   const cat = skinCategoryOf(poolKey);
@@ -1062,7 +1112,11 @@ function skinIconSvg(poolKey, itemName, size){
   const light = curatedStyle ? curatedStyle.light : 55;
   const variantIdx = _hashHue(key + "#v") ; // друге, незалежне число для вибору пози/дизайну (інші категорії)
   const c1 = `hsl(${hue},${sat}%,${light}%)`, c2 = `hsl(${hue},${Math.max(0,sat-8)}%,${Math.min(90,light+19)}%)`, c3 = `hsl(${hue},${Math.max(0,sat-12)}%,${Math.max(10,light-17)}%)`, bg = `hsl(${hue},${Math.max(0,sat-24)}%,16%)`;
+  const override = findItemIconOverride(itemName);
   let shape = "";
+  if (override) {
+    shape = override(c1,c2,c3,bg);
+  } else
   switch(cat){
     case "character": {
       shape = (CHARACTER_ICON_ART[key] ? CHARACTER_ICON_ART[key](c1,c2,c3,bg) : null) || [
