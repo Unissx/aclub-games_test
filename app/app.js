@@ -472,11 +472,14 @@ async function playRunner(){
   const obstacleStyle = params.equippedObstacles
     ? (OBSTACLE_SKIN_STYLES[params.equippedObstacles] || { hue: _hashHue(params.equippedObstacles), sat: 70, light: 50 })
     : null;
+  const obsShape = params.equippedObstacles ? (OBSTACLE_SHAPES[params.equippedObstacles] || "") : "";
   const bossStyle = params.equippedBoss
     ? (BOSS_SKIN_STYLES[params.equippedBoss] || { hue: _hashHue(params.equippedBoss), sat: 60, light: 35 })
     : null;
+  const bossShape = params.equippedBoss ? (BOSS_SHAPES[params.equippedBoss] || "") : "";
+  const birdShape = params.equippedBird ? (BIRD_SHAPES[params.equippedBird] || "") : "";
   const weatherPreset = params.equippedWeather ? (WEATHER_SKIN_PRESETS[params.equippedWeather] || "") : "";
-  const url = RUNNER_URL + `&bird=${params.bird}&shield=${params.shield}&magnet=${params.magnet}&uspeed=${params.uspeed}&ulives=${params.ulives}${style?`&skinhue=${style.hue}&skinsat=${style.sat}&skinlight=${style.light}`:""}${skinShape?`&skinshape=${skinShape}`:""}${birdStyle?`&birdhue=${birdStyle.hue}&birdsat=${birdStyle.sat}&birdlight=${birdStyle.light}`:""}${obstacleStyle?`&obshue=${obstacleStyle.hue}&obssat=${obstacleStyle.sat}&obslight=${obstacleStyle.light}`:""}${bossStyle?`&bosshue=${bossStyle.hue}&bosssat=${bossStyle.sat}&bosslight=${bossStyle.light}`:""}${weatherPreset?`&weather=${weatherPreset}`:""}`;
+  const url = RUNNER_URL + `&bird=${params.bird}&shield=${params.shield}&magnet=${params.magnet}&uspeed=${params.uspeed}&ulives=${params.ulives}${style?`&skinhue=${style.hue}&skinsat=${style.sat}&skinlight=${style.light}`:""}${skinShape?`&skinshape=${skinShape}`:""}${birdStyle?`&birdhue=${birdStyle.hue}&birdsat=${birdStyle.sat}&birdlight=${birdStyle.light}`:""}${birdShape?`&birdshape=${birdShape}`:""}${obstacleStyle?`&obshue=${obstacleStyle.hue}&obssat=${obstacleStyle.sat}&obslight=${obstacleStyle.light}`:""}${obsShape?`&obsshape=${obsShape}`:""}${bossStyle?`&bosshue=${bossStyle.hue}&bosssat=${bossStyle.sat}&bosslight=${bossStyle.light}`:""}${bossShape?`&bossshape=${bossShape}`:""}${weatherPreset?`&weather=${weatherPreset}`:""}`;
   openGameFrame(url, "🏃 áClub Runner");
 }
 
@@ -823,54 +826,19 @@ function skinCategoryOf(poolKey){
   if (poolKey.indexOf("letters") >= 0) return "letters";
   return "generic";
 }
-// Розпізнавання по ключових словах у НАЗВІ скіна — щоб скіни з промовистою
-// назвою ("Сова-мудрець", "Дракон-дедлайн", "Веселка успіху", "Кіберпанк-набір
-// перешкод", "Офісна леді", "Спортивна дівчина") малювались саме тим, чим
-// вони насправді є, а не узагальненим силуетом категорії, розфарбованим по
-// хешу. Перевіряється ДО категорійного fallback-у нижче; якщо жодне слово
-// не збіглось — усе працює, як і раніше (силует категорії + колір-хеш).
-// Кожна draw-функція отримує ті самі (c1,c2,c3,bg), що йдуть у градієнт.
-const ITEM_ICON_KEYWORDS = [
-  { test: /сова|сич|пугач/i, draw: (c1,c2,c3,bg) => `
-    <ellipse cx="50" cy="58" rx="26" ry="28" fill="${c1}"/>
-    <circle cx="38" cy="42" r="12" fill="${bg}"/><circle cx="62" cy="42" r="12" fill="${bg}"/>
-    <circle cx="38" cy="42" r="6" fill="${c3}"/><circle cx="62" cy="42" r="6" fill="${c3}"/>
-    <circle cx="38" cy="42" r="2.4" fill="#0a0c14"/><circle cx="62" cy="42" r="2.4" fill="#0a0c14"/>
-    <path d="M46,52 L50,60 L54,52 Z" fill="${c2}"/>
-    <path d="M22,30 L34,40 M78,30 L66,40" stroke="${c1}" stroke-width="7" stroke-linecap="round"/>
-    <path d="M30,78 Q50,88 70,78" stroke="${c2}" stroke-width="6" fill="none" stroke-linecap="round"/>` },
-  { test: /дракон/i, draw: (c1,c2,c3,bg) => `
-    <ellipse cx="50" cy="60" rx="27" ry="24" fill="${c1}"/>
-    <path d="M30,38 L22,18 L36,32 M70,38 L78,18 L64,32" fill="${c2}"/>
-    <circle cx="39" cy="52" r="5" fill="${bg}"/><circle cx="61" cy="52" r="5" fill="${bg}"/>
-    <path d="M50,64 Q56,72 50,78 Q44,72 50,64 Z" fill="${c3}"/>
-    <path d="M20,60 Q10,66 16,76 Q22,70 26,64 Z" fill="${c2}"/>
-    <path d="M80,60 Q90,66 84,76 Q78,70 74,64 Z" fill="${c2}"/>` },
-  { test: /весел|райдуг/i, draw: (c1,c2,c3,bg) => `
+// Розпізнавання ЛИШЕ для категорії "погода" — там немає окремого силуету
+// в грі (це просто інша палітра неба/землі + прапорці дощу/туману/зірок),
+// тож іконка веселки лишається символічною відповідністю. Всі інші
+// категорії (bird/obstacles/boss/character) тепер мають РЕАЛЬНІ форми, що
+// збігаються з тим, що фактично малює гра (BIRD_SHAPES/OBSTACLE_SHAPES/
+// BOSS_SHAPES/CHARACTER_SHAPES) — іконка більше нічого не вигадує.
+function weatherIconOverride(name){
+  if (/весел|райдуг/i.test(String(name||""))) return (c1,c2,c3,bg) => `
     <path d="M14,78 A36,36 0 0 1 86,78" fill="none" stroke="${c1}" stroke-width="8"/>
     <path d="M22,78 A28,28 0 0 1 78,78" fill="none" stroke="${c2}" stroke-width="8"/>
     <path d="M30,78 A20,20 0 0 1 70,78" fill="none" stroke="${c3}" stroke-width="8"/>
     <ellipse cx="24" cy="76" rx="10" ry="7" fill="#fff" opacity=".85"/>
-    <ellipse cx="76" cy="76" rx="10" ry="7" fill="#fff" opacity=".85"/>` },
-  { test: /кіберпанк|кибер|неон/i, draw: (c1,c2,c3,bg) => `
-    <rect x="14" y="52" width="16" height="34" fill="${c1}"/>
-    <rect x="42" y="30" width="16" height="56" fill="${c2}"/>
-    <rect x="70" y="44" width="16" height="42" fill="${c1}"/>
-    <line x1="10" y1="30" x2="90" y2="30" stroke="${c3}" stroke-width="2" opacity=".7"/>
-    <line x1="10" y1="20" x2="90" y2="20" stroke="${c3}" stroke-width="2" opacity=".4"/>` },
-  { test: /офіс/i, draw: (c1,c2,c3,bg) => `
-    <circle cx="50" cy="27" r="12" fill="${c2}"/>
-    <path d="M32,88 L36,54 Q50,46 64,54 L68,88 Z" fill="${c1}"/>
-    <path d="M44,54 L50,66 L56,54 Z" fill="${c3}"/>
-    <rect x="28" y="60" width="7" height="24" rx="2" fill="${c3}"/><rect x="65" y="60" width="7" height="24" rx="2" fill="${c3}"/>` },
-  { test: /спортив/i, draw: (c1,c2,c3,bg) => `
-    <circle cx="46" cy="24" r="11" fill="${c2}"/>
-    <path d="M32,86 L38,50 Q46,44 54,50 L64,86" stroke="${c1}" stroke-width="11" fill="none" stroke-linecap="round"/>
-    <path d="M38,50 L20,62 M54,50 L78,40" stroke="${c1}" stroke-width="9" fill="none" stroke-linecap="round"/>` },
-];
-function findItemIconOverride(name){
-  const n = String(name||"");
-  for (const it of ITEM_ICON_KEYWORDS) { if (it.test.test(n)) return it.draw; }
+    <ellipse cx="76" cy="76" rx="10" ry="7" fill="#fff" opacity=".85"/>`;
   return null;
 }
 function skinIconSvg(poolKey, itemName, size){
@@ -881,16 +849,20 @@ function skinIconSvg(poolKey, itemName, size){
   // самій грі (CHARACTER_SKIN_STYLES / CHARACTER_ICON_ART), а не окремий
   // хеш-колір — інакше іконка в каталозі могла відрізнятись від реального
   // вигляду скіна в Runner.
-  const curatedStyle = cat === "character" ? CHARACTER_SKIN_STYLES[key] : null;
+  const curatedStyle = cat === "character" ? CHARACTER_SKIN_STYLES[key]
+    : cat === "bird" ? BIRD_SKIN_STYLES[key]
+    : cat === "obstacles" ? OBSTACLE_SKIN_STYLES[key]
+    : cat === "boss" ? BOSS_SKIN_STYLES[key]
+    : null;
   const hue = curatedStyle ? curatedStyle.hue : _hashHue(key);
   const sat = curatedStyle ? curatedStyle.sat : 62;
   const light = curatedStyle ? curatedStyle.light : 55;
-  const variantIdx = _hashHue(key + "#v") ; // друге, незалежне число для вибору пози/дизайну (інші категорії)
+  const variantIdx = _hashHue(key + "#v") ; // друге, незалежне число для вибору пози/дизайну (категорії без власного силуету)
   const c1 = `hsl(${hue},${sat}%,${light}%)`, c2 = `hsl(${hue},${Math.max(0,sat-8)}%,${Math.min(90,light+19)}%)`, c3 = `hsl(${hue},${Math.max(0,sat-12)}%,${Math.max(10,light-17)}%)`, bg = `hsl(${hue},${Math.max(0,sat-24)}%,16%)`;
-  const override = findItemIconOverride(itemName);
   let shape = "";
-  if (override) {
-    shape = override(c1,c2,c3,bg);
+  const weatherOverride = cat === "weather" ? weatherIconOverride(key) : null;
+  if (weatherOverride) {
+    shape = weatherOverride(c1,c2,c3,bg);
   } else
   switch(cat){
     case "character": {
@@ -901,26 +873,63 @@ function skinIconSvg(poolKey, itemName, size){
       break;
     }
     case "bird": {
-      const variants = [
-        `<ellipse cx="48" cy="56" rx="26" ry="17" fill="${c1}"/><path d="M50,45 L76,29 L60,53 Z" fill="${c2}"/><circle cx="33" cy="49" r="4" fill="${bg}"/>`,
-        `<ellipse cx="50" cy="60" rx="27" ry="15" fill="${c1}"/><path d="M50,58 Q70,40 82,52 Q65,55 50,64 Z" fill="${c2}"/><circle cx="30" cy="55" r="4" fill="${bg}"/><path d="M22,55 L12,52 L22,60 Z" fill="${c2}"/>`,
-      ];
-      shape = variants[variantIdx % variants.length];
+      // Той самий силует, що й drawBirdBody() у грі (owl/parrot/wader/raptor/penguin), впізнаваний за BIRD_SHAPES.
+      const bshape = BIRD_SHAPES[key] || "songbird";
+      if (bshape === "owl") {
+        shape = `<ellipse cx="50" cy="55" rx="26" ry="26" fill="${c1}"/><path d="M30,32 L22,14 L38,26 Z" fill="${c2}"/><path d="M70,32 L78,14 L62,26 Z" fill="${c2}"/><circle cx="40" cy="48" r="10" fill="#fff"/><circle cx="60" cy="48" r="10" fill="#fff"/><circle cx="40" cy="48" r="4.5" fill="#1a237e"/><circle cx="60" cy="48" r="4.5" fill="#1a237e"/><path d="M46,58 L50,66 L54,58 Z" fill="#e65100"/>`;
+      } else if (bshape === "parrot") {
+        shape = `<ellipse cx="46" cy="56" rx="26" ry="17" fill="${c1}"/><path d="M46,38 L38,16 L52,32 Z" fill="${c3}"/><path d="M40,50 Q20,42 12,58 Q28,54 42,62 Z" fill="${c2}"/><circle cx="58" cy="52" r="5" fill="#fff"/><circle cx="59" cy="52" r="2.4" fill="#1a237e"/><path d="M68,54 Q82,54 68,66 Z" fill="#ffca28"/>`;
+      } else if (bshape === "wader") {
+        shape = `<ellipse cx="44" cy="62" rx="22" ry="14" fill="${c1}"/><path d="M56,58 Q76,48 70,24" stroke="${c1}" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="70" cy="22" r="7" fill="#fff"/><circle cx="72" cy="21" r="3" fill="#1a237e"/><path d="M76,22 L90,18 L76,28 Z" fill="#e65100"/><line x1="38" y1="74" x2="38" y2="90" stroke="${c3}" stroke-width="3"/><line x1="50" y1="74" x2="50" y2="90" stroke="${c3}" stroke-width="3"/>`;
+      } else if (bshape === "penguin") {
+        shape = `<ellipse cx="50" cy="58" rx="22" ry="26" fill="${c3}"/><ellipse cx="50" cy="62" rx="13" ry="18" fill="#f5f5f5"/><ellipse cx="27" cy="50" rx="8" ry="16" fill="${c1}"/><ellipse cx="73" cy="50" rx="8" ry="16" fill="${c1}"/><circle cx="42" cy="38" r="5" fill="#fff"/><circle cx="58" cy="38" r="5" fill="#fff"/><circle cx="43" cy="38" r="2.4" fill="#1a237e"/><circle cx="59" cy="38" r="2.4" fill="#1a237e"/><path d="M44,44 L56,44 L50,50 Z" fill="#ffca28"/>`;
+      } else if (bshape === "raptor") {
+        shape = `<ellipse cx="50" cy="55" rx="24" ry="16" fill="${c1}"/><path d="M50,42 Q20,30 8,52 Q30,45 50,55 Z" fill="${c3}"/><path d="M50,42 Q80,30 92,52 Q70,45 50,55 Z" fill="${c3}"/><path d="M38,42 L46,46" stroke="${bg}" stroke-width="3"/><path d="M62,42 L54,46" stroke="${bg}" stroke-width="3"/><circle cx="50" cy="48" r="3" fill="#ffca28"/><path d="M62,52 L78,50 L62,60 Z" fill="#212121"/>`;
+      } else {
+        shape = [
+          `<ellipse cx="48" cy="56" rx="26" ry="17" fill="${c1}"/><path d="M50,45 L76,29 L60,53 Z" fill="${c2}"/><circle cx="33" cy="49" r="4" fill="${bg}"/>`,
+          `<ellipse cx="50" cy="60" rx="27" ry="15" fill="${c1}"/><path d="M50,58 Q70,40 82,52 Q65,55 50,64 Z" fill="${c2}"/><circle cx="30" cy="55" r="4" fill="${bg}"/><path d="M22,55 L12,52 L22,60 Z" fill="${c2}"/>`,
+        ][variantIdx % 2];
+      }
       break;
     }
-    case "obstacles": shape = `<rect x="18" y="55" width="18" height="30" rx="3" fill="${c1}"/><rect x="43" y="38" width="18" height="47" rx="3" fill="${c2}"/><rect x="68" y="60" width="14" height="25" rx="3" fill="${c1}"/>`; break;
+    case "obstacles": {
+      // Кіберпанк — реальні неонові вежі, як і в грі; решта лишається
+      // стандартним силуетом перешкод + свій тон.
+      if (OBSTACLE_SHAPES[key] === "cyberpunk") {
+        shape = `<rect x="16" y="50" width="16" height="36" fill="${bg}" stroke="${c1}" stroke-width="2"/><rect x="42" y="26" width="16" height="60" fill="${bg}" stroke="${c1}" stroke-width="2"/><rect x="68" y="42" width="16" height="44" fill="${bg}" stroke="${c1}" stroke-width="2"/>${[0,1,2,3,4].map(i=>`<rect x="18" y="${56+i*6}" width="12" height="2" fill="${c1}" opacity=".8"/>`).join("")}${[0,1,2,3,4,5,6].map(i=>`<rect x="44" y="${32+i*7}" width="12" height="2" fill="${c1}" opacity=".8"/>`).join("")}`;
+      } else {
+        shape = `<rect x="18" y="55" width="18" height="30" rx="3" fill="${c1}"/><rect x="43" y="38" width="18" height="47" rx="3" fill="${c2}"/><rect x="68" y="60" width="14" height="25" rx="3" fill="${c1}"/>`;
+      }
+      break;
+    }
+    case "boss": {
+      // Той самий силует-акцент, що й у drawBoss() (BOSS_SHAPES), поверх базового монстро-тіла.
+      const boshape = BOSS_SHAPES[key] || "";
+      const base = `<path d="M20,50 Q20,20 50,20 Q80,20 80,50 Q80,75 50,85 Q20,75 20,50 Z" fill="${c1}"/><circle cx="38" cy="48" r="5" fill="${bg}"/><circle cx="62" cy="48" r="5" fill="${bg}"/>`;
+      if (boshape === "dragon") {
+        shape = base + `<path d="M28,26 L18,8 L34,22 Z" fill="${c3}"/><path d="M72,26 L82,8 L66,22 Z" fill="${c3}"/><path d="M18,55 L4,48 L16,68 Z" fill="${c2}"/><path d="M82,55 L96,48 L84,68 Z" fill="${c2}"/><path d="M50,85 L56,98 L44,94 Z" fill="${c3}"/>`;
+      } else if (boshape === "robot") {
+        shape = base + `<line x1="50" y1="20" x2="50" y2="8" stroke="${c2}" stroke-width="3"/><circle cx="50" cy="8" r="4" fill="#ff1744"/><rect x="35" y="60" width="30" height="8" fill="#0a0a0a"/><rect x="38" y="61" width="6" height="6" fill="#4fc3f7"/><rect x="47" y="61" width="6" height="6" fill="#4fc3f7"/><rect x="56" y="61" width="6" height="6" fill="#4fc3f7"/>`;
+      } else if (boshape === "printer") {
+        shape = base + `<rect x="22" y="16" width="56" height="10" fill="${c3}"/><rect x="35" y="58" width="30" height="18" fill="#f5f5f5"/><line x1="39" y1="64" x2="61" y2="64" stroke="#bbb" stroke-width="2"/><line x1="39" y1="70" x2="61" y2="70" stroke="#bbb" stroke-width="2"/>`;
+      } else if (boshape === "queen") {
+        shape = base + `<path d="M28,22 L36,4 L46,20 L54,4 L64,20 L72,4 L80,22 Z" fill="#ffd740"/>`;
+      } else if (boshape === "ghost") {
+        shape = `<path d="M20,55 Q20,20 50,20 Q80,20 80,55 L80,85 Q72,75 64,85 Q56,75 48,85 Q40,75 32,85 Q24,75 20,85 Z" fill="${c1}" opacity=".8"/><circle cx="38" cy="48" r="5" fill="${bg}"/><circle cx="62" cy="48" r="5" fill="${bg}"/>`;
+      } else if (boshape === "kraken") {
+        shape = base.replace(/Q20,75 20,50/,'Q20,75 20,50') + `${[0,1,2,3].map(i=>`<path d="M${28+i*15},80 Q${34+i*15},95 ${26+i*15},100 Q${20+i*15},92 ${28+i*15},80 Z" fill="${c3}"/>`).join("")}`;
+      } else if (boshape === "golem") {
+        shape = base + `<path d="M32,28 L40,50 L34,66" stroke="${c3}" stroke-width="2" fill="none"/><path d="M70,32 L60,55" stroke="${c3}" stroke-width="2" fill="none"/>`;
+      } else {
+        shape = `<circle cx="50" cy="52" r="27" fill="${c1}"/><path d="M22,42 L30,22 L38,42 M62,42 L70,22 L78,42" stroke="${c2}" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="40" cy="50" r="5" fill="${bg}"/><circle cx="60" cy="50" r="5" fill="${bg}"/>`;
+      }
+      break;
+    }
     case "weather": {
       const variants = [
         `<ellipse cx="44" cy="42" rx="25" ry="15" fill="${c2}"/><ellipse cx="64" cy="48" rx="17" ry="12" fill="${c1}"/><line x1="35" y1="68" x2="30" y2="84" stroke="${c1}" stroke-width="4" stroke-linecap="round"/><line x1="55" y1="68" x2="50" y2="84" stroke="${c1}" stroke-width="4" stroke-linecap="round"/>`,
         `<circle cx="35" cy="30" r="14" fill="${c2}"/>${[0,1,2,3,4,5].map(i=>`<line x1="35" y1="30" x2="${35+22*Math.cos(i*Math.PI/3)}" y2="${30+22*Math.sin(i*Math.PI/3)}" stroke="${c2}" stroke-width="3" stroke-linecap="round"/>`).join("")}<ellipse cx="58" cy="65" rx="26" ry="16" fill="${c1}"/>`,
-      ];
-      shape = variants[variantIdx % variants.length];
-      break;
-    }
-    case "boss": {
-      const variants = [
-        `<circle cx="50" cy="52" r="27" fill="${c1}"/><path d="M22,42 L30,22 L38,42 M62,42 L70,22 L78,42" stroke="${c2}" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="40" cy="50" r="5" fill="${bg}"/><circle cx="60" cy="50" r="5" fill="${bg}"/>`,
-        `<path d="M20,50 Q20,20 50,20 Q80,20 80,50 Q80,75 50,85 Q20,75 20,50 Z" fill="${c1}"/><path d="M15,45 L25,35 L28,50 M85,45 L75,35 L72,50" fill="${c2}"/><circle cx="38" cy="48" r="5" fill="${bg}"/><circle cx="62" cy="48" r="5" fill="${bg}"/><path d="M38,65 Q50,72 62,65" stroke="${bg}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
       ];
       shape = variants[variantIdx % variants.length];
       break;
