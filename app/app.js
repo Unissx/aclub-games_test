@@ -942,6 +942,8 @@ function skinIconSvg(poolKey, itemName, size){
     default: shape = `<circle cx="50" cy="50" r="28" fill="${c1}"/>`;
   }
   const gradId = 'g' + Math.abs(_hashHue(key + poolKey)).toString(36);
+  const rarity = skinRarityOf(poolKey);
+  const frame = rarityFrameSvg(rarity, gradId);
   return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <radialGradient id="${gradId}h" cx="35%" cy="30%" r="75%">
@@ -952,11 +954,53 @@ function skinIconSvg(poolKey, itemName, size){
         <stop offset="0%" stop-color="${shadeColorCss(c1,16)}"/>
         <stop offset="100%" stop-color="${shadeColorCss(c1,-18)}"/>
       </linearGradient>
+      ${frame.defs}
     </defs>
     <rect x="2" y="2" width="96" height="96" rx="18" fill="${bg}"/>
+    ${frame.back}
     <ellipse cx="50" cy="90" rx="26" ry="5" fill="#000" opacity=".25"/>
     ${shape.replace(new RegExp(_escRe(c2),'g'), `url(#${gradId}h)`).replace(new RegExp(_escRe(c1),'g'), `url(#${gradId}b)`)}
+    ${frame.front}
   </svg>`;
+}
+// Рідкість визначається прямо з назви пулу (в ній вона вже закодована,
+// напр. "runner_epic_bird") — і одразу дає рамку/світіння/частинки, щоб
+// цінність предмета було видно навіть у маленькому прев'ю, а не лише
+// за текстовою назвою.
+function skinRarityOf(poolKey){
+  if (!poolKey) return null;
+  if (poolKey.indexOf("legendary") >= 0) return "legendary";
+  if (poolKey.indexOf("epic") >= 0) return "epic";
+  if (poolKey.indexOf("rare") >= 0) return "rare";
+  return null;
+}
+function rarityFrameSvg(rarity, gid){
+  if (rarity === "rare") {
+    return {
+      defs: `<radialGradient id="${gid}glow" cx="50%" cy="50%" r="60%"><stop offset="60%" stop-color="#4E8FE0" stop-opacity="0"/><stop offset="100%" stop-color="#4E8FE0" stop-opacity=".55"/></radialGradient>`,
+      back: `<rect x="2" y="2" width="96" height="96" rx="18" fill="url(#${gid}glow)"/>`,
+      front: `<rect x="3" y="3" width="94" height="94" rx="17" fill="none" stroke="#4E8FE0" stroke-width="2.5" opacity=".85"/>`
+    };
+  }
+  if (rarity === "epic") {
+    const sparks = [[10,14],[88,20],[14,86],[90,80]].map(([x,y],i) =>
+      `<circle cx="${x}" cy="${y}" r="${2.4-(i%2)*0.6}" fill="#E9C6FF"><animate attributeName="opacity" values="0.2;1;0.2" dur="${1.6+i*0.3}s" repeatCount="indefinite" begin="${i*0.2}s"/></circle>`).join("");
+    return {
+      defs: `<radialGradient id="${gid}glow" cx="50%" cy="50%" r="65%"><stop offset="55%" stop-color="#B15EF0" stop-opacity="0"/><stop offset="100%" stop-color="#B15EF0" stop-opacity=".6"/></radialGradient>`,
+      back: `<rect x="2" y="2" width="96" height="96" rx="18" fill="url(#${gid}glow)"/>`,
+      front: `<rect x="3" y="3" width="94" height="94" rx="17" fill="none" stroke="#B15EF0" stroke-width="3" opacity=".9"/>${sparks}`
+    };
+  }
+  if (rarity === "legendary") {
+    const sparks = [[8,12],[92,16],[10,88],[92,84],[50,6],[50,94]].map(([x,y],i) =>
+      `<circle cx="${x}" cy="${y}" r="${3-(i%3)*0.6}" fill="#FFE9B8"><animate attributeName="opacity" values="0.15;1;0.15" dur="${1.3+i*0.22}s" repeatCount="indefinite" begin="${i*0.15}s"/></circle>`).join("");
+    return {
+      defs: `<radialGradient id="${gid}glow" cx="50%" cy="50%" r="70%"><stop offset="45%" stop-color="#F2A93B" stop-opacity="0"/><stop offset="100%" stop-color="#F2A93B" stop-opacity=".7"/></radialGradient>`,
+      back: `<rect x="2" y="2" width="96" height="96" rx="18" fill="url(#${gid}glow)"/>`,
+      front: `<rect x="2.5" y="2.5" width="95" height="95" rx="17.5" fill="none" stroke="#F2A93B" stroke-width="3.5"/><rect x="2.5" y="2.5" width="95" height="95" rx="17.5" fill="none" stroke="#FFE9B8" stroke-width="1.2" opacity=".8"/>${sparks}`
+    };
+  }
+  return { defs: "", back: "", front: "" };
 }
 function _escRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function shadeColorCss(hslStr, delta){
