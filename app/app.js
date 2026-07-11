@@ -1056,22 +1056,66 @@ function _rewardVisual(text){
   if (/скін|предмет|косметик/i.test(t)) return { icon:"🎨", color:"#3FE0A0" };
   return { icon:"🎁", color:"#3FE0A0" };
 }
-function chestOpenSceneHtml(chestId, chestName, resultText){
-  const sparks = ["✨","⭐","💫","✨"].map((s,i) => {
-    const dx = [-40, 36, -18, 22][i], delay = 0.3 + i*0.07;
-    return `<div class="chest-spark" style="--dx:${dx}px; animation-delay:${delay}s; left:${42+i*6}%;">${s}</div>`;
-  }).join("");
+// Іконка/колір "картки" карусельки з drop-об'єкта напряму (надійніше за
+// розбір тексту — знаємо точний тип призу, а не вгадуємо за словами).
+function _dropVisual(drop){
+  if (!drop) return { icon:"🎁", color:"#3FE0A0" };
+  if (drop.type === "shard") return { icon:"🔮", color:"#8B7CF6" };
+  if (drop.type === "vipHours") return { icon:"👑", color:"#F2C879" };
+  if (drop.type === "coins") return { icon:"💰", color:"#3FE0A0" };
+  if (drop.type === "item") {
+    const rc = { Rare:"#4E8FE0", Epic:"#B15EF0", Legendary:"#F2A93B" }[drop.rarity] || "#3FE0A0";
+    return { icon:"🎨", color:rc };
+  }
+  return { icon:"🎁", color:"#3FE0A0" };
+}
+const CAROUSEL_FILLER_ICONS = ["🪙","🔮","👑","🎁","💎","🍀","⭐","🎨"];
+function chestCarouselHtml(drop){
+  const win = _dropVisual(drop);
+  const total = 24, winIndex = 18;
+  let cards = "";
+  for (let i=0;i<total;i++){
+    if (i === winIndex) {
+      cards += `<div class="carousel-card win" id="carouselWinCard" style="--rc:${win.color};">${win.icon}</div>`;
+    } else {
+      cards += `<div class="carousel-card">${CAROUSEL_FILLER_ICONS[Math.floor(Math.random()*CAROUSEL_FILLER_ICONS.length)]}</div>`;
+    }
+  }
+  return `<div class="carousel-viewport" id="carouselViewport">
+    <div class="carousel-track" id="carouselTrack">${cards}</div>
+    <div class="carousel-marker"></div>
+    <div class="carousel-win-flash" id="carouselFlash"></div>
+  </div>`;
+}
+// Запускається одразу після вставки модалки в DOM (через подвійний
+// requestAnimationFrame, щоб браузер встиг порахувати розміри карток).
+function startCarouselAnim(){
+  const viewport = document.getElementById("carouselViewport");
+  const track = document.getElementById("carouselTrack");
+  const winCard = document.getElementById("carouselWinCard");
+  if (!viewport || !track || !winCard) return;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const vpRect = viewport.getBoundingClientRect();
+    const cardRect = winCard.getBoundingClientRect();
+    const trackRect = track.getBoundingClientRect();
+    const cardCenterInTrack = (cardRect.left - trackRect.left) + cardRect.width/2;
+    const targetOffset = cardCenterInTrack - vpRect.width/2;
+    track.style.transition = "transform 3.1s cubic-bezier(.11,.72,.16,1)";
+    track.style.transform = `translateX(-${targetOffset}px)`;
+    setTimeout(() => {
+      const flash = document.getElementById("carouselFlash");
+      if (flash) flash.classList.add("play");
+    }, 3050);
+  }));
+}
+function chestOpenSceneHtml(chestId, chestName, resultText, drop){
   const rv = _rewardVisual(resultText);
   return `
-    <div class="chest-open-wrap">
-      <div class="chest-shock"></div>
-      <div class="chest-flash"></div>
-      <div class="chest-glow"></div>
-      ${sparks}
-      <div class="chest-shake">${chestArtSvg(chestId, 76, true)}</div>
-    </div>
-    <div class="mh reward-pop" style="text-align:center;">🎉 ${esc(chestName)} відкрито!</div>
-    <div class="reward-card reward-pop" style="--rc:${rv.color};">
+    <div class="mh" style="text-align:center;">🎁 ${esc(chestName)}</div>
+    <div class="sub" style="text-align:center; margin-bottom:2px;">Відкриваємо...</div>
+    ${chestCarouselHtml(drop)}
+    <div class="mh reward-pop" style="text-align:center; animation-delay:3.3s;">🎉 Вітаємо!</div>
+    <div class="reward-card reward-pop" style="--rc:${rv.color}; animation-delay:3.3s;">
       <div class="reward-card-icon">${rv.icon}</div>
       <div class="reward-card-text">${esc(resultText).replace(/\*/g,'')}</div>
     </div>
@@ -1367,7 +1411,8 @@ async function chestSlotOpen(row){
   try {
     const r = await api("chest_slot_open", { row });
     if (!r.ok) { toast(r.error === "not_ready" ? "Ще не готово" : "Помилка", "err"); return; }
-    showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText));
+    showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText, r.drop));
+    startCarouselAnim();
     await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
@@ -1406,7 +1451,8 @@ async function buyChest(chestId){
   try {
     const r = await apiRaw("chest_open", { chestId });
     if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
-    showModal(chestOpenSceneHtml(r.chest.id, r.chest.name, r.resultText));
+    showModal(chestOpenSceneHtml(r.chest.id, r.chest.name, r.resultText, r.drop));
+    startCarouselAnim();
     await refreshDashboard();
     await loadShopChests(); // no-op, якщо ми не на вкладці Магазину (наприклад, купили з Інвентаря)
   } catch(e) { toast("Помилка з'єднання", "err"); }
@@ -1514,7 +1560,8 @@ async function claimVipDaily(kind){
       toast(msg, "err"); return;
     }
     if (kind === "avangard") {
-      showModal(chestOpenSceneHtml(r.chestId || "avangard", r.chestName || "«Авангард»", r.resultText));
+      showModal(chestOpenSceneHtml(r.chestId || "avangard", r.chestName || "«Авангард»", r.resultText, r.drop));
+      startCarouselAnim();
     } else {
       toast("Кейс додано в слот! 🥈", "ok");
     }
