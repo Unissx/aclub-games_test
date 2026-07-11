@@ -87,6 +87,27 @@ function closeModal(){
 }
 document.getElementById("modalBg").addEventListener("click", closeModal);
 
+// Власне вікно підтвердження замість системного confirm() — у деяких
+// Telegram WebView нативні діалоги можуть тихо не спрацьовувати
+// (клік ніби нічого не робить, без жодної помилки). Це надійніше.
+let _confirmCallback = null;
+function showConfirmModal(message, callback, okLabel){
+  _confirmCallback = callback;
+  showModal(`
+    <div class="mh" style="text-align:center;">${esc(message)}</div>
+    <div class="btn-row" style="margin-top:14px; gap:8px;">
+      <button class="btn secondary" style="flex:1;" onclick="closeModal()">Скасувати</button>
+      <button class="btn" style="flex:1;" onclick="_runConfirmCallback()">${esc(okLabel||"Так")}</button>
+    </div>
+  `);
+}
+function _runConfirmCallback(){
+  const cb = _confirmCallback;
+  _confirmCallback = null;
+  closeModal();
+  if (cb) cb();
+}
+
 // ============================================================
 // СТАН
 // ============================================================
@@ -737,13 +758,14 @@ function paintShopAbank(r){
     </div>`).join("") + `</div>`;
 }
 async function buyShopItem(id, price){
-  if (!confirm(`Придбати за ${price} á-coin?`)) return;
-  try {
-    const r = await api("shop_buy", { itemId:id });
-    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
-    toast("Придбано! Перевірте «Мої товари»", "ok");
-    await refreshDashboard(); loadShopAbank();
-  } catch(e) { toast("Помилка з'єднання", "err"); }
+  showConfirmModal(`Придбати за ${price} á-coin?`, async () => {
+    try {
+      const r = await api("shop_buy", { itemId:id });
+      if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+      toast("Придбано! Перевірте «Мої товари»", "ok");
+      await refreshDashboard(); loadShopAbank();
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+  }, "Придбати");
 }
 
 async function loadUpgrades(kind){
@@ -1273,6 +1295,26 @@ function paintMySkins(){
     return Object.assign(g, { poolKey, game: skinGameOf(poolKey) });
   });
 
+  // Щойно скрафчені предмети ("Крафт: предмет рівня X") ще не належать
+  // жодній грі, поки гравець не обере конкретну річ — інакше вони не
+  // потрапляли в жодну вкладку нижче й виглядали як зниклі.
+  const pending = resolvedGroups.filter(g => !g.poolKey && g.items.some(x => x.status === "Не використано"));
+  const pendingHtml = pending.length ? `
+    <div class="h2" style="font-size:13px; margin-top:0;">🎁 Потребує вибору <span class="hint">натисніть, щоб обрати конкретний предмет</span></div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:10px; margin-bottom:16px;">
+      ${pending.map(g => {
+        const countLabel = g.items.length > 1 ? `<div class="badge" style="position:absolute; top:-4px; right:-4px;">×${g.items.length}</div>` : "";
+        const cleanName = g.name.replace(/^Крафт: предмет рівня /,"").replace(/^Крафт: |^Кейс: /,"");
+        return `<div data-chest-group="${esc(g.name)}" style="cursor:pointer; text-align:center; position:relative; background:var(--panel3); border:1.5px solid var(--brass-bright); border-radius:14px; padding:8px 4px 10px;">
+          ${countLabel}
+          <div>${skinIconSvg(null, cleanName, 68)}</div>
+          <div class="sub" style="font-size:10px; margin-top:3px; line-height:1.25;">${esc(cleanName)}</div>
+          <div class="badge new" style="margin-top:2px;">Обрати →</div>
+        </div>`;
+      }).join("")}
+    </div>
+  ` : "";
+
   const games = [
     { id:"runner", ic:"🏃", lb:"Runner" },
     { id:"wordle", ic:"🔤", lb:"Вгадай слово" },
@@ -1298,7 +1340,7 @@ function paintMySkins(){
       </div>`;
     }).join("") + `</div>` : emptyBlock("🎨","Тут поки порожньо","Скіни цієї гри ще не випадали");
 
-  sec.innerHTML = `<div class="tabs2" style="flex-wrap:wrap; gap:4px;">${tabsHtml}</div>${gridHtml}`;
+  sec.innerHTML = `${pendingHtml}<div class="tabs2" style="flex-wrap:wrap; gap:4px;">${tabsHtml}</div>${gridHtml}`;
   sec.querySelectorAll("[data-my-skins-game]").forEach(el => {
     if (el.getAttribute("data-my-skins-game") === MY_SKINS_GAME) el.classList.add("active");
     el.addEventListener("click", () => { MY_SKINS_GAME = el.getAttribute("data-my-skins-game"); paintMySkins(); });
@@ -1533,24 +1575,27 @@ async function activateVipHours(hours){
 }
 async function buyVipTicket(ticketId){
   const t = VIP_TICKET_DEFS[ticketId];
-  if (!confirm(`Придбати VIP-тикет «${t.label}» за ${t.price} á-coin?`)) return;
-  try {
-    const r = await api("vip_buy_ticket", { ticketId });
-    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
-    toast("Тикет придбано! Активуйте, коли захочете", "ok");
-    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
-  } catch(e) { toast("Помилка з'єднання", "err"); }
+  if (!t) { toast("Помилка: невідомий тикет", "err"); return; }
+  showConfirmModal(`Придбати VIP-тикет «${t.label}» за ${t.price} á-coin?`, async () => {
+    try {
+      const r = await api("vip_buy_ticket", { ticketId });
+      if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+      toast("Тикет придбано! Активуйте, коли захочете", "ok");
+      await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+  }, "Придбати");
 }
 async function activateVipTicket(row){
-  if (!confirm("Активувати цей VIP-тикет цілком прямо зараз?")) return;
-  try {
-    const r = await api("vip_activate_ticket", { row });
-    if (!r.ok) { toast("Помилка", "err"); return; }
-    toast("VIP активовано! 👑", "ok");
-    await refreshDashboard();
-    if (TAB === "inventory") { await loadInventoryData(); paintInventory(); }
-    else if (TAB === "games") { closeModal(); renderGames(); }
-  } catch(e) { toast("Помилка з'єднання", "err"); }
+  showConfirmModal("Активувати цей VIP-тикет цілком прямо зараз?", async () => {
+    try {
+      const r = await api("vip_activate_ticket", { row });
+      if (!r.ok) { toast("Помилка", "err"); return; }
+      toast("VIP активовано! 👑", "ok");
+      await refreshDashboard();
+      if (TAB === "inventory") { await loadInventoryData(); paintInventory(); }
+      else if (TAB === "games") { renderGames(); }
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+  }, "Активувати");
 }
 async function claimVipDaily(kind){
   try {
@@ -1589,7 +1634,7 @@ async function craftItem(rarity){
   try {
     const r = await apiRaw("craft_item", { rarity });
     if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
-    toast("Крафт виконано! Дивіться нижче в «Мої скіни»", "ok");
+    toast("Крафт виконано! Оберіть предмет у «Мої скіни» → «Потребує вибору»", "ok");
     await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
