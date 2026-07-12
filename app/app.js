@@ -824,6 +824,32 @@ const CHEST_META = {
   epic:        { icon:"💜", base:"#3a1f4d", lid:"#B15EF0", accent:"#6b2f8a", gem:"#e6c3ff" },
   legendary:   { icon:"🧡", base:"#5c3410", lid:"#F2A93B", accent:"#a35a12", gem:"#ffdca0" },
 };
+const CHEST_GRANT_OPTIONS = [
+  { kind:"paid", id:"avangard",    label:"💰 «Авангард»" },
+  { kind:"paid", id:"singularity", label:"⚡️ «Сингулярність»" },
+  { kind:"paid", id:"ultimatum",   label:"🏃 «Ультиматум»" },
+  { kind:"paid", id:"requiem",     label:"🌒 «Реквієм»" },
+  { kind:"paid", id:"collapse",    label:"🔤 «Колапс»" },
+  { kind:"paid", id:"absolut",     label:"👑 «Абсолют»" },
+  { kind:"free", id:"silver",      label:"🥈 Срібна скриня" },
+  { kind:"free", id:"gold",        label:"🥇 Золота скриня" },
+  { kind:"free", id:"epic",        label:"💜 Епічна скриня" },
+  { kind:"free", id:"legendary",   label:"🧡 Легендарна скриня" },
+];
+async function submitGrantChest(){
+  const ldap = document.getElementById("chestGrantLdap").value.trim();
+  const val = document.getElementById("chestGrantChest").value;
+  const [kind, chestId] = val.split("|");
+  if (!ldap) { toast("Введіть LDAP", "err"); return; }
+  try {
+    const r = await api("admin_grant_chest", { ldap, kind, chestId });
+    if (!r.ok) {
+      const msg = r.error === "user_not_found" ? "Співробітника не знайдено" : (r.error === "inventory_full" ? "У співробітника заповнені слоти кейсів" : "Помилка");
+      toast(msg, "err"); return;
+    }
+    toast(`Кейс видано ${r.userName}`, "ok");
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
 // Один шаблон 2D-скрині, розфарбований під кожен тип — узгоджено
 // виглядає і в Магазині, і в слотах Інвентаря. animated=true —
 // кришка окремою групою з CSS-анімацією відкриття.
@@ -1748,6 +1774,22 @@ async function loadAdminSkins(){
       SKINS_CATALOG_CACHE = r.pools; // той самий кеш, що й для іконок власних скінів
     }
     wrap.innerHTML = `
+      <div class="card">
+        <div style="font-weight:700; font-size:13.5px; margin-bottom:8px;">📦 Видати кейс вручну</div>
+        <div class="field-label">LDAP співробітника</div>
+        <input class="field" id="chestGrantLdap" placeholder="AB120996RGN">
+        <div class="field-label">Кейс</div>
+        <select class="field" id="chestGrantChest">
+          <optgroup label="Платні (відкриється одразу)">
+            ${CHEST_GRANT_OPTIONS.filter(c=>c.kind==='paid').map(c => `<option value="paid|${c.id}">${esc(c.label)}</option>`).join("")}
+          </optgroup>
+          <optgroup label="Безкоштовні (додасться у слот)">
+            ${CHEST_GRANT_OPTIONS.filter(c=>c.kind==='free').map(c => `<option value="free|${c.id}">${esc(c.label)}</option>`).join("")}
+          </optgroup>
+        </select>
+        <button class="btn sm" style="margin-top:10px;" onclick="submitGrantChest()">✅ Видати</button>
+      </div>
+
       <div class="card">
         <div style="font-weight:700; font-size:13.5px; margin-bottom:8px;">🎁 Видати скін вручну</div>
         <div class="field-label">LDAP співробітника</div>
