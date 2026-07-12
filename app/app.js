@@ -759,6 +759,7 @@ function paintShopAbank(r){
 }
 async function buyShopItem(id, price){
   showConfirmModal(`Придбати за ${price} á-coin?`, async () => {
+    toast("Обробляємо...", "ok");
     try {
       const r = await api("shop_buy", { itemId:id });
       if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
@@ -798,6 +799,7 @@ function paintUpgrades(kind, r){
   }).join("") + `</div>`;
 }
 async function buyUpgrade(kind, key){
+  toast("Обробляємо...", "ok");
   try {
     const r = await api(kind === "runner" ? "upgrades_runner_buy" : "upgrades_wordle_buy", { key });
     if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
@@ -1450,13 +1452,14 @@ async function submitRush(row){
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 async function chestSlotOpen(row){
+  showModal(`<div class="mh" style="text-align:center;">🎁 Відкриваємо...</div><div style="display:flex; justify-content:center; padding:20px 0;"><div class="spin"></div></div>`);
   try {
     const r = await api("chest_slot_open", { row });
-    if (!r.ok) { toast(r.error === "not_ready" ? "Ще не готово" : "Помилка", "err"); return; }
+    if (!r.ok) { closeModal(); toast(r.error === "not_ready" ? "Ще не готово" : "Помилка", "err"); return; }
     showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText, r.drop));
     startCarouselAnim();
     await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
-  } catch(e) { toast("Помилка з'єднання", "err"); }
+  } catch(e) { closeModal(); toast("Помилка з'єднання", "err"); }
 }
 
 // ── Покупка кейсу — платні кейси відкриваються МИТТЄВО (не через
@@ -1489,15 +1492,15 @@ function openBuyChestSheet(chestId){
 }
 async function buyChest(chestId){
   closeModal();
-  toast("Відкриваємо кейс...", "ok");
+  showModal(`<div class="mh" style="text-align:center;">🎁 Купуємо...</div><div style="display:flex; justify-content:center; padding:20px 0;"><div class="spin"></div></div>`);
   try {
     const r = await apiRaw("chest_open", { chestId });
-    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+    if (!r.ok) { closeModal(); toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
     showModal(chestOpenSceneHtml(r.chest.id, r.chest.name, r.resultText, r.drop));
     startCarouselAnim();
     await refreshDashboard();
     await loadShopChests(); // no-op, якщо ми не на вкладці Магазину (наприклад, купили з Інвентаря)
-  } catch(e) { toast("Помилка з'єднання", "err"); }
+  } catch(e) { closeModal(); toast("Помилка з'єднання", "err"); }
 }
 
 // ── Предмети з кейсів (самообслуговування) ──
