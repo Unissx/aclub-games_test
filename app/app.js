@@ -1120,6 +1120,7 @@ function _dropVisual(drop){
   return { icon:"🎁", color:"#3FE0A0" };
 }
 const CAROUSEL_FILLER_ICONS = ["🪙","🔮","👑","🎁","💎","🍀","⭐","🎨"];
+const CAROUSEL_FILLER_COLORS = ["#4E8FE0","#B15EF0","#F2A93B","#3FE0A0","#8B7CF6","#F2C879"];
 function chestCarouselHtml(drop){
   const win = _dropVisual(drop);
   const total = 24, winIndex = 18;
@@ -1128,7 +1129,9 @@ function chestCarouselHtml(drop){
     if (i === winIndex) {
       cards += `<div class="carousel-card win" id="carouselWinCard" style="--rc:${win.color};">${win.icon}</div>`;
     } else {
-      cards += `<div class="carousel-card">${CAROUSEL_FILLER_ICONS[Math.floor(Math.random()*CAROUSEL_FILLER_ICONS.length)]}</div>`;
+      const icon = CAROUSEL_FILLER_ICONS[Math.floor(Math.random()*CAROUSEL_FILLER_ICONS.length)];
+      const color = CAROUSEL_FILLER_COLORS[Math.floor(Math.random()*CAROUSEL_FILLER_COLORS.length)];
+      cards += `<div class="carousel-card tinted" style="--rc:${color};">${icon}</div>`;
     }
   }
   return `<div class="carousel-viewport" id="carouselViewport">
