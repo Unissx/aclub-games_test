@@ -1459,7 +1459,7 @@ async function chestSlotOpen(row){
     showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText, r.drop));
     startCarouselAnim();
     await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
-  } catch(e) { closeModal(); toast("Помилка з'єднання", "err"); }
+  } catch(e) { closeModal(); toast("Помилка: " + (e && e.message || e), "err"); console.error(e); }
 }
 
 // ── Покупка кейсу — платні кейси відкриваються МИТТЄВО (не через
@@ -1500,7 +1500,7 @@ async function buyChest(chestId){
     startCarouselAnim();
     await refreshDashboard();
     await loadShopChests(); // no-op, якщо ми не на вкладці Магазину (наприклад, купили з Інвентаря)
-  } catch(e) { closeModal(); toast("Помилка з'єднання", "err"); }
+  } catch(e) { closeModal(); toast("Помилка: " + (e && e.message || e), "err"); console.error(e); }
 }
 
 // ── Предмети з кейсів (самообслуговування) ──
