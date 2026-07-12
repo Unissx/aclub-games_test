@@ -391,14 +391,14 @@ async function selfUseItem(row){
 }
 
 async function cancelItem(row){
-  if (!confirm("Скасувати покупку? Кошти повернуться на баланс.")) return;
-  try {
-    const r = await api("item_cancel", { row });
-    if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
-    toast("Покупку скасовано, кошти повернено", "ok");
-    await refreshDashboard();
-    closeModal();
-  } catch(e) { toast("Помилка з'єднання", "err"); }
+  showConfirmModal("Скасувати покупку? Кошти повернуться на баланс.", async () => {
+    try {
+      const r = await api("item_cancel", { row });
+      if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
+      toast("Покупку скасовано, кошти повернено", "ok");
+      await refreshDashboard();
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+  }, "Скасувати покупку");
 }
 
 function openMerchForm(row, itemName){
@@ -610,9 +610,14 @@ async function getRebusHint(){
     let r = await api("rebus_hint", { confirm:false });
     if (!r.ok) { showModal(`<div class="mh">⚠️ Помилка</div><div class="sub">${esc(r.error||"")}</div>`); return; }
     if (r.needConfirm) {
-      if (!confirm("Підказка зменшує приз вдвічі. Продовжити?")) return;
-      r = await api("rebus_hint", { confirm:true });
-      if (!r.ok) { showModal(`<div class="mh">⚠️ Помилка</div>`); return; }
+      showConfirmModal("Підказка зменшує приз вдвічі. Продовжити?", async () => {
+        try {
+          const r2 = await api("rebus_hint", { confirm:true });
+          if (!r2.ok) { showModal(`<div class="mh">⚠️ Помилка</div>`); return; }
+          showModal(`<div class="mh">💡 Підказка</div><div class="sub">${esc(r2.hint)}</div>`);
+        } catch(e) { showModal(`<div class="mh">⚠️ Немає з'єднання</div>`); }
+      }, "Так, продовжити");
+      return;
     }
     showModal(`<div class="mh">💡 Підказка</div><div class="sub">${esc(r.hint)}</div>`);
   } catch(e) { showModal(`<div class="mh">⚠️ Немає з'єднання</div>`); }
@@ -1444,13 +1449,18 @@ async function chestSlotStart(row){
     await loadInventoryData(); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
+const FREE_CHEST_SELL_PRICES = { silver:1, gold:3, epic:8, legendary:15 };
 function chestSlotDispose(row, kind){
   if (kind === "paid") {
-    if (!confirm("Розібрати кейс на осколки? Шанс отримати 1 осколок — 50%.")) return;
-    disposeChestSlot(row, "dismantle");
+    showConfirmModal("Розібрати кейс на осколки? Шанс отримати 1 осколок — 50%.", () => {
+      disposeChestSlot(row, "dismantle");
+    }, "Розібрати");
   } else {
-    if (!confirm("Продати кейс боту за фіксовану ціну á-coin?")) return;
-    disposeChestSlot(row, "sell");
+    const slot = CHEST_SLOTS_STATE.find(s => s.row === row);
+    const price = slot ? (FREE_CHEST_SELL_PRICES[slot.chestId] || 0) : 0;
+    showConfirmModal(`Продати кейс боту за ${price} á-coin?`, () => {
+      disposeChestSlot(row, "sell");
+    }, "Продати");
   }
 }
 async function disposeChestSlot(row, mode){
@@ -1663,13 +1673,14 @@ function fmtDate(iso){
   return d.toLocaleDateString("uk-UA",{day:"2-digit",month:"2-digit"}) + " " + d.toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
 }
 async function craftItem(rarity){
-  if (!confirm("Витратити осколки на крафт?")) return;
-  try {
-    const r = await apiRaw("craft_item", { rarity });
-    if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
-    toast("Крафт виконано! Оберіть предмет у «Мої скіни» → «Потребує вибору»", "ok");
-    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
-  } catch(e) { toast("Помилка з'єднання", "err"); }
+  showConfirmModal("Витратити осколки на крафт?", async () => {
+    try {
+      const r = await apiRaw("craft_item", { rarity });
+      if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
+      toast("Крафт виконано! Оберіть предмет у «Мої скіни» → «Потребує вибору»", "ok");
+      await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+  }, "Крафтити");
 }
 
 // ============================================================
@@ -1921,9 +1932,10 @@ async function adminLeaderboardGet(){
 async function adminLeaderboardRollback(){
   const v = document.getElementById("lbCutoff").value;
   if (!v) { toast("Вкажіть дату", "err"); return; }
-  if (!confirm("Вилучити всі результати ПІСЛЯ цієї дати? Дію не можна скасувати.")) return;
-  const r = await api("admin_leaderboard_rollback", { cutoffIso: new Date(v).toISOString() });
-  if (r.ok) toast(`Вилучено результатів: ${r.excluded}`, "ok"); else toast("Помилка", "err");
+  showConfirmModal("Вилучити всі результати ПІСЛЯ цієї дати? Дію не можна скасувати.", async () => {
+    const r = await api("admin_leaderboard_rollback", { cutoffIso: new Date(v).toISOString() });
+    if (r.ok) toast(`Вилучено результатів: ${r.excluded}`, "ok"); else toast("Помилка", "err");
+  }, "Вилучити");
 }
 
 function loadAdminAward(){
@@ -1965,12 +1977,13 @@ async function submitAdminVipGrant(){
 async function submitAdminVipRevoke(){
   const ldap = document.getElementById("vipLdap").value.trim();
   if (!ldap) { toast("Введіть LDAP", "err"); return; }
-  if (!confirm(`Забрати активний VIP-статус у ${ldap}?`)) return;
-  try {
-    const r = await api("admin_vip_revoke", { ldap });
-    if (!r.ok) { toast(r.error === "user_not_found" ? "Співробітника не знайдено" : "Помилка", "err"); return; }
-    toast(r.wasActive ? `VIP забрано у ${r.userName}` : `У ${r.userName} і так не було активного VIP`, "ok");
-  } catch(e) { toast("Помилка з'єднання", "err"); }
+  showConfirmModal(`Забрати активний VIP-статус у ${ldap}?`, async () => {
+    try {
+      const r = await api("admin_vip_revoke", { ldap });
+      if (!r.ok) { toast(r.error === "user_not_found" ? "Співробітника не знайдено" : "Помилка", "err"); return; }
+      toast(r.wasActive ? `VIP забрано у ${r.userName}` : `У ${r.userName} і так не було активного VIP`, "ok");
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+  }, "Забрати VIP");
 }
 async function submitAward(kind){
   const text = document.getElementById(kind==='coins'?'awardCoins':'awardShards').value.trim();
@@ -2017,10 +2030,11 @@ async function addAdminId(){
   if (r.ok) { toast("Права надано", "ok"); loadAdminAdmins(); } else toast(r.error === "forbidden_not_main_admin" ? "Лише Головний адмін може це робити" : "Помилка", "err");
 }
 async function removeAdminId(tgId){
-  if (!confirm("Забрати права адміна в " + tgId + "?")) return;
-  const r = await api("admin_admin_remove", { tgId });
-  if (r.ok) { toast("Права забрано", "ok"); loadAdminAdmins(); }
-  else toast(r.error === "last_main_admin" ? "Не можна видалити останнього Головного адміна" : "Помилка", "err");
+  showConfirmModal("Забрати права адміна в " + tgId + "?", async () => {
+    const r = await api("admin_admin_remove", { tgId });
+    if (r.ok) { toast("Права забрано", "ok"); loadAdminAdmins(); }
+    else toast(r.error === "last_main_admin" ? "Не можна видалити останнього Головного адміна" : "Помилка", "err");
+  }, "Забрати права");
 }
 
 async function loadAdminSupport(){
