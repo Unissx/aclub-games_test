@@ -1362,9 +1362,10 @@ function slotsSectionHtml(){
   const slots = CHEST_SLOTS_STATE;
   const cells = [];
   const totalCells = Math.max(CHEST_SLOTS_MAX_CLIENT, slots.length); // адмінам ліміт не застосовується — покажемо всі
+  const cardStyle = "text-align:center; min-height:172px; display:flex; flex-direction:column; align-items:center; justify-content:center;";
   for (let i=0;i<totalCells;i++){
     const s = slots[i];
-    if (!s) { cells.push(`<div class="card" style="text-align:center; opacity:.5;"><div style="font-size:24px;">➕</div><div class="sub" style="margin-top:4px;">Порожньо</div></div>`); continue; }
+    if (!s) { cells.push(`<div class="card" style="${cardStyle} opacity:.5;"><div style="font-size:24px;">➕</div><div class="sub" style="margin-top:4px;">Порожньо</div></div>`); continue; }
     let body;
     if (s.status === "Очікує") {
       const anyUnlocking = slots.some(x=>x.status==="Розблоковується");
@@ -1384,13 +1385,13 @@ function slotsSectionHtml(){
     } else {
       body = `<button class="btn sm" style="margin-top:8px;" onclick="chestSlotOpen(${s.row})">🎁 Відкрити!</button>`;
     }
-    cells.push(`<div class="card" style="text-align:center;">
+    cells.push(`<div class="card" style="${cardStyle}">
       <div style="display:flex; justify-content:center;">${chestArtSvg(s.chestId, 52)}</div>
       <div style="font-weight:700; font-size:11.5px; margin-top:4px; line-height:1.3;">${esc(s.name)}</div>
       ${body}
     </div>`);
   }
-  return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">${cells.join("")}</div>`;
+  return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:start;">${cells.join("")}</div>`;
 }
 function startSlotTicker(){
   if (SLOT_TICK_TIMER) clearInterval(SLOT_TICK_TIMER);
