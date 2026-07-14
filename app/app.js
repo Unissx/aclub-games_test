@@ -229,17 +229,11 @@ function renderHome(){
         <div class="display" style="font-weight:700; font-size:14px;">👑 VIP-статус</div>
         <div class="badge ${vip.active?'ok':''}">${vip.active ? ('до '+fmtDate(vip.until)) : 'не активний'}</div>
       </div>
-      <div class="sub" style="margin:8px 2px 0; font-size:11.5px; line-height:1.7;">
-        ✅ Максимальна прокачка в іграх на весь час дії<br>
-        ✅ Пріоритет звернень у підтримці (вище в черзі)<br>
-        ✅ 🔒 «Змінити відповідь» у Ребусі дня<br>
-        ✅ Безкоштовна підказка в Ребусі (приз не зменшується)<br>
-        ✅ +1 спроба щодня у «Щасливчику»<br>
-        ✅ Щоденний безкоштовний Silver Chest (відкривається одразу)<br>
-        ✅ Щоденний безкоштовний «Авангард» (відкривається одразу)<br>
-        ✅ 1 миттєве безкоштовне розблокування кейсу щодня
+      <div class="sub" style="margin:8px 0 10px;">Максимальна прокачка в іграх, пріоритет у підтримці, щоденні безкоштовні кейси та інші привілеї.</div>
+      <div class="btn-row">
+        <button class="btn secondary sm" style="flex:1;" onclick="showVipDetailsModal()">ℹ️ Детальніше</button>
+        ${vip.active ? "" : `<button class="btn sm" style="flex:1;" onclick="goToShopVip()">🛍 Придбати VIP</button>`}
       </div>
-      ${vip.active ? "" : `<button class="btn secondary sm" style="margin-top:10px;" onclick="goToShopVip()">🛍 Придбати VIP</button>`}
     </div>
 
     <div class="card" style="margin-top:12px;">
@@ -271,6 +265,23 @@ function renderHome(){
   document.getElementById("goHistory").addEventListener("click", () => openHistoryModal());
   document.getElementById("btnDaily").addEventListener("click", claimDaily);
   loadHistoryPreview();
+}
+function showVipDetailsModal(){
+  showModal(`
+    <div class="mh">👑 Що дає VIP-статус</div>
+    <div class="sub" style="line-height:1.9; margin-bottom:4px;">
+      ✅ Максимальна прокачка в іграх на весь час дії<br>
+      ✅ Пріоритет звернень у підтримці (вище в черзі)<br>
+      ✅ Кілька звернень у підтримку одночасно (без ліміту "1 в роботі")<br>
+      ✅ 🔒 «Змінити відповідь» у Ребусі дня<br>
+      ✅ Безкоштовна підказка в Ребусі (приз не зменшується)<br>
+      ✅ +1 спроба щодня у «Щасливчику»<br>
+      ✅ Щоденний безкоштовний Silver Chest (відкривається одразу)<br>
+      ✅ Щоденний безкоштовний «Авангард» (відкривається одразу)<br>
+      ✅ 1 миттєве безкоштовне розблокування кейсу щодня
+    </div>
+    <button class="btn secondary sm" style="margin-top:12px;" onclick="closeModal()">Зрозуміло</button>
+  `);
 }
 
 async function claimDaily(){
@@ -1270,7 +1281,7 @@ function paintInventory(){
       <button class="btn secondary" onclick="openMySkinsModal()">🎨 Мої скіни</button>
     </div>
 
-    <div class="h2">👑 VIP-статус</div>
+    <div class="h2">👑 VIP</div>
     <div class="card">
       <div class="row between">
         <div style="font-weight:700; font-size:13.5px;">${vip.active ? '✅ VIP активний' : '😴 VIP не активний'}</div>
@@ -1279,15 +1290,14 @@ function paintInventory(){
       <div class="sub" style="margin:8px 0;">У банку: <b>${vip.bankedHours} год.</b></div>
       ${vip.bankedHours > 0 ? `
         <button class="btn" onclick="activateVipHours(${vip.bankedHours})">👑 Активувати ${vip.bankedHours} год.</button>` : `<div class="sub">Години падають з кейсів (Абсолют, Золота/Епічна/Легендарна скриня).</div>`}
-    </div>
 
-    <div class="h2">🎟 VIP-тикети</div>
-    <div class="sub" style="margin:-6px 2px 10px;">Активується одразу цілим тикетом (без розбиття на години), стакується з наявним VIP.</div>
-    ${VIP_TICKETS_STATE.length ? `<div class="list" style="margin-bottom:10px;">${VIP_TICKETS_STATE.map(t => `
-      <div class="item"><div class="ic">🎟</div><div class="txt"><div class="t">${esc((VIP_TICKET_DEFS[t.type]||{}).label || t.type)}</div><div class="s">Не активовано</div></div>
-      <button class="btn sm" style="width:auto; padding:8px 12px;" onclick="activateVipTicket(${t.row})">Активувати</button></div>
-    `).join("")}</div>` : `<div class="sub" style="margin-bottom:10px;">Наразі тикетів немає.</div>`}
-    <button class="btn secondary sm" onclick="goToShopVip()">🛍 Придбати VIP-тикет у Магазині</button>
+      <div class="sub" style="margin:12px 0 6px; border-top:1px solid var(--line); padding-top:10px;">🎟 VIP-тикети — активується цілим тикетом, стакується з наявним VIP.</div>
+      ${VIP_TICKETS_STATE.length ? `<div class="list" style="margin-bottom:10px;">${VIP_TICKETS_STATE.map(t => `
+        <div class="item"><div class="ic">🎟</div><div class="txt"><div class="t">${esc((VIP_TICKET_DEFS[t.type]||{}).label || t.type)}</div><div class="s">Не активовано</div></div>
+        <button class="btn sm" style="width:auto; padding:8px 12px;" onclick="activateVipTicket(${t.row})">Активувати</button></div>
+      `).join("")}</div>` : `<div class="sub" style="margin-bottom:10px;">Наразі тикетів немає.</div>`}
+      <button class="btn secondary sm" onclick="goToShopVip()">🛍 Придбати VIP-тикет у Магазині</button>
+    </div>
 
     <div class="h2">🎁 Щоденні VIP-бонуси</div>
     <div class="list">
