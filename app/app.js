@@ -1158,12 +1158,12 @@ function startCarouselAnim(){
     const trackRect = track.getBoundingClientRect();
     const cardCenterInTrack = (cardRect.left - trackRect.left) + cardRect.width/2;
     const targetOffset = cardCenterInTrack - vpRect.width/2;
-    track.style.transition = "transform 3.1s cubic-bezier(.11,.72,.16,1)";
+    track.style.transition = "transform 4.6s cubic-bezier(.11,.72,.16,1)";
     track.style.transform = `translateX(-${targetOffset}px)`;
     setTimeout(() => {
       const flash = document.getElementById("carouselFlash");
       if (flash) flash.classList.add("play");
-    }, 3050);
+    }, 4550);
   }));
 }
 function chestOpenSceneHtml(chestId, chestName, resultText, drop){
@@ -1172,8 +1172,8 @@ function chestOpenSceneHtml(chestId, chestName, resultText, drop){
     <div class="mh" style="text-align:center;">🎁 ${esc(chestName)}</div>
     <div class="sub" style="text-align:center; margin-bottom:2px;">Відкриваємо...</div>
     ${chestCarouselHtml(drop)}
-    <div class="mh reward-pop" style="text-align:center; animation-delay:3.3s;">🎉 Вітаємо!</div>
-    <div class="reward-card reward-pop" style="--rc:${rv.color}; animation-delay:3.3s;">
+    <div class="mh reward-pop" style="text-align:center; animation-delay:4.8s;">🎉 Вітаємо!</div>
+    <div class="reward-card reward-pop" style="--rc:${rv.color}; animation-delay:4.8s;">
       <div class="reward-card-icon">${rv.icon}</div>
       <div class="reward-card-text">${esc(resultText).replace(/\*/g,'')}</div>
     </div>
