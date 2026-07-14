@@ -1231,6 +1231,27 @@ function chestOpenSceneHtml(chestId, chestName, resultText, drop){
   `;
 }
 
+function openVipManageModal(){
+  const eff = (CHESTS_STATE && CHESTS_STATE.effects) || {};
+  const vip = (DASH && DASH.vip) || { active:false, until:null, bankedHours: eff.vipBankedHours||0 };
+  showModal(`
+    <div class="mh">👑 VIP-статус</div>
+    <div class="row between" style="margin-bottom:8px;">
+      <div style="font-weight:700; font-size:13.5px;">${vip.active ? '✅ VIP активний' : '😴 VIP не активний'}</div>
+      <div class="badge ${vip.active?'ok':''}">${vip.active ? ('до '+fmtDate(vip.until)) : 'немає'}</div>
+    </div>
+    <div class="sub" style="margin:0 0 10px;">У банку: <b>${vip.bankedHours} год.</b></div>
+    ${vip.bankedHours > 0 ? `
+      <button class="btn" onclick="activateVipHours(${vip.bankedHours})">👑 Активувати ${vip.bankedHours} год.</button>` : `<div class="sub">Години падають з кейсів (Абсолют, Золота/Епічна/Легендарна скриня).</div>`}
+
+    <div class="sub" style="margin:14px 0 6px; border-top:1px solid var(--line); padding-top:12px;">🎟 VIP-тикети — активується цілим тикетом, стакується з наявним VIP.</div>
+    ${VIP_TICKETS_STATE.length ? `<div class="list" style="margin-bottom:10px;">${VIP_TICKETS_STATE.map(t => `
+      <div class="item"><div class="ic">🎟</div><div class="txt"><div class="t">${esc((VIP_TICKET_DEFS[t.type]||{}).label || t.type)}</div><div class="s">Не активовано</div></div>
+      <button class="btn sm" style="width:auto; padding:8px 12px;" onclick="activateVipTicket(${t.row})">Активувати</button></div>
+    `).join("")}</div>` : `<div class="sub" style="margin-bottom:10px;">Наразі тикетів немає.</div>`}
+    <button class="btn secondary sm" onclick="closeModal(); goToShopVip();">🛍 Придбати VIP-тикет у Магазині</button>
+  `);
+}
 function dropLabel(d){
   if (d.label) return d.label;
   if (d.pool) return `Косметика рівня ${d.rarity} (сюрприз)`;
@@ -1287,16 +1308,8 @@ function paintInventory(){
         <div style="font-weight:700; font-size:13.5px;">${vip.active ? '✅ VIP активний' : '😴 VIP не активний'}</div>
         <div class="badge ${vip.active?'ok':''}">${vip.active ? ('до '+fmtDate(vip.until)) : 'немає'}</div>
       </div>
-      <div class="sub" style="margin:8px 0;">У банку: <b>${vip.bankedHours} год.</b></div>
-      ${vip.bankedHours > 0 ? `
-        <button class="btn" onclick="activateVipHours(${vip.bankedHours})">👑 Активувати ${vip.bankedHours} год.</button>` : `<div class="sub">Години падають з кейсів (Абсолют, Золота/Епічна/Легендарна скриня).</div>`}
-
-      <div class="sub" style="margin:12px 0 6px; border-top:1px solid var(--line); padding-top:10px;">🎟 VIP-тикети — активується цілим тикетом, стакується з наявним VIP.</div>
-      ${VIP_TICKETS_STATE.length ? `<div class="list" style="margin-bottom:10px;">${VIP_TICKETS_STATE.map(t => `
-        <div class="item"><div class="ic">🎟</div><div class="txt"><div class="t">${esc((VIP_TICKET_DEFS[t.type]||{}).label || t.type)}</div><div class="s">Не активовано</div></div>
-        <button class="btn sm" style="width:auto; padding:8px 12px;" onclick="activateVipTicket(${t.row})">Активувати</button></div>
-      `).join("")}</div>` : `<div class="sub" style="margin-bottom:10px;">Наразі тикетів немає.</div>`}
-      <button class="btn secondary sm" onclick="goToShopVip()">🛍 Придбати VIP-тикет у Магазині</button>
+      <div class="sub" style="margin:8px 0 10px;">${vip.bankedHours > 0 ? `У банку ${vip.bankedHours} год.` : ''}${VIP_TICKETS_STATE.length ? `${vip.bankedHours>0?' · ':''}${VIP_TICKETS_STATE.length} тикет(и) не активовано` : ''}${(!vip.bankedHours && !VIP_TICKETS_STATE.length) ? 'Керування статусом, банком годин і тикетами' : ''}</div>
+      <button class="btn secondary sm" onclick="openVipManageModal()">👑 VIP — детальніше</button>
     </div>
 
     <div class="h2">🎁 Щоденні VIP-бонуси</div>
@@ -1695,7 +1708,8 @@ async function activateVipHours(hours){
     if (!r.ok) { toast(r.error === "insufficient_hours" ? "Недостатньо годин у банку" : "Помилка", "err"); return; }
     toast(`VIP активовано на ${hours} год.! 👑`, "ok");
     await refreshDashboard();
-    paintInventory();
+    if (TAB === "inventory") { await loadInventoryData(); paintInventory(); }
+    openVipManageModal();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 async function buyVipTicket(ticketId){
@@ -1706,7 +1720,9 @@ async function buyVipTicket(ticketId){
       const r = await api("vip_buy_ticket", { ticketId });
       if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
       toast("Тикет придбано! Активуйте, коли захочете", "ok");
-      await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
+      await Promise.all([refreshDashboard(), loadInventoryData()]);
+      if (TAB === "inventory") paintInventory();
+      if (TAB === "shop" && SHOP_SUB === "vip") loadShopVip();
     } catch(e) { toast("Помилка з'єднання", "err"); }
   }, "Придбати");
 }
@@ -1717,8 +1733,10 @@ async function activateVipTicket(row){
       if (!r.ok) { toast("Помилка", "err"); return; }
       toast("VIP активовано! 👑", "ok");
       await refreshDashboard();
-      if (TAB === "inventory") { await loadInventoryData(); paintInventory(); }
-      else if (TAB === "games") { renderGames(); }
+      await loadInventoryData();
+      if (TAB === "inventory") paintInventory();
+      else if (TAB === "games") renderGames();
+      openVipManageModal();
     } catch(e) { toast("Помилка з'єднання", "err"); }
   }, "Активувати");
 }
