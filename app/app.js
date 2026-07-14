@@ -932,7 +932,265 @@ function skinCategoryOf(poolKey){
   if (poolKey.indexOf("letters") >= 0) return "letters";
   return "generic";
 }
-// Розпізнавання ЛИШЕ для категорії "погода" — там немає окремого силуету
+// ============================================================
+// РЕАЛЬНЕ 1:1 ПРЕВʼЮ — рендеримо не окрему "схожу" SVG-форму, а буквально
+// ТІ Ж САМІ виклики canvas, що й сама гра (P.draw / drawBirdBody / drawBoss /
+// OT.*.draw / drawObstacleCyberpunk, дослівно перенесені з 1.1_runner.txt).
+// Малюємо на невидимому <canvas>, конвертуємо в PNG data URL і вставляємо
+// як <image> всередину того самого SVG-каркаса (фон/рамка рідкості/тінь
+// лишаються як були) — тому іконка гарантовано збігається з тим, що
+// реально намальовано в Runner, а не є окремим наближенням.
+function _iconShade(c, delta){
+  const m = String(c).match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
+  if (!m) return c;
+  const h=parseFloat(m[1]), sa=parseFloat(m[2]);
+  const li=Math.max(0,Math.min(100,parseFloat(m[3])+delta));
+  return `hsl(${h},${sa}%,${li}%)`;
+}
+function _iconGrad(ctx,x0,y0,x1,y1,base,ld,dd){
+  const g=ctx.createLinearGradient(x0,y0,x1,y1);
+  g.addColorStop(0,_iconShade(base,ld));
+  g.addColorStop(1,_iconShade(base,dd));
+  return g;
+}
+// ── Персонаж: дослівно тіло+аксесуар з P.draw() (1.1_runner.txt), без
+// бігу/тіні/щита — статична поза, px=0,py=0 в локальних координатах.
+function _iconDrawCharacter(ctx, hue, sat, light, skinShape){
+  const BC=`hsl(${hue},${sat}%,${light}%)`;
+  const DC=`hsl(${hue},${sat}%,${Math.max(10,light-20)}%)`;
+  const LC=`hsl(${hue},${Math.max(0,sat-10)}%,${Math.min(90,light+10)}%)`;
+  const SK='#a5d6a7', HC=BC;
+  const px=0, py=0, lo=0, arm=0;
+  ctx.fillStyle=_iconGrad(ctx,px+4,py+26,px+4,py+39+lo,LC,14,-18);ctx.beginPath();ctx.roundRect(px+4,py+26,9,13+lo,3);ctx.fill();
+  ctx.fillStyle=_iconGrad(ctx,px+15,py+26,px+15,py+39-lo,LC,14,-18);ctx.beginPath();ctx.roundRect(px+15,py+26,9,13-lo,3);ctx.fill();
+  ctx.fillStyle=_iconShade(DC,-8);ctx.beginPath();ctx.roundRect(px+2,py+37+lo,13,4,2);ctx.fill();
+  ctx.beginPath();ctx.roundRect(px+13,py+37-lo,13,4,2);ctx.fill();
+  ctx.fillStyle=_iconGrad(ctx,px+3,py+12,px+25,py+30,BC,16,-16);ctx.beginPath();ctx.roundRect(px+3,py+12,22,18,5);ctx.fill();
+  ctx.save();ctx.globalAlpha=.22;ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(px+9,py+16,5,3,-.3,0,Math.PI*2);ctx.fill();ctx.restore();
+  ctx.fillStyle=DC;ctx.font='bold 11px Nunito';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('á',px+14,py+21);
+  ctx.fillStyle=_iconGrad(ctx,px-3,py+13+arm,px+4,py+25+arm,BC,10,-14);ctx.beginPath();ctx.roundRect(px-3,py+13+arm,7,12,3);ctx.fill();
+  ctx.fillStyle=_iconGrad(ctx,px+24,py+13-arm,px+31,py+25-arm,BC,10,-14);ctx.beginPath();ctx.roundRect(px+24,py+13-arm,7,12,3);ctx.fill();
+  ctx.fillStyle=SK;ctx.beginPath();ctx.roundRect(px+4,py,20,16,8);ctx.fill();
+  ctx.fillStyle=_iconGrad(ctx,px+3,py-3,px+3,py+5,HC,18,-12);ctx.beginPath();ctx.roundRect(px+3,py-3,22,8,[6,6,0,0]);ctx.fill();
+  ctx.fillStyle='#1a237e';ctx.fillRect(px+8,py+5,3,3);ctx.fillRect(px+17,py+5,3,3);
+  ctx.strokeStyle='#1a237e';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(px+14,py+11,4,0.2,Math.PI-0.2);ctx.stroke();
+  if(skinShape){
+    ctx.save();
+    if(skinShape==='suit'){
+      ctx.fillStyle=DC;ctx.beginPath();ctx.moveTo(px+12,py+14);ctx.lineTo(px+16,py+14);ctx.lineTo(px+15,py+26);ctx.lineTo(px+14,py+29);ctx.lineTo(px+13,py+26);ctx.fill();
+      ctx.fillStyle='#fff';ctx.fillRect(px+3,py+12,4,6);ctx.fillRect(px+21,py+12,4,6);
+    } else if(skinShape==='sporty_girl'){
+      ctx.fillStyle=DC;ctx.beginPath();ctx.ellipse(px+24,py+2,4,7,0.4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=LC;ctx.fillRect(px+2,py-1,24,4);
+    } else if(skinShape==='office_lady'){
+      ctx.fillStyle=DC;ctx.beginPath();ctx.moveTo(px+2,py+26);ctx.lineTo(px+26,py+26);ctx.lineTo(px+23,py+36);ctx.lineTo(px+5,py+36);ctx.fill();
+    } else if(skinShape==='retro'){
+      ctx.fillStyle='#fff';ctx.fillRect(px+2,py+2,24,3);
+      ctx.fillStyle=DC;ctx.fillRect(px+3,py+18,22,3);
+    } else if(skinShape==='hipster'){
+      ctx.strokeStyle=DC;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(px+2,py+12);ctx.lineTo(px+24,py+30);ctx.stroke();
+      ctx.fillStyle=DC;ctx.beginPath();ctx.roundRect(px+18,py+28,9,8,2);ctx.fill();
+    } else if(skinShape==='heels'){
+      ctx.fillStyle=DC;ctx.fillRect(px+6,py+39+lo,2,4);ctx.fillRect(px+20,py+39-lo,2,4);
+      ctx.fillStyle=DC;ctx.beginPath();ctx.moveTo(px+3,py+14);ctx.lineTo(px+25,py+14);ctx.lineTo(px+20,py+24);ctx.lineTo(px+8,py+24);ctx.fill();
+    } else if(skinShape==='skater'){
+      ctx.fillStyle=DC;ctx.beginPath();ctx.roundRect(px-2,py+41,30,3,2);ctx.fill();
+      ctx.fillStyle=HC;ctx.beginPath();ctx.arc(px+14,py+2,11,Math.PI,0);ctx.fill();
+    } else if(skinShape==='yoga'){
+      ctx.fillStyle=DC;ctx.beginPath();ctx.arc(px+14,py+4,1.5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=BC;ctx.beginPath();ctx.ellipse(px+14,py+40,13,5,0,0,Math.PI*2);ctx.fill();
+    } else if(skinShape==='winter'){
+      ctx.fillStyle=DC;ctx.beginPath();ctx.roundRect(px+2,py+13,24,5,2);ctx.fill();
+      ctx.fillRect(px+16,py+17,5,9);
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px+14,py-4,5,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+// ── Птах-помічник: дослівно drawBirdBody() з 1.1_runner.txt (flap=0, статична поза).
+function _iconDrawBird(ctx, hue, sat, light, shape){
+  const bodyColor=`hsl(${hue},${sat}%,${light}%)`;
+  const wingColor=`hsl(${hue},${sat}%,${Math.max(10,light-15)}%)`;
+  const bx=0, by=0, flap=0;
+  if(shape==='owl'){
+    ctx.fillStyle=_iconGrad(ctx,bx-13,by-11,bx+13,by+11,bodyColor,16,-16);
+    ctx.beginPath();ctx.ellipse(bx,by,13,13,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=_iconShade(wingColor,-10);
+    ctx.beginPath();ctx.moveTo(bx-10,by-9);ctx.lineTo(bx-14,by-19);ctx.lineTo(bx-4,by-12);ctx.fill();
+    ctx.beginPath();ctx.moveTo(bx+10,by-9);ctx.lineTo(bx+14,by-19);ctx.lineTo(bx+4,by-12);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx-5,by-2,5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(bx+5,by-2,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a237e';ctx.beginPath();ctx.arc(bx-5,by-2,2.4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(bx+5,by-2,2.4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#e65100';ctx.beginPath();ctx.moveTo(bx-2,by+3);ctx.lineTo(bx+2,by+3);ctx.lineTo(bx,by+8);ctx.fill();
+  } else if(shape==='parrot'){
+    ctx.fillStyle=_iconGrad(ctx,bx-13,by-8,bx+13,by+8,bodyColor,16,-16);
+    ctx.beginPath();ctx.ellipse(bx,by,13,8.5,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=_iconShade(wingColor,10);
+    ctx.beginPath();ctx.moveTo(bx-2,by-9);ctx.lineTo(bx-6,by-20);ctx.lineTo(bx+2,by-11);ctx.fill();
+    ctx.fillStyle=_iconShade(wingColor,-6);
+    ctx.beginPath();ctx.moveTo(bx,by-2);ctx.quadraticCurveTo(bx-20,by-10+flap,bx-24,by+3);ctx.quadraticCurveTo(bx-8,by+9,bx,by-2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx+4,by-1,3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a237e';ctx.beginPath();ctx.arc(bx+5,by-1,1.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ffca28';ctx.beginPath();ctx.moveTo(bx+11,by);ctx.quadraticCurveTo(bx+20,by,bx+11,by+6);ctx.fill();
+  } else if(shape==='wader'){
+    ctx.fillStyle=_iconGrad(ctx,bx-11,by-7,bx+11,by+7,bodyColor,16,-16);
+    ctx.beginPath();ctx.ellipse(bx-2,by+4,11,7,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=bodyColor;ctx.lineWidth=4;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(bx+6,by);ctx.quadraticCurveTo(bx+16,by-6,bx+14,by-16);ctx.stroke();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx+13,by-16,3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a237e';ctx.beginPath();ctx.arc(bx+14,by-16,1.4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#e65100';ctx.beginPath();ctx.moveTo(bx+16,by-17);ctx.lineTo(bx+23,by-15);ctx.lineTo(bx+16,by-13);ctx.fill();
+    ctx.strokeStyle=_iconShade(bodyColor,-20);ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(bx-4,by+10);ctx.lineTo(bx-4,by+20);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(bx+2,by+10);ctx.lineTo(bx+2,by+20);ctx.stroke();
+  } else if(shape==='penguin'){
+    ctx.fillStyle=_iconGrad(ctx,bx-10,by-12,bx+10,by+12,_iconShade(bodyColor,-25),16,-16);
+    ctx.beginPath();ctx.ellipse(bx,by+1,11,13,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#f5f5f5';ctx.beginPath();ctx.ellipse(bx,by+4,6.5,9,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=bodyColor;ctx.beginPath();ctx.ellipse(bx-11,by-2,4,8,.3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(bx+11,by-2,4,8,-.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx-4,by-6,2.6,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(bx+4,by-6,2.6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a237e';ctx.beginPath();ctx.arc(bx-3.5,by-6,1.3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(bx+4.5,by-6,1.3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ffca28';ctx.beginPath();ctx.moveTo(bx-2,by-4);ctx.lineTo(bx+2,by-4);ctx.lineTo(bx,by-1);ctx.fill();
+  } else if(shape==='raptor'){
+    ctx.fillStyle=_iconGrad(ctx,bx-12,by-8,bx+12,by+8,bodyColor,10,-20);
+    ctx.beginPath();ctx.ellipse(bx,by,12,8,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=_iconShade(wingColor,-14);
+    ctx.beginPath();ctx.moveTo(bx-1,by-4);ctx.quadraticCurveTo(bx-24,by-16+flap,bx-30,by+2);ctx.quadraticCurveTo(bx-10,by+8,bx-1,by-4);ctx.fill();
+    ctx.beginPath();ctx.moveTo(bx+1,by-4);ctx.quadraticCurveTo(bx+24,by-16+flap,bx+30,by+2);ctx.quadraticCurveTo(bx+10,by+8,bx+1,by-4);ctx.fill();
+    ctx.strokeStyle=_iconShade(bodyColor,-30);ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(bx-6,by-7);ctx.lineTo(bx-1,by-5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(bx+6,by-7);ctx.lineTo(bx+1,by-5);ctx.stroke();
+    ctx.fillStyle='#ffca28';ctx.beginPath();ctx.arc(bx,by-2,2.2,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#212121';ctx.beginPath();ctx.moveTo(bx+9,by);ctx.lineTo(bx+17,by-1);ctx.lineTo(bx+9,by+4);ctx.fill();
+  } else {
+    ctx.fillStyle=_iconGrad(ctx,bx-14,by-9,bx+14,by+9,bodyColor,16,-16);
+    ctx.beginPath();ctx.ellipse(bx,by,14,9,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=_iconShade(wingColor,-6);
+    ctx.beginPath();ctx.moveTo(bx,by-3);ctx.quadraticCurveTo(bx-18,by-14+flap,bx-22,by+2);ctx.quadraticCurveTo(bx-8,by+8,bx,by-3);ctx.fill();
+    ctx.beginPath();ctx.moveTo(bx,by-3);ctx.quadraticCurveTo(bx+18,by-14+flap,bx+22,by+2);ctx.quadraticCurveTo(bx+8,by+8,bx,by-3);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bx+5,by-1,3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a237e';ctx.beginPath();ctx.arc(bx+6,by-1,1.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#e65100';ctx.beginPath();ctx.moveTo(bx+13,by);ctx.lineTo(bx+20,by-2);ctx.lineTo(bx+13,by+3);ctx.fill();
+  }
+}
+// ── Бос: дослівно базове тіло + BOSS_SHAPE-акценти з drawBoss() (без HP-бару/куль).
+function _iconDrawBoss(ctx, hue, sat, light, shape){
+  const bc=`hsl(${hue},${sat}%,${light}%)`;
+  const px=0, py=0, bob=0, w=60, h=70;
+  ctx.fillStyle=_iconGrad(ctx,px,py,px,py+h,bc,14,-16);ctx.beginPath();ctx.roundRect(px,py,w,h,8);ctx.fill();
+  ctx.fillStyle=`hsl(${hue},${sat}%,${Math.min(80,light+20)}%)`;
+  ctx.beginPath();ctx.roundRect(px+w*.13,py+h*.14,w*.74,h*.72,6);ctx.fill();
+  ctx.fillStyle='#ff1744';
+  ctx.beginPath();ctx.arc(px+w*.3,py+h*.37,8,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(px+w*.7,py+h*.37,8,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px+w*.33,py+h*.37,3.5,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(px+w*.67,py+h*.37,3.5,0,Math.PI*2);ctx.fill();
+  if(shape==='dragon'){
+    ctx.fillStyle=_iconShade(bc,-20);
+    ctx.beginPath();ctx.moveTo(px+w*.2,py);ctx.lineTo(px+w*.12,py-16);ctx.lineTo(px+w*.32,py+2);ctx.fill();
+    ctx.beginPath();ctx.moveTo(px+w*.8,py);ctx.lineTo(px+w*.88,py-16);ctx.lineTo(px+w*.68,py+2);ctx.fill();
+    ctx.fillStyle=_iconShade(bc,10);ctx.globalAlpha=.9;
+    ctx.beginPath();ctx.moveTo(px-4,py+h*.3);ctx.lineTo(px-22,py+h*.05);ctx.lineTo(px-6,py+h*.55);ctx.fill();
+    ctx.beginPath();ctx.moveTo(px+w+4,py+h*.3);ctx.lineTo(px+w+22,py+h*.05);ctx.lineTo(px+w+6,py+h*.55);ctx.fill();
+    ctx.globalAlpha=1;ctx.fillStyle=_iconShade(bc,-10);
+    ctx.beginPath();ctx.moveTo(px+w*.5,py+h);ctx.lineTo(px+w*.5+6,py+h+14);ctx.lineTo(px+w*.5-6,py+h+10);ctx.fill();
+  } else if(shape==='robot'){
+    ctx.strokeStyle=_iconShade(bc,20);ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(px+w*.5,py);ctx.lineTo(px+w*.5,py-12);ctx.stroke();
+    ctx.fillStyle='#ff1744';ctx.beginPath();ctx.arc(px+w*.5,py-12,3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#0a0a0a';ctx.fillRect(px+w*.32,py+h*.55,w*.36,6);
+    ctx.fillStyle='#4fc3f7';for(let i=0;i<3;i++)ctx.fillRect(px+w*.32+i*9,py+h*.55+1,5,4);
+  } else if(shape==='printer'){
+    ctx.fillStyle=_iconShade(bc,-14);ctx.fillRect(px+w*.1,py-6,w*.8,8);
+    ctx.fillStyle='#f5f5f5';ctx.fillRect(px+w*.3,py+h*.4,w*.4,16);
+    ctx.strokeStyle='#bbb';ctx.lineWidth=1;
+    for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(px+w*.34,py+h*.4+4+i*4);ctx.lineTo(px+w*.66,py+h*.4+4+i*4);ctx.stroke();}
+  } else if(shape==='queen'){
+    ctx.fillStyle='#ffd740';
+    ctx.beginPath();ctx.moveTo(px+w*.22,py-2);ctx.lineTo(px+w*.3,py-16);ctx.lineTo(px+w*.4,py-2);ctx.lineTo(px+w*.5,py-18);ctx.lineTo(px+w*.6,py-2);ctx.lineTo(px+w*.7,py-16);ctx.lineTo(px+w*.78,py-2);ctx.closePath();ctx.fill();
+  } else if(shape==='ghost'){
+    ctx.globalAlpha=.55;ctx.fillStyle=bc;
+    ctx.beginPath();
+    const gy=py+h;
+    ctx.moveTo(px,gy-10);
+    for(let i=0;i<=4;i++){ctx.quadraticCurveTo(px+w*(i+.5)/4,gy+(i%2===0?8:-4),px+w*(i+1)/4,gy-10);}
+    ctx.lineTo(px+w,py+h*.3);ctx.lineTo(px,py+h*.3);ctx.closePath();ctx.fill();
+    ctx.globalAlpha=1;
+  } else if(shape==='kraken'){
+    ctx.fillStyle=_iconShade(bc,-10);
+    for(let i=0;i<4;i++){
+      const tx=px+w*(0.15+i*0.25);
+      ctx.beginPath();ctx.moveTo(tx,py+h*.85);
+      ctx.quadraticCurveTo(tx+(i%2?4:-4),py+h+14,tx+(i%2?2:-2),py+h+22);
+      ctx.quadraticCurveTo(tx-3,py+h+10,tx-2,py+h*.85);
+      ctx.fill();
+    }
+  } else if(shape==='golem'){
+    ctx.strokeStyle=_iconShade(bc,-30);ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(px+w*.25,py+6);ctx.lineTo(px+w*.35,py+h*.4);ctx.lineTo(px+w*.28,py+h*.7);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px+w*.75,py+10);ctx.lineTo(px+w*.65,py+h*.5);ctx.stroke();
+  }
+}
+// ── Перешкоди: дослівно OT.barrier/OT.cone/OT.spike та drawObstacleCyberpunk
+// з 1.1_runner.txt (без GY/H, бо тут немає ями — тільки наземні форми).
+function _iconDrawObstacles(ctx, hue, isCyberpunk){
+  if(isCyberpunk){
+    const neon=`hsl(${hue!=null?hue:315},90%,60%)`, dark=`hsl(${hue!=null?hue:315},60%,14%)`;
+    [[6,22,16,48],[32,4,16,66],[64,16,16,54]].forEach(([x,y,w,h])=>{
+      ctx.fillStyle=dark;ctx.fillRect(x,y,w,h);
+      ctx.strokeStyle=neon;ctx.lineWidth=2;ctx.shadowColor=neon;ctx.shadowBlur=6;
+      ctx.strokeRect(x+1,y+1,w-2,h-2);
+      ctx.shadowBlur=0;ctx.globalAlpha=.8;
+      for(let sy=y+6;sy<y+h-3;sy+=9){ ctx.fillStyle=neon;ctx.fillRect(x+2,sy,w-4,2); }
+      ctx.globalAlpha=1;
+    });
+    return;
+  }
+  // barrier
+  (function(x,y,w,h){
+    ctx.fillStyle='#d32f2f';ctx.beginPath();ctx.roundRect(x+w*.25,y,w*.5,h,3);ctx.fill();
+    ctx.fillStyle='#ffeb3b';ctx.fillRect(x+w*.19,y+h*.17,w*.62,h*.1);ctx.fillRect(x+w*.19,y+h*.46,w*.62,h*.1);ctx.fillRect(x+w*.19,y+h*.75,w*.62,h*.1);
+  })(8,24,16,46);
+  // cone
+  (function(x,y,w,h){
+    ctx.fillStyle='#ff6f00';ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x+w/2,y);ctx.lineTo(x+w,y+h);ctx.fill();
+    ctx.fillStyle='#ffcc02';ctx.beginPath();ctx.moveTo(x+w*.18,y+h*.85);ctx.lineTo(x+w/2,y+h*.2);ctx.lineTo(x+w*.82,y+h*.85);ctx.fill();
+  })(34,38,22,32);
+  // spike
+  (function(x,y,w,h){
+    ctx.fillStyle='#4a148c';ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x+w/2,y);ctx.lineTo(x+w,y+h);ctx.fill();
+    ctx.fillStyle='#9c27b0';ctx.beginPath();ctx.moveTo(x+w*.19,y+h);ctx.lineTo(x+w/2,y+h*.17);ctx.lineTo(x+w*.81,y+h);ctx.fill();
+  })(68,34,26,36);
+  if(hue!=null){
+    ctx.save();ctx.globalCompositeOperation='hue';ctx.fillStyle=`hsl(${hue},70%,50%)`;
+    ctx.fillRect(0,0,100,100);ctx.restore();
+  }
+}
+// Малює у наданий canvas.getContext('2d') з потрібним translate/scale, щоб
+// силует (у "гравих" одиницях координат) вписався в кадр 100×100, і
+// повертає готовий PNG data URL.
+function _renderIconPng(cat, hue, sat, light, shapeKey){
+  const cvs = document.createElement('canvas');
+  cvs.width = 200; cvs.height = 200;
+  const ctx = cvs.getContext('2d');
+  ctx.save();
+  ctx.scale(2,2); // внутрішня роздільність 200 — малюємо в умовних 100×100
+  if (cat === 'character') {
+    ctx.translate(58,49); ctx.scale(3,3);
+    _iconDrawCharacter(ctx, hue, sat, light, shapeKey);
+  } else if (cat === 'bird') {
+    ctx.translate(100,92); ctx.scale(2.6,2.6);
+    _iconDrawBird(ctx, hue, sat, light, shapeKey);
+  } else if (cat === 'boss') {
+    ctx.translate(56,46); ctx.scale(1.45,1.45);
+    _iconDrawBoss(ctx, hue, sat, light, shapeKey);
+  } else if (cat === 'obstacles') {
+    _iconDrawObstacles(ctx, hue, shapeKey === 'cyberpunk');
+  }
+  ctx.restore();
+  return cvs.toDataURL('image/png');
+}
+
 // в грі (це просто інша палітра неба/землі + прапорці дощу/туману/зірок),
 // тож іконка веселки лишається символічною відповідністю. Всі інші
 // категорії (bird/obstacles/boss/character) тепер мають РЕАЛЬНІ форми, що
@@ -1494,7 +1752,7 @@ function openChestSlotModal(row){
         <button class="btn" style="flex:1;" ${anyUnlocking?'disabled':''} onclick="closeModal(); chestSlotStart(${s.row})">🔓 Почати розблокування</button>
       </div>
       ${anyUnlocking ? `<div class="sub" style="text-align:center; margin-top:6px;">Спочатку завершіть поточне розкриття іншого кейсу</div>` : ""}
-      <button class="btn danger sm" style="margin-top:8px;" onclick="closeModal(); chestSlotDispose(${s.row},'${s.kind}')">${s.kind==='paid'?'♻️ Розібрати на осколки':'💰 Продати'}</button>
+      ${s.kind==='paid' ? `<button class="btn danger sm" style="margin-top:8px;" onclick="closeModal(); chestSlotDispose(${s.row},'${s.kind}')">♻️ Розібрати на осколки</button>` : ""}
     `;
   } else if (s.status === "Розблоковується" && !s.ready) {
     const vip = (DASH && DASH.vip) || {};
@@ -1504,7 +1762,7 @@ function openChestSlotModal(row){
       <div class="btn-row">
         <button class="btn secondary" style="flex:1;" onclick="closeModal(); openRushModal(${s.row})">⚡ Прискорити</button>
       </div>
-      <button class="btn danger sm" style="margin-top:8px;" onclick="closeModal(); chestSlotDispose(${s.row},'${s.kind}')">${s.kind==='paid'?'♻️ Розібрати на осколки':'💰 Продати'}</button>
+      ${s.kind==='paid' ? `<button class="btn danger sm" style="margin-top:8px;" onclick="closeModal(); chestSlotDispose(${s.row},'${s.kind}')">♻️ Розібрати на осколки</button>` : ""}
       ${canInstant ? `<button class="btn sm" style="margin-top:8px; background:linear-gradient(155deg,#F2A93B,#B15EF0); color:#1a0f2e;" onclick="closeModal(); claimVipInstantUnlock(${s.row})">👑 Миттєво (безкоштовно)</button>` : ""}
     `;
   } else {
@@ -1544,26 +1802,17 @@ async function chestSlotStart(row){
     await loadInventoryData(); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
-const FREE_CHEST_SELL_PRICES = { silver:1, gold:3, epic:8, legendary:15 };
 function chestSlotDispose(row, kind){
-  if (kind === "paid") {
-    showConfirmModal("Розібрати кейс на осколки? Шанс отримати 1 осколок — 50%.", () => {
-      disposeChestSlot(row, "dismantle");
-    }, "Розібрати");
-  } else {
-    const slot = CHEST_SLOTS_STATE.find(s => s.row === row);
-    const price = slot ? (FREE_CHEST_SELL_PRICES[slot.chestId] || 0) : 0;
-    showConfirmModal(`Продати кейс боту за ${price} á-coin?`, () => {
-      disposeChestSlot(row, "sell");
-    }, "Продати");
-  }
+  if (kind !== "paid") return; // безкоштовні кейси більше не можна продати/розібрати — лише відкрити
+  showConfirmModal("Розібрати кейс на осколки? Шанс отримати 1 осколок — 50%.", () => {
+    disposeChestSlot(row, "dismantle");
+  }, "Розібрати");
 }
 async function disposeChestSlot(row, mode){
   try {
-    const r = await api(mode === "dismantle" ? "chest_slot_dismantle" : "chest_slot_sell", { row });
+    const r = await api("chest_slot_dismantle", { row });
     if (!r.ok) { toast("Помилка", "err"); return; }
-    if (mode === "dismantle") toast(r.won ? "🔮 +1 осколок!" : "Нічого не випало", r.won?"ok":undefined);
-    else toast(`Продано за ${r.price} á-coin`, "ok");
+    toast(r.won ? "🔮 +1 осколок!" : "Нічого не випало", r.won?"ok":undefined);
     await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
