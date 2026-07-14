@@ -46,12 +46,12 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
 
 /* ── BOARD ────────────────────────────────────────── */
 .board-wrap{flex:1;display:flex;align-items:center;justify-content:center;width:100%;min-height:0;}
-.board{display:grid;gap:7px;padding:10px;}
+.board{display:grid;gap:5px;padding:6px;}
 .tile{
-  width:var(--tile-size,52px);height:var(--tile-size,52px);
+  width:var(--tile-size,40px);height:var(--tile-size,40px);
   display:flex;align-items:center;justify-content:center;
-  font-family:'Nunito',sans-serif;font-weight:900;font-size:calc(var(--tile-size,52px) * 0.42);
-  background:#0d1830;border:2px solid #1a2438;border-radius:8px;color:#e8edf5;
+  font-family:'Nunito',sans-serif;font-weight:900;font-size:calc(var(--tile-size,40px) * 0.42);
+  background:#0d1830;border:2px solid #1a2438;border-radius:7px;color:#e8edf5;
   transform-style:preserve-3d;transition:transform .15s ease;
   text-transform:uppercase;
 }
@@ -68,10 +68,10 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
 @keyframes flipTile{0%{transform:rotateX(0);}50%{transform:rotateX(-90deg);}100%{transform:rotateX(0);}}
 
 /* ── KEYBOARD ─────────────────────────────────────── */
-.kb-wrap{width:100%;max-width:480px;flex-shrink:0;padding:8px 4px calc(10px + env(safe-area-inset-bottom));}
-.kb-row{display:flex;justify-content:center;gap:clamp(2px,0.8vw,5px);margin-bottom:6px;width:100%;}
+.kb-wrap{width:100%;max-width:480px;flex-shrink:0;padding:6px 4px calc(8px + env(safe-area-inset-bottom));}
+.kb-row{display:flex;justify-content:center;gap:clamp(2px,0.8vw,5px);margin-bottom:5px;width:100%;}
 .key{
-  min-width:0;height:44px;flex:1 1 0;
+  min-width:0;height:40px;flex:1 1 0;
   display:flex;align-items:center;justify-content:center;
   background:#16223d;border:none;border-radius:5px;color:#e8edf5;
   font-family:'Nunito',sans-serif;font-weight:800;font-size:var(--key-font-size,13px);text-transform:uppercase;
@@ -97,6 +97,25 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
 .ov-word{font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;letter-spacing:4px;color:#ffd740;}
 .ov-reward{font-family:'Nunito',sans-serif;font-weight:800;font-size:13.5px;color:#ffd740;line-height:1.4;text-align:center;max-width:300px;
   background:rgba(255,215,64,.1);border:1px solid rgba(255,215,64,.3);border-radius:12px;padding:10px 18px;}
+
+/* ── CHEST OPEN ANIMATION ─────────────────────────── */
+.chest-anim{position:relative;display:flex;align-items:center;justify-content:center;height:64px;width:100%;}
+.chest-box{font-size:48px;position:relative;z-index:2;}
+.chest-glow{position:absolute;width:90px;height:90px;border-radius:50%;
+  background:radial-gradient(circle, rgba(255,215,64,.65), transparent 70%);opacity:0;z-index:1;}
+.chest-anim.shaking .chest-box{animation:chestShake .5s ease;}
+.chest-anim.opening .chest-glow{animation:chestFlash .55s ease-out both;}
+.chest-anim.opening .chest-box{animation:chestPop .5s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes chestShake{
+  0%,100%{transform:translateX(0) rotate(0);}
+  15%{transform:translateX(-5px) rotate(-4deg);}
+  30%{transform:translateX(5px) rotate(4deg);}
+  45%{transform:translateX(-4px) rotate(-3deg);}
+  60%{transform:translateX(4px) rotate(3deg);}
+  75%{transform:translateX(-2px) rotate(-1deg);}
+}
+@keyframes chestFlash{0%{opacity:0;transform:scale(.3);}45%{opacity:1;transform:scale(1.1);}100%{opacity:0;transform:scale(1.5);}}
+@keyframes chestPop{0%{transform:scale(1);}40%{transform:scale(1.35) rotate(-6deg);}70%{transform:scale(.92) rotate(3deg);}100%{transform:scale(1) rotate(0);}}
 .ov-text{font-size:13px;color:#90a4ae;max-width:320px;line-height:1.6;}
 .ov-timer{font-size:13px;color:#5b7090;margin-top:4px;}
 .ov-timer b{color:#00e676;font-variant-numeric:tabular-nums;}
@@ -206,7 +225,11 @@ html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;touch-action
   <div class="ov-emoji">🎉</div>
   <div class="ov-title">ВГАДАВ!</div>
   <div class="ov-word" id="winWord"></div>
-  <div class="ov-reward" id="winReward">+8 á</div>
+  <div class="chest-anim hide" id="chestAnim">
+    <div class="chest-glow"></div>
+    <div class="chest-box" id="chestBox">📦</div>
+  </div>
+  <div class="ov-reward hide" id="winReward">+8 á</div>
   <div class="ov-text" id="winSaveStatus">⏳ Зберігаємо результат...</div>
   <button class="btn" id="finishBtnWin">✅ Завершити гру</button>
 </div>
@@ -3028,10 +3051,15 @@ function calcTileSize() {
   // тому рахуємо розмір тайла від нього, а не від vh. Це і прибирає "заліз на текст".
   const wrap = document.querySelector('.board-wrap');
   const availW = wrap && wrap.clientWidth ? wrap.clientWidth : vw;
-  const availH = wrap && wrap.clientHeight ? wrap.clientHeight : window.innerHeight * 0.55;
-  const maxTileW = Math.floor((Math.min(availW, vw) - 20 - (WORD_LEN - 1) * 7) / WORD_LEN);
-  const maxTileH = Math.floor((availH - 20 - (MAX_ATTEMPTS - 1) * 7) / MAX_ATTEMPTS);
-  const tileSize = Math.max(34, Math.min(54, maxTileW, maxTileH));
+  const availH = wrap && wrap.clientHeight ? wrap.clientHeight : window.innerHeight * 0.5;
+  const maxTileW = Math.floor((Math.min(availW, vw) - 12 - (WORD_LEN - 1) * 5) / WORD_LEN);
+  const maxTileH = Math.floor((availH - 12 - (MAX_ATTEMPTS - 1) * 5) / MAX_ATTEMPTS);
+  // Менші межі (було 34–54) — з хедером "← Назад" застосунку доступної висоти
+  // стало помітно менше, і на межі діапазону дошка вилазила на текст вище.
+  // Менший максимум лишає стабільний запас незалежно від того, скільки саме
+  // місця займає хедер/бейджі в конкретному оточенні (iframe застосунку чи
+  // прямий запуск через Telegram).
+  const tileSize = Math.max(26, Math.min(40, maxTileW, maxTileH));
   document.documentElement.style.setProperty('--tile-size', tileSize + 'px');
   return tileSize;
 }
@@ -3065,6 +3093,20 @@ function buildBoard() {
       board.appendChild(tile);
     }
   }
+
+  // Перше вимірювання .board-wrap могло статись до того, як flex-розкладка
+  // застосунку (хедер "← Назад" + сам iframe) остаточно "осіла" — тоді
+  // clientHeight ще міг бути завищений, і дошка виходила за межі видимого
+  // (саме це виглядало як "з'їхали блоки"). Тому один раз домірюємо після
+  // двох requestAnimationFrame (гарантовано після layout/paint) і, якщо
+  // реальний доступний розмір виявився МЕНШИМ — стискаємо дошку ще раз.
+  // Лише зменшуємо, ніколи не збільшуємо назад — щоб розмір не "стрибав"
+  // візуально вже під час гри.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const cur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tile-size')) || 40;
+    const fixed = calcTileSize();
+    if (fixed > cur) document.documentElement.style.setProperty('--tile-size', cur + 'px');
+  }));
 }
 
 function buildKeyboard() {
@@ -3281,6 +3323,27 @@ async function useHint() {
 }
 
 // ── Завершення гри ────────────────────────────────────────
+// Анімація "кейс відкрився одразу" — трясеться, спалахує, лишається
+// відкритим, і тільки після цього показуємо текст призу. Повертає Promise,
+// щоб endGame() міг дочекатись завершення перед тим як писати "Збережено".
+function playChestOpenAnim(rewardText) {
+  return new Promise(resolve => {
+    const anim = $('chestAnim');
+    const box = $('chestBox');
+    anim.classList.remove('hide', 'opening');
+    anim.classList.add('shaking');
+    setTimeout(() => {
+      anim.classList.remove('shaking');
+      anim.classList.add('opening');
+      box.textContent = '🎁';
+    }, 500);
+    setTimeout(() => {
+      $('winReward').textContent = rewardText;
+      $('winReward').classList.remove('hide');
+      resolve();
+    }, 1000);
+  });
+}
 async function endGame(won, isTimeout) {
   gameOver = true;
   stopTimer();
@@ -3288,8 +3351,11 @@ async function endGame(won, isTimeout) {
 
   if (won) {
     $('winWord').textContent = WORD;
-    $('winReward').textContent = '🎁 Рахуємо приз...';
-    $('winSaveStatus').textContent = '⏳ Зберігаємо результат...';
+    $('winReward').classList.add('hide');
+    $('winReward').textContent = '';
+    $('chestAnim').classList.add('hide');
+    $('chestAnim').classList.remove('shaking', 'opening');
+    $('winSaveStatus').textContent = '⏳ Рахуємо приз...';
     showOverlay('ovWin');
   } else {
     $('loseEmoji').textContent = isTimeout ? '⏱' : '😔';
@@ -3306,8 +3372,17 @@ async function endGame(won, isTimeout) {
   if (saved && saved.ok) {
     resultSent = true;
     if (won) {
-      $('winReward').textContent = saved.resultText ? saved.resultText.replace(/\*/g,'') : 'Приз нараховано';
+      const rewardText = saved.resultText ? saved.resultText.replace(/\*/g,'') : 'Приз нараховано';
       statusEl.textContent = '✅ Збережено!';
+      if (saved.chestKind === 'paid' && saved.chestGranted) {
+        // Кейс відкривається одразу — показуємо анімацію (трясеться →
+        // спалах + "розкрився"), і лише ПІСЛЯ неї показуємо текст призу,
+        // замість того щоб текст просто миттєво з'являвся поряд.
+        await playChestOpenAnim(rewardText);
+      } else {
+        $('winReward').textContent = rewardText;
+        $('winReward').classList.remove('hide');
+      }
     } else {
       statusEl.textContent = '✅ Результат збережено.';
     }
@@ -3333,7 +3408,7 @@ async function sendResult(won, attemptCount) {
     try {
       const res = await fetch(url);
       const data = await res.json();
-      if (data.ok || data.error === 'already_processed') return { ok: true, attemptsLeft: data.attemptsLeft || 0 };
+      if (data.ok || data.error === 'already_processed') return { ok: true, attemptsLeft: data.attemptsLeft || 0, resultText: data.resultText, chestGranted: data.chestGranted, chestKind: data.chestKind };
       if (data.error && data.error !== 'invalid_session') return data; // інша серверна помилка — не повторюємо
     } catch (e) {}
     if (attempt < 2) await new Promise(r => setTimeout(r, 2000)); // пауза 2 сек перед повторною спробою
