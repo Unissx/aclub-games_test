@@ -1396,7 +1396,7 @@ function slotsSectionHtml(){
   const slots = CHEST_SLOTS_STATE;
   const cells = [];
   const totalCells = Math.max(CHEST_SLOTS_MAX_CLIENT, slots.length); // адмінам ліміт не застосовується — покажемо всі
-  const cardStyle = "text-align:center; min-height:172px; display:flex; flex-direction:column; align-items:center; justify-content:center;";
+  const cardStyle = "text-align:center; height:200px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden;";
   for (let i=0;i<totalCells;i++){
     const s = slots[i];
     if (!s) { cells.push(`<div class="card" style="${cardStyle} opacity:.5;"><div style="font-size:24px;">➕</div><div class="sub" style="margin-top:4px;">Порожньо</div></div>`); continue; }
@@ -1425,7 +1425,7 @@ function slotsSectionHtml(){
       ${body}
     </div>`);
   }
-  return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:start;">${cells.join("")}</div>`;
+  return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">${cells.join("")}</div>`;
 }
 function startSlotTicker(){
   if (SLOT_TICK_TIMER) clearInterval(SLOT_TICK_TIMER);
