@@ -1580,7 +1580,7 @@ function paintInventory(){
         <div class="badge ${vip.dailyInstantUnlockClaimed?'ok':''}">${vip.dailyInstantUnlockClaimed?'Використано':(vip.active?'Доступно':'—')}</div></div>
     </div>
 
-    <div class="h2">📦 Кейси-слоти <span class="hint">${CHEST_SLOTS_STATE.length}${(DASH && DASH.isAdmin) ? ' (без ліміту)' : ('/'+CHEST_SLOTS_MAX_CLIENT)}</span></div>
+    <div class="h2">📦 Кейси-слоти <span class="hint">${CHEST_SLOTS_STATE.length}/${CHEST_SLOTS_MAX_CLIENT}</span></div>
     <button class="btn secondary sm" style="margin-bottom:10px;" onclick="openPaidChestsModal()">🧧 Кейси — платні (відкрити зараз)</button>
     <div id="chestSlotsGrid">${slotsSectionHtml()}</div>
 
