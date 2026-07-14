@@ -1394,37 +1394,73 @@ function fmtSecs(sec){
 }
 function slotsSectionHtml(){
   const slots = CHEST_SLOTS_STATE;
+  const maxSlotIndex = slots.reduce((m, s) => Math.max(m, s.slotIndex || 0), 0);
+  const totalCells = Math.max(CHEST_SLOTS_MAX_CLIENT, maxSlotIndex); // адмінам ліміт не застосовується — покажемо всі
+  const bySlot = {};
+  slots.forEach(s => { bySlot[s.slotIndex] = s; });
   const cells = [];
-  const totalCells = Math.max(CHEST_SLOTS_MAX_CLIENT, slots.length); // адмінам ліміт не застосовується — покажемо всі
-  for (let i=0;i<totalCells;i++){
-    const s = slots[i];
+  for (let i=1;i<=totalCells;i++){
+    const s = bySlot[i];
     if (!s) { cells.push(`<div class="card chest-slot-card" style="opacity:.5;"><div style="font-size:20px;">➕</div><div class="sub">Порожньо</div></div>`); continue; }
-    let body;
+    let statusBadge;
     if (s.status === "Очікує") {
-      const anyUnlocking = slots.some(x=>x.status==="Розблоковується");
-      body = `<div style="display:flex; flex-direction:column; gap:4px; width:100%; margin-top:6px;">
-        <button class="btn secondary sm" style="padding:6px 2px; font-size:10.5px;" ${anyUnlocking?'disabled':''} onclick="chestSlotStart(${s.row})">🔓</button>
-        <button class="btn danger sm" style="padding:6px 2px; font-size:10.5px;" onclick="chestSlotDispose(${s.row},'${s.kind}')">${s.kind==='paid'?'♻️':'💰'}</button>
-      </div>`;
+      statusBadge = `<div class="badge" style="margin-top:4px;">🔓 Тапни</div>`;
     } else if (s.status === "Розблоковується" && !s.ready) {
-      const vip = (DASH && DASH.vip) || {};
-      const canInstant = vip.active && !vip.dailyInstantUnlockClaimed;
-      body = `<div class="sub mono" style="text-align:center; font-size:10.5px; margin:4px 0;">⏳ ${fmtSecs(s.secondsLeft)}</div>
-        <div style="display:flex; flex-direction:column; gap:4px; width:100%;">
-          <button class="btn secondary sm" style="padding:6px 2px; font-size:10.5px;" onclick="openRushModal(${s.row})">⚡</button>
-          <button class="btn danger sm" style="padding:6px 2px; font-size:10.5px;" onclick="chestSlotDispose(${s.row},'${s.kind}')">${s.kind==='paid'?'♻️':'💰'}</button>
-        </div>
-        ${canInstant ? `<button class="btn sm" style="margin-top:4px; padding:6px 2px; font-size:10px; background:linear-gradient(155deg,#F2A93B,#B15EF0); color:#1a0f2e;" onclick="claimVipInstantUnlock(${s.row})">👑</button>` : ""}`;
+      statusBadge = `<div class="sub mono" style="font-size:9.5px; margin:3px 0 0;">⏳ ${fmtSecs(s.secondsLeft)}</div>`;
     } else {
-      body = `<button class="btn sm" style="margin-top:6px; padding:6px 2px; font-size:10.5px;" onclick="chestSlotOpen(${s.row})">🎁</button>`;
+      statusBadge = `<div class="badge ok" style="margin-top:4px;">🎁 Готово</div>`;
     }
-    cells.push(`<div class="card chest-slot-card">
+    cells.push(`<div class="card chest-slot-card" style="cursor:pointer;" onclick="openChestSlotModal(${s.row})">
       <div style="display:flex; justify-content:center;">${chestArtSvg(s.chestId, 34)}</div>
       <div style="font-weight:700; font-size:9.5px; margin-top:3px; line-height:1.25;">${esc(s.name)}</div>
-      ${body}
+      ${statusBadge}
     </div>`);
   }
   return `<div class="chest-slots-grid">${cells.join("")}</div>`;
+}
+// Клік по картці слота — всі дії (почати розблокування, прискорити,
+// відкрити, розібрати/продати) тепер в одній модалці замість купи
+// дрібних кнопок на самій картці (там банально не влазило красиво
+// в 4 колонки).
+function openChestSlotModal(row){
+  const s = CHEST_SLOTS_STATE.find(x => x.row === row);
+  if (!s) return;
+  const slots = CHEST_SLOTS_STATE;
+  let bodyHtml;
+  if (s.status === "Очікує") {
+    const anyUnlocking = slots.some(x=>x.status==="Розблоковується");
+    bodyHtml = `
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn" style="flex:1;" ${anyUnlocking?'disabled':''} onclick="closeModal(); chestSlotStart(${s.row})">🔓 Почати розблокування</button>
+      </div>
+      ${anyUnlocking ? `<div class="sub" style="text-align:center; margin-top:6px;">Спочатку завершіть поточне розкриття іншого кейсу</div>` : ""}
+      <button class="btn danger sm" style="margin-top:8px;" onclick="closeModal(); chestSlotDispose(${s.row},'${s.kind}')">${s.kind==='paid'?'♻️ Розібрати на осколки':'💰 Продати'}</button>
+    `;
+  } else if (s.status === "Розблоковується" && !s.ready) {
+    const vip = (DASH && DASH.vip) || {};
+    const canInstant = vip.active && !vip.dailyInstantUnlockClaimed;
+    bodyHtml = `
+      <div class="sub mono" style="text-align:center; font-size:15px; margin:8px 0;">⏳ ${fmtSecs(s.secondsLeft)}</div>
+      <div class="btn-row">
+        <button class="btn secondary" style="flex:1;" onclick="closeModal(); openRushModal(${s.row})">⚡ Прискорити</button>
+      </div>
+      <button class="btn danger sm" style="margin-top:8px;" onclick="closeModal(); chestSlotDispose(${s.row},'${s.kind}')">${s.kind==='paid'?'♻️ Розібрати на осколки':'💰 Продати'}</button>
+      ${canInstant ? `<button class="btn sm" style="margin-top:8px; background:linear-gradient(155deg,#F2A93B,#B15EF0); color:#1a0f2e;" onclick="closeModal(); claimVipInstantUnlock(${s.row})">👑 Миттєво (безкоштовно)</button>` : ""}
+    `;
+  } else {
+    bodyHtml = `
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn" style="flex:1;" onclick="closeModal(); chestSlotOpen(${s.row})">🎁 Відкрити!</button>
+      </div>
+    `;
+  }
+  showModal(`
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:4px;">
+      ${chestArtSvg(s.chestId, 44)}
+      <div class="mh" style="margin:0;">${esc(s.name)}</div>
+    </div>
+    ${bodyHtml}
+  `);
 }
 function startSlotTicker(){
   if (SLOT_TICK_TIMER) clearInterval(SLOT_TICK_TIMER);
