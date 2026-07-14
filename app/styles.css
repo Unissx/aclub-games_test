@@ -40,15 +40,14 @@ body::before{
 .card{background:linear-gradient(155deg, var(--panel2), var(--panel)); border:1px solid var(--line); border-radius:var(--radius); padding:14px;}
 .card + .card{margin-top:10px;}
 
-/* Сітка слотів кейсів — ізольована від .card + .card (той margin-top
-   ламав вирівнювання в 2-колонковому grid, бо селектор суміжного
-   елемента не знає про рядки грід-сітки). Власний клас замість
-   покладання на inline-стилі, з explicit grid-auto-rows + stretch,
-   щоб усі клітинки рядка завжди мали однакову висоту незалежно від
-   вмісту сусідньої клітинки. */
-.chest-slots-grid{display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:1fr; align-items:stretch; gap:8px;}
-.chest-slot-card{margin:0 !important; height:200px; box-sizing:border-box; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; text-align:center; overflow:hidden;}
+/* Сітка слотів кейсів — 4 колонки в ОДИН рядок (не 2x2), щоб
+   взагалі не було поняття "рядок грід-сітки" і, відповідно, не було
+   різниці у висоті між першою і рештою карток. Компактніший розмір
+   під 4 картки в ширину на вузькому екрані. */
+.chest-slots-grid{display:grid; grid-template-columns:repeat(4, 1fr); gap:6px;}
+.chest-slot-card{margin:0 !important; height:132px; box-sizing:border-box; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; text-align:center; overflow:hidden; padding:8px 4px;}
+.chest-slot-card .sub{font-size:10.5px; margin:3px 0 0;}
 .row{display:flex; align-items:center; gap:10px;}
 .between{justify-content:space-between;}
 .stat-row{display:flex; gap:10px;}
