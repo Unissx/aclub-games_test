@@ -226,6 +226,24 @@ function renderHome(){
 
     <div class="card" style="margin-top:12px;">
       <div class="row between">
+        <div class="display" style="font-weight:700; font-size:14px;">👑 VIP-статус</div>
+        <div class="badge ${vip.active?'ok':''}">${vip.active ? ('до '+fmtDate(vip.until)) : 'не активний'}</div>
+      </div>
+      <div class="sub" style="margin:8px 2px 0; font-size:11.5px; line-height:1.7;">
+        ✅ Максимальна прокачка в іграх на весь час дії<br>
+        ✅ Пріоритет звернень у підтримці (вище в черзі)<br>
+        ✅ 🔒 «Змінити відповідь» у Ребусі дня<br>
+        ✅ Безкоштовна підказка в Ребусі (приз не зменшується)<br>
+        ✅ +1 спроба щодня у «Щасливчику»<br>
+        ✅ Щоденний безкоштовний Silver Chest (відкривається одразу)<br>
+        ✅ Щоденний безкоштовний «Авангард» (відкривається одразу)<br>
+        ✅ 1 миттєве безкоштовне розблокування кейсу щодня
+      </div>
+      ${vip.active ? "" : `<button class="btn secondary sm" style="margin-top:10px;" onclick="goToShopVip()">🛍 Придбати VIP</button>`}
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="row between">
         <div class="display" style="font-weight:700; font-size:14px;">🎁 Щоденний бонус</div>
         <div class="badge">${streak} 🔥 стрік</div>
       </div>
@@ -544,7 +562,7 @@ function renderGames(){
     <div class="game-card">
       <div class="gt">🔤 Вгадай слово</div>
       <div class="gd">Класичний Wordle українською — 6 спроб, нагорода за швидкість.</div>
-      <button class="btn" onclick="openGameFrame('${WORDLE_URL}','🔤 Вгадай слово')">🔤 Грати</button>
+      <button class="btn" onclick="openGameFrame('${WORDLE_URL}','🔤 Вгадай слово')">🔤 Грати${vipActive ? ' (VIP: макс. прокачка)' : ''}</button>
     </div>
 
     <div class="game-card">
@@ -710,6 +728,7 @@ function renderShop(){
     <div class="tabs2" style="flex-wrap:wrap; gap:4px;">
       <div class="t2" style="flex:1 1 30%;" data-sub="abank">🎁 áBank</div>
       <div class="t2" style="flex:1 1 30%;" data-sub="chests">📦 Кейси</div>
+      <div class="t2" style="flex:1 1 30%;" data-sub="vip">👑 VIP</div>
       <div class="t2" style="flex:1 1 30%;" data-sub="runner">🏃 Runner</div>
       <div class="t2" style="flex:1 1 30%;" data-sub="wordle">🔤 Wordle</div>
       <div class="t2" style="flex:1 1 30%;" data-sub="items">🎽 Мої товари</div>
@@ -722,9 +741,30 @@ function renderShop(){
   });
   if (SHOP_SUB === "abank") loadShopAbank();
   else if (SHOP_SUB === "chests") loadShopChests();
+  else if (SHOP_SUB === "vip") loadShopVip();
   else if (SHOP_SUB === "runner") loadUpgrades("runner");
   else if (SHOP_SUB === "wordle") loadUpgrades("wordle");
   else loadMyItems("shopBody");
+}
+function goToShopVip(){ SHOP_SUB = "vip"; nav("shop"); }
+
+// ── VIP-тикети (покупка) — сама активація лишається в «Інвентарі» ──
+async function loadShopVip(){
+  const wrap = document.getElementById("shopBody");
+  if (!wrap) return;
+  try {
+    const r = await apiRaw("get_inventory");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    CHESTS_STATE = r;
+    wrap.innerHTML = `
+      <div class="sub" style="margin:-2px 2px 10px;">Тикет активується цілком, без розбиття на години — придбайте, а активуйте вже в «Інвентарі» → «VIP-тикети», коли завгодно.</div>
+      <div class="list">${Object.entries(VIP_TICKET_DEFS).map(([id,t]) => `
+        <div class="item">
+          <div class="ic">🎟</div>
+          <div class="txt"><div class="t">${esc(t.label)}</div><div class="s">Разова активація на весь термін</div></div>
+          <button class="btn sm" style="width:auto; padding:8px 12px;" ${CHESTS_STATE.balance<t.price?'disabled':''} onclick="buyVipTicket('${id}')">${t.price} 💰</button>
+        </div>`).join("")}</div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
 }
 
 // ── Кейси (покупка — потрапляє у слот в «Інвентарі») ──
@@ -1239,7 +1279,6 @@ function paintInventory(){
       <div class="sub" style="margin:8px 0;">У банку: <b>${vip.bankedHours} год.</b></div>
       ${vip.bankedHours > 0 ? `
         <button class="btn" onclick="activateVipHours(${vip.bankedHours})">👑 Активувати ${vip.bankedHours} год.</button>` : `<div class="sub">Години падають з кейсів (Абсолют, Золота/Епічна/Легендарна скриня).</div>`}
-      <div class="sub" style="margin-top:8px; font-size:11px;">VIP дає: максимальну прокачку в іграх, пріоритет у підтримці, безкоштовну підказку в ребусі, зміну відповіді в ребусі, +1 спробу в «Щасливчику», щоденні бонуси нижче.</div>
     </div>
 
     <div class="h2">🎟 VIP-тикети</div>
@@ -1247,14 +1286,12 @@ function paintInventory(){
     ${VIP_TICKETS_STATE.length ? `<div class="list" style="margin-bottom:10px;">${VIP_TICKETS_STATE.map(t => `
       <div class="item"><div class="ic">🎟</div><div class="txt"><div class="t">${esc((VIP_TICKET_DEFS[t.type]||{}).label || t.type)}</div><div class="s">Не активовано</div></div>
       <button class="btn sm" style="width:auto; padding:8px 12px;" onclick="activateVipTicket(${t.row})">Активувати</button></div>
-    `).join("")}</div>` : ""}
-    <div class="btn-row" style="flex-wrap:wrap;">
-      ${Object.entries(VIP_TICKET_DEFS).map(([id,t]) => `<button class="btn secondary sm" style="flex:1 1 45%;" ${CHESTS_STATE.balance<t.price?'disabled':''} onclick="buyVipTicket('${id}')">${esc(t.label)}<br><span class="mono">${t.price} 💰</span></button>`).join("")}
-    </div>
+    `).join("")}</div>` : `<div class="sub" style="margin-bottom:10px;">Наразі тикетів немає.</div>`}
+    <button class="btn secondary sm" onclick="goToShopVip()">🛍 Придбати VIP-тикет у Магазині</button>
 
     <div class="h2">🎁 Щоденні VIP-бонуси</div>
     <div class="list">
-      <div class="item"><div class="ic">🥈</div><div class="txt"><div class="t">Безкоштовний Silver Chest</div><div class="s">Раз на добу, потрапляє в слот</div></div>
+      <div class="item"><div class="ic">🥈</div><div class="txt"><div class="t">Безкоштовний Silver Chest</div><div class="s">Раз на добу, відкривається одразу</div></div>
         <button class="btn sm" style="width:auto; padding:8px 12px;" ${(!vip.active||vip.dailySilverClaimed)?'disabled':''} onclick="claimVipDaily('silver')">${vip.dailySilverClaimed?'Отримано':'Забрати'}</button></div>
       <div class="item"><div class="ic">💰</div><div class="txt"><div class="t">Безкоштовний «Авангард»</div><div class="s">Раз на добу, відкривається одразу</div></div>
         <button class="btn sm" style="width:auto; padding:8px 12px;" ${(!vip.active||vip.dailyAvangardClaimed)?'disabled':''} onclick="claimVipDaily('avangard')">${vip.dailyAvangardClaimed?'Отримано':'Забрати'}</button></div>
@@ -1679,15 +1716,12 @@ async function claimVipDaily(kind){
   try {
     const r = await api(kind === "silver" ? "vip_daily_silver" : "vip_daily_avangard");
     if (!r.ok) {
-      const msg = r.error === "already_claimed" ? "Вже отримано сьогодні" : (r.error === "vip_required" ? "Потрібен активний VIP" : (r.error === "inventory_full" ? "Інвентар кейсів заповнений" : "Помилка"));
+      const msg = r.error === "already_claimed" ? "Вже отримано сьогодні" : (r.error === "vip_required" ? "Потрібен активний VIP" : "Помилка");
       toast(msg, "err"); return;
     }
-    if (kind === "avangard") {
-      showModal(chestOpenSceneHtml(r.chestId || "avangard", r.chestName || "«Авангард»", r.resultText, r.drop));
-      startCarouselAnim();
-    } else {
-      toast("Кейс додано в слот! 🥈", "ok");
-    }
+    const fallbackName = kind === "silver" ? "🥈 Срібна скриня" : "«Авангард»";
+    showModal(chestOpenSceneHtml(r.chestId || kind, r.chestName || fallbackName, r.resultText, r.drop));
+    startCarouselAnim();
     await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
