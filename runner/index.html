@@ -816,7 +816,7 @@ function drawApple(a){
   ctx.fillStyle=a.isRed?'#ef9a9a':'#a5d6a7';ctx.beginPath();ctx.ellipse(-s(2),-s(3),s(3),s(4),-.4,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle='#5d4037';ctx.lineWidth=s(1.5);ctx.beginPath();ctx.moveTo(0,-a.r);ctx.quadraticCurveTo(s(4),-a.r-s(6),s(2),-a.r-s(10));ctx.stroke();
   ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.ellipse(s(4),-a.r-s(5),s(4),s(2),.5,0,Math.PI*2);ctx.fill();
-  if(a.isRed){ctx.globalAlpha=1;ctx.fillStyle='#ff8a80';ctx.font=`bold ${s(7)}px Nunito`;ctx.textAlign='center';ctx.fillText('+1á',0,a.r+s(10));}
+  if(a.isRed){ctx.globalAlpha=1;ctx.fillStyle='#ff8a80';ctx.font=`bold ${s(7)}px Nunito`;ctx.textAlign='center';ctx.fillText('+50',0,a.r+s(10));}
   if(noApples){ctx.globalAlpha=.9;ctx.strokeStyle='#ff1744';ctx.lineWidth=s(2.5);ctx.beginPath();ctx.moveTo(-a.r,-a.r);ctx.lineTo(a.r,a.r);ctx.stroke();ctx.beginPath();ctx.moveTo(a.r,-a.r);ctx.lineTo(-a.r,a.r);ctx.stroke();}
   ctx.restore();
 }
@@ -944,7 +944,7 @@ function gameLoop(ts){
       // Якщо яблуко опинилось позаду гравця (рідкісний випадок) — миттєво забираємо
       if(a.x<P.x-s(30)){
         a.collected=true;
-        if(a.isRed){score+=50;spawnP(pcx,pcy,'#ff1744',12);spawnT(pcx,pcy-s(16),'+1á','#ff1744');sendCoin();}
+        if(a.isRed){score+=50;spawnP(pcx,pcy,'#ff1744',12);spawnT(pcx,pcy-s(16),'+50','#ff1744');}
         else{score+=10;spawnP(pcx,pcy,'#00c853',8);spawnT(pcx,pcy-s(13),'+10','#00c853');}
         continue;
       }
@@ -958,7 +958,7 @@ function gameLoop(ts){
     const dist2=Math.hypot(a.x-pcx,a.y-pcy);
     if(dist2<a.r+s(14)&&!noApples){
       a.collected=true;
-      if(a.isRed){score+=50;spawnP(a.x,a.y,'#ff1744',12);spawnT(a.x,a.y-s(16),'+1á','#ff1744');sendCoin();}
+      if(a.isRed){score+=50;spawnP(a.x,a.y,'#ff1744',12);spawnT(a.x,a.y-s(16),'+50','#ff1744');}
       else{score+=10;spawnP(a.x,a.y,'#00c853',8);spawnT(a.x,a.y-s(13),'+10','#00c853');}
     }
   }
@@ -1358,26 +1358,37 @@ async function sendScore(v){
   const minRequired=Math.floor(v*0.04);
   if(elapsed < minRequired){st.textContent='';return;}
 
+  // Основний шлях — запуск через áClub Mini App (немає cid/mid/iid,
+  // лише uid із tgid). Раніше цей випадок помилково трактувався як
+  // "гру відкрито не через Telegram" і результат ВЗАГАЛІ не надсилався.
+  // Тепер надсилаємо напряму POST-ом на GAS — doPost() вже вміє
+  // приймати {type:"game_result", game:"runner", userId, score}.
+  async function postResult(){
+    const resp=await fetch(GAS,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({type:'game_result',game:'runner',userId:uid,score:v,secret:'aclub2026runnertest'})
+    });
+    const data=await resp.json();
+    if(!data || !data.ok) throw new Error('save_failed');
+  }
+  try{
+    await postResult();
+    st.textContent='✅ Збережено!';st.className='st ok';
+  }catch(e){
+    st.textContent='⚠️ Не вдалось зберегти результат';st.className='st err';
+  }
+
+  // Додатково (не критично для основного шляху) — якщо гру запущено
+  // через СТАРИЙ Telegram Game API (inline-повідомлення в чаті з
+  // callback_game), оновлюємо ще й рахунок безпосередньо в тому
+  // повідомленні через воркер setGameScore.
   if((cid&&mid)||iid){
     let q='user_id='+uid+'&score='+v+'&wt=wrk_test_xyz123&elapsed='+elapsed;
     if(iid)q+='&inline_message_id='+encodeURIComponent(iid);
     else q+='&chat_id='+cid+'&message_id='+mid;
     if(cur)q+='&current_msg='+cur;
-    try{
-      const resp=await fetch(WRK+'?'+q);
-      const data=await resp.json();
-      if(data.ok){st.textContent='✅ Збережено!';st.className='st ok';}
-      else{
-        try{new Image().src=GAS+'?type=game_result&game=runner&score='+v+'&userId='+uid+'&secret=aclub2026runnertest&elapsed='+elapsed+'&_t='+Date.now();}catch(e){}
-        st.textContent='✅ Збережено!';st.className='st ok';
-      }
-    }catch(e){
-      try{new Image().src=GAS+'?type=game_result&game=runner&score='+v+'&userId='+uid+'&secret=aclub2026runnertest&elapsed='+elapsed+'&_t='+Date.now();}catch(e2){}
-      st.textContent='✅ Збережено!';st.className='st ok';
-    }
-  } else {
-    st.textContent='⚠️ Відкрий гру через Telegram!';
-    st.className='st err';
+    try{ await fetch(WRK+'?'+q); }catch(e){}
   }
 }
 
