@@ -567,13 +567,13 @@ function renderGames(){
     <div class="game-card">
       <div class="gt">🏃 áClub Runner</div>
       <div class="gd">Біжи через перешкоди, збирай яблука, потрапляй у топ тижневого турніру.</div>
-      <button class="btn" onclick="playRunner()">🎮 Грати${vipActive ? ' (VIP: макс. прокачка)' : ''}</button>
+      <button class="btn" onclick="playRunner()">🎮 Грати${vipActive ? ' — VIP (Максимальний рівень)' : ''}</button>
     </div>
 
     <div class="game-card">
       <div class="gt">🔤 Вгадай слово</div>
       <div class="gd">Класичний Wordle українською — 6 спроб, нагорода за швидкість.</div>
-      <button class="btn" onclick="openGameFrame('${WORDLE_URL}','🔤 Вгадай слово')">🔤 Грати${vipActive ? ' (VIP: макс. прокачка)' : ''}</button>
+      <button class="btn" onclick="openGameFrame('${WORDLE_URL}','🔤 Вгадай слово')">🔤 Грати${vipActive ? ' — VIP (Максимальний рівень)' : ''}</button>
     </div>
 
     <div class="game-card">
@@ -836,18 +836,22 @@ async function loadUpgrades(kind){
 function paintUpgrades(kind, r){
   const wrap = document.getElementById("shopBody");
   if (!wrap) return;
+  const vipActive = !!(DASH && DASH.vip && DASH.vip.active);
   const entries = Object.entries(r.upgrades);
-  wrap.innerHTML = `<div class="list">` + entries.map(([key, upg]) => {
+  wrap.innerHTML = (vipActive ? `<div class="card" style="margin-bottom:10px; background:rgba(242,169,59,.12); border-color:var(--legendary);">
+    <div style="font-weight:800; font-size:13px; color:var(--legendary);">👑 VIP активний — Максимальна прокачка на час VIP</div>
+    <div class="sub" style="margin:4px 0 0;">Усі рівні нижче застосовуються в грі як максимальні, поки діє VIP. Реальний куплений рівень (нижче) від цього не змінюється.</div>
+  </div>` : "") + `<div class="list">` + entries.map(([key, upg]) => {
     const maxLevel = upg.maxLevel || 5;
     const cur = r.current[key] || 0;
     const maxed = cur >= maxLevel;
     const price = !maxed ? upg.prices[cur] : 0;
     const effect = cur > 0 ? upg.effects[cur-1] : (key==='lives' ? "1 життя (базово)" : "не куплено");
     return `<div class="card">
-      <div class="row between"><div style="font-weight:700; font-size:13.5px;">${esc(upg.name)}</div><div class="badge">${cur}/${maxLevel}</div></div>
+      <div class="row between"><div style="font-weight:700; font-size:13.5px;">${esc(upg.name)}</div><div class="badge ${vipActive?'ok':''}">${vipActive ? '👑 VIP (Максимальний рівень)' : `${cur}/${maxLevel}`}</div></div>
       <div class="sub" style="margin:6px 0;">${esc(upg.desc)}</div>
-      <div class="progress" style="margin-bottom:8px;"><div style="width:${cur/maxLevel*100}%"></div></div>
-      <div class="sub" style="margin:0 0 10px;">Зараз: ${esc(effect)}${!maxed?` · Далі: ${esc(upg.effects[cur])} — ${price} 💰`:''}</div>
+      <div class="progress" style="margin-bottom:8px;"><div style="width:${(vipActive?maxLevel:cur)/maxLevel*100}%"></div></div>
+      <div class="sub" style="margin:0 0 10px;">Зараз (куплено): ${esc(effect)}${!maxed?` · Далі: ${esc(upg.effects[cur])} — ${price} 💰`:''}</div>
       <button class="btn sm" ${maxed || r.balance < price ? 'disabled' : ''} onclick="buyUpgrade('${kind}','${key}')">
         ${maxed ? '✅ Максимум' : (r.balance < price ? 'Недостатньо á-coin' : `Купити рів. ${cur+1} — ${price} 💰`)}
       </button>
