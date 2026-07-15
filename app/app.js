@@ -3,7 +3,7 @@
 // ============================================================
 const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzH8qt2_fUmnrLEw0Z56fsyMEH-D3uOgBSeTxwzUMCDTFDDoNBAowLTZqEGwSFo26ie9A/exec";
 const GAME_SECRET = "aclub2026runnertest";
-const RUNNER_URL = "https://unissx.github.io/aclub-games_test/runner/?v=1";
+const RUNNER_URL = "https://unissx.github.io/aclub-games_test/runner/?v=10";
 const WORDLE_URL = "https://unissx.github.io/aclub-games_test/wordle/?v=13";
 const CIRCLE_URL = "https://unissx.github.io/aclub-games_test/circle/?v=4";
 
@@ -118,6 +118,7 @@ const TABS = [
   { id:"home",      ic:"🏠", lb:"Головна" },
   { id:"games",     ic:"🎮", lb:"Ігри" },
   { id:"shop",      ic:"🏪", lb:"Магазин" },
+  { id:"craft",     ic:"🔨", lb:"Створити" },
   { id:"inventory", ic:"🎒", lb:"Інвентар" },
   { id:"support",   ic:"🆘", lb:"Підтримка" },
 ];
@@ -197,6 +198,7 @@ function render(){
   if (TAB === "home") return renderHome();
   if (TAB === "games") return renderGames();
   if (TAB === "shop") return renderShop();
+  if (TAB === "craft") return renderCraft();
   if (TAB === "inventory") return renderInventory();
   if (TAB === "support") return renderSupport();
   if (TAB === "admin") return renderAdmin();
@@ -594,7 +596,7 @@ async function openChangeAnswer(vipActive){
         if (tr.ok && tr.tickets.length) {
           ticketsHtml = `<div class="sub" style="margin:10px 0 6px;">У вас є непроактивований VIP-тикет:</div>
             <div class="list">${tr.tickets.map(t => `
-              <div class="item"><div class="ic">🎟</div><div class="txt"><div class="t">${esc((VIP_TICKET_DEFS[t.type]||{}).label || t.type)}</div></div>
+              <div class="item"><div class="ic">🎟</div><div class="txt"><div class="t">${vipTicketLabel(t)}</div></div>
               <button class="btn sm" style="width:auto; padding:8px 12px;" onclick="activateVipTicket(${t.row})">Активувати</button></div>
             `).join("")}</div>`;
         }
@@ -1494,32 +1496,41 @@ function chestOpenSceneHtml(chestId, chestName, resultText, drop){
 }
 
 function openVipManageModal(){
-  const eff = (CHESTS_STATE && CHESTS_STATE.effects) || {};
-  const vip = (DASH && DASH.vip) || { active:false, until:null, bankedHours: eff.vipBankedHours||0 };
+  const vip = (DASH && DASH.vip) || { active:false, until:null };
   showModal(`
     <div class="mh">👑 VIP-статус</div>
     <div class="row between" style="margin-bottom:8px;">
       <div style="font-weight:700; font-size:13.5px;">${vip.active ? '✅ VIP активний' : '😴 VIP не активний'}</div>
       <div class="badge ${vip.active?'ok':''}">${vip.active ? ('до '+fmtDate(vip.until)) : 'немає'}</div>
     </div>
-    <div class="sub" style="margin:0 0 10px;">У банку: <b>${vip.bankedHours} год.</b></div>
-    ${vip.bankedHours > 0 ? `
-      <button class="btn" onclick="activateVipHours(${vip.bankedHours})">👑 Активувати ${vip.bankedHours} год.</button>` : `<div class="sub">Години падають з кейсів (Абсолют, Золота/Епічна/Легендарна скриня).</div>`}
 
-    <div class="sub" style="margin:14px 0 6px; border-top:1px solid var(--line); padding-top:12px;">🎟 VIP-тикети — активується цілим тикетом, стакується з наявним VIP.</div>
+    <div class="sub" style="margin:6px 0 6px;">🎟 VIP-тикети — активується цілим тикетом, стакується з наявним VIP. Тикети видаються з кейсів (Абсолют, Золота/Епічна/Легендарна скриня), адміном або купуються в Магазині.</div>
     ${VIP_TICKETS_STATE.length ? `<div class="list" style="margin-bottom:10px;">${VIP_TICKETS_STATE.map(t => `
-      <div class="item"><div class="ic">🎟</div><div class="txt"><div class="t">${esc((VIP_TICKET_DEFS[t.type]||{}).label || t.type)}</div><div class="s">Не активовано</div></div>
+      <div class="item"><div class="ic">🎟</div><div class="txt"><div class="t">${vipTicketLabel(t)}</div><div class="s">Не активовано</div></div>
       <button class="btn sm" style="width:auto; padding:8px 12px;" onclick="activateVipTicket(${t.row})">Активувати</button></div>
     `).join("")}</div>` : `<div class="sub" style="margin-bottom:10px;">Наразі тикетів немає.</div>`}
     <button class="btn secondary sm" onclick="closeModal(); goToShopVip();">🛍 Придбати VIP-тикет у Магазині</button>
   `);
+}
+// Мітка тикета: для тикетів з Магазину (24h/48h/week/month) — фіксований
+// підпис з VIP_TICKET_DEFS; для решти (з кейсів, від адміна, з міграції
+// старого банку годин) — довільна кількість годин, тож формуємо підпис
+// із самого значення годин.
+function vipTicketLabel(t){
+  const def = VIP_TICKET_DEFS[t.type];
+  if (def) return esc(def.label);
+  const h = t.hours;
+  let human = h + " год.";
+  if (h % 24 === 0 && h >= 24) human = (h/24) + " дн.";
+  const srcLabel = { chest: "з кейсу", admin: "від адміна", legacy_bank: "" }[t.type];
+  return human + (srcLabel ? ` <span class="hint">${srcLabel}</span>` : "");
 }
 function dropLabel(d){
   if (d.label) return d.label;
   if (d.pool) return `Косметика рівня ${d.rarity} (сюрприз)`;
   if (d.type === "coins") return d.amount + " á-coin";
   if (d.type === "shard") return d.amount + " осколок";
-  if (d.type === "vipHours") return d.amount + " год. VIP (у банк)";
+  if (d.type === "vipHours") return d.amount + " год. VIP-тикет";
   return d.type;
 }
 let CHESTS_STATE = null;
@@ -1527,6 +1538,97 @@ let CHEST_ITEMS_STATE = [];
 let CHEST_SLOTS_STATE = [];
 let SLOT_TICK_TIMER = null;
 const CHEST_SLOTS_MAX_CLIENT = 4;
+
+// ============================================================
+// СТВОРИТИ (крафт з осколків)
+// ============================================================
+async function renderCraft(){
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `<div class="h1">🔨 Створити</div><div id="craftBody">${loadingBlock()}</div>`;
+  const wrap = document.getElementById("craftBody");
+  try {
+    const r = await apiRaw("get_inventory");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); return; }
+    CHESTS_STATE = r;
+    const shards = r.shards || 0;
+    const chestDef = (id) => (r.chests||[]).find(c => c.id === id);
+
+    wrap.innerHTML = `
+      <div class="sub" style="margin:-4px 2px 14px;">Витрачайте 🔮 осколки на створення сундуків, кейсів та скінів — без á-coin.</div>
+
+      <div class="h2">📦 Створити сундук <span class="hint">🔮 ${fmt(shards)}</span></div>
+      <div class="sub" style="margin:-4px 2px 10px;">Відкривається одразу тут — у слоти кейсів не потрапляє.</div>
+      <div class="btn-row" style="flex-wrap:wrap; margin-bottom:18px;">
+        ${(r.craftChestRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${shards<rc.cost?'disabled':''} onclick="craftChest('${rc.id}')">${esc(rc.label)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
+      </div>
+
+      <div class="h2">🧧 Створити кейс <span class="hint">🔮 ${fmt(shards)}</span></div>
+      <div class="sub" style="margin:-4px 2px 10px;">Той самий кейс, що й у Магазині, але за осколки — і відкривається безкоштовно одразу тут.</div>
+      <div class="list" style="margin-bottom:18px;">
+        ${(r.craftPaidChestRecipes||[]).map(rc => `
+          <div class="item"><div style="flex:none;">${chestArtSvg(rc.chestId, 34)}</div><div class="txt"><div class="t">${esc((chestDef(rc.chestId)||{}).name || rc.chestId)}</div></div>
+          <button class="btn sm" style="width:auto; padding:8px 12px;" ${shards<rc.cost?'disabled':''} onclick="craftPaidChest('${rc.chestId}')">${rc.cost} 🔮</button></div>
+        `).join("")}
+      </div>
+
+      <div class="h2">🎨 Створити предмет <span class="hint">🔮 ${fmt(shards)}</span></div>
+      <div class="sub" style="margin:-4px 2px 10px;">Випадковий скін заданої рідкості — одразу в «Мої скіни».</div>
+      <div class="btn-row" style="flex-wrap:wrap; margin-bottom:18px;">
+        ${(r.craftItemRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${shards<rc.cost?'disabled':''} onclick="craftSkinItem('${rc.rarity}')">${esc(rc.rarity)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
+      </div>
+
+      <div class="h2">📜 Створити Контракт</div>
+      <div class="card" style="text-align:center; opacity:.6;">
+        <div style="font-size:28px; margin-bottom:6px;">📜</div>
+        <div style="font-weight:700;">Coming soon</div>
+        <div class="sub" style="margin-top:4px;">Цей розділ ще не працює — слідкуйте за оновленнями!</div>
+      </div>
+    `;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+
+async function craftChest(recipeId){
+  showConfirmModal("Витратити осколки на створення сундука?", async () => {
+    try {
+      const r = await apiRaw("craft_chest", { recipeId });
+      if (!r.ok) { toast(r.error === "insufficient_shards" ? "Недостатньо осколків" : "Помилка", "err"); return; }
+      showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText, r.drop));
+      startCarouselAnim();
+      await refreshDashboard();
+      if (TAB === "craft") renderCraft();
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+  }, "Створити");
+}
+async function craftPaidChest(chestId){
+  showConfirmModal("Витратити осколки на створення кейса?", async () => {
+    try {
+      const r = await apiRaw("craft_paid_chest", { chestId });
+      if (!r.ok) { toast(r.error === "insufficient_shards" ? "Недостатньо осколків" : "Помилка", "err"); return; }
+      showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText, r.drop));
+      startCarouselAnim();
+      await refreshDashboard();
+      if (TAB === "craft") renderCraft();
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+  }, "Створити");
+}
+async function craftSkinItem(rarity){
+  showConfirmModal(`Витратити осколки на випадковий скін рідкості ${rarity}?`, async () => {
+    try {
+      const r = await apiRaw("craft_item", { rarity });
+      if (!r.ok) { toast(r.error === "insufficient_shards" ? "Недостатньо осколків" : "Помилка", "err"); return; }
+      const pools = await loadSkinsCatalog();
+      const poolKey = findPoolKeyForItem(r.itemName, pools);
+      showModal(`
+        <div style="display:flex; justify-content:center; margin-bottom:8px;">${skinIconSvg(poolKey, r.itemName, 84)}</div>
+        <div class="mh" style="text-align:center;">✨ Скраф­чено!</div>
+        <div class="sub" style="text-align:center; margin-bottom:10px;">${esc(r.itemName)} <span class="hint">${esc(r.rarity)}</span></div>
+        <div class="sub" style="text-align:center;">Дивіться в «Інвентар» → «Мої скіни», щоб екіпірувати.</div>
+      `);
+      await refreshDashboard();
+      if (TAB === "craft") renderCraft();
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+  }, "Створити");
+}
 
 async function renderInventory(){
   const screen = document.getElementById("screen");
@@ -1557,7 +1659,7 @@ function paintInventory(){
   if (!wrap) return;
   if (!CHESTS_STATE) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); return; }
   const eff = CHESTS_STATE.effects || {};
-  const vip = (DASH && DASH.vip) || { active:false, until:null, bankedHours: eff.vipBankedHours||0 };
+  const vip = (DASH && DASH.vip) || { active:false, until:null };
   wrap.innerHTML = `
     <div class="btn-row" style="margin-bottom:14px;">
       <button class="btn secondary" onclick="openMyItemsModal()">🛍 Товари aShop</button>
@@ -1570,7 +1672,7 @@ function paintInventory(){
         <div style="font-weight:700; font-size:13.5px;">${vip.active ? '✅ VIP активний' : '😴 VIP не активний'}</div>
         <div class="badge ${vip.active?'ok':''}">${vip.active ? ('до '+fmtDate(vip.until)) : 'немає'}</div>
       </div>
-      <div class="sub" style="margin:8px 0 10px;">${vip.bankedHours > 0 ? `У банку ${vip.bankedHours} год.` : ''}${VIP_TICKETS_STATE.length ? `${vip.bankedHours>0?' · ':''}${VIP_TICKETS_STATE.length} тикет(и) не активовано` : ''}${(!vip.bankedHours && !VIP_TICKETS_STATE.length) ? 'Керування статусом, банком годин і тикетами' : ''}</div>
+      <div class="sub" style="margin:8px 0 10px;">${VIP_TICKETS_STATE.length ? `${VIP_TICKETS_STATE.length} тикет(и) не активовано` : 'Керування статусом і тикетами'}</div>
       <button class="btn secondary sm" onclick="openVipManageModal()">👑 VIP — детальніше</button>
     </div>
 
@@ -1596,9 +1698,10 @@ function paintInventory(){
       <div class="item"><div class="ic">⚡️</div><div class="txt"><div class="t">x3 щоденний бонус</div><div class="s">${eff.x3Active?('Діє до '+fmtDate(eff.x3Until)):'Не активний'}</div></div><div class="right">${eff.x3Active?'<span class="badge ok">АКТИВНО</span>':'<span class="mono">0</span>'}</div></div>
     </div>
 
-    <div class="h2">Крафт з осколків <span class="hint">🔮 ${fmt(CHESTS_STATE.shards)}</span></div>
-    <div class="btn-row" style="flex-wrap:wrap;">
-      ${(CHESTS_STATE.craftRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${CHESTS_STATE.shards<rc.cost?'disabled':''} onclick="craftItem('${rc.id}')">${esc(rc.name)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
+    <div class="card" style="margin-top:12px; text-align:center;">
+      <div style="font-size:13.5px; font-weight:700; margin-bottom:6px;">🔨 Хочете скрафтити щось із осколків?</div>
+      <div class="sub" style="margin-bottom:10px;">Сундуки, кейси та скіни — тепер у окремому меню «Створити»</div>
+      <button class="btn secondary sm" onclick="nav('craft')">🔨 Перейти до «Створити»</button>
     </div>
   `;
   startSlotTicker();
@@ -1953,18 +2056,6 @@ async function pickCraftItem(row, itemName){
     if (TAB === "inventory") { await loadInventoryData(); paintInventory(); }
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
-async function activateVipHours(hours){
-  hours = parseInt(hours);
-  if (!hours || hours <= 0) { toast("Немає годин для активації", "err"); return; }
-  try {
-    const r = await api("vip_activate", { hours });
-    if (!r.ok) { toast(r.error === "insufficient_hours" ? "Недостатньо годин у банку" : "Помилка", "err"); return; }
-    toast(`VIP активовано на ${hours} год.! 👑`, "ok");
-    await refreshDashboard();
-    if (TAB === "inventory") { await loadInventoryData(); paintInventory(); }
-    openVipManageModal();
-  } catch(e) { toast("Помилка з'єднання", "err"); }
-}
 async function buyVipTicket(ticketId){
   const t = VIP_TICKET_DEFS[ticketId];
   if (!t) { toast("Помилка: невідомий тикет", "err"); return; }
@@ -2021,16 +2112,6 @@ function fmtDate(iso){
   if (!iso) return "";
   const d = new Date(iso);
   return d.toLocaleDateString("uk-UA",{day:"2-digit",month:"2-digit"}) + " " + d.toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"});
-}
-async function craftItem(rarity){
-  showConfirmModal("Витратити осколки на крафт?", async () => {
-    try {
-      const r = await apiRaw("craft_item", { rarity });
-      if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
-      toast("Крафт виконано! Оберіть предмет у «Мої скіни» → «Потребує вибору»", "ok");
-      await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
-    } catch(e) { toast("Помилка з'єднання", "err"); }
-  }, "Крафтити");
 }
 
 // ============================================================
