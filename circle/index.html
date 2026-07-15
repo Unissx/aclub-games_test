@@ -642,25 +642,35 @@ function useHint(){
 // ── WIN ───────────────────────────────────────────────
 function showWin(){
   $i('winWords').textContent='Знайдено '+curWords.length+' слів!';
+  $i('winCoins').textContent='🎁 Рахуємо приз...';
   show('ovWin');
-  // Синхронізуємо баланс з сервером після нарахування монети
-  sendResult().then(()=>syncBalance().then(()=>{
-    $i('winCoins').textContent='+1 💰 (всього: '+coins+')';
-  }));
+  // Нагорода тепер кейс, а не монета — показуємо реальний текст із сервера,
+  // а не заздалегідь зашите "+1 💰".
+  sendResult().then(saved => {
+    if (saved && saved.resultText) {
+      $i('winCoins').textContent = saved.resultText.replace(/\*/g,'');
+    } else {
+      $i('winCoins').textContent = '⚠️ Не вдалось порахувати приз';
+    }
+  });
 }
 function nextLevel(){level++;hide('ovWin');loadLevel();}
 function closeGame(){if(tg?.close)tg.close();else toast('Гру завершено!');}
 
 async function sendResult(){
-  const u=uid();if(!u)return;
+  const u=uid();if(!u)return null;
   const el=Math.round((Date.now()-lvlStart)/1000);
   const url=GAS+'?type=circle_result&userId='+u+'&level='+level+'&score='+curWords.length+'&elapsed='+el+'&secret='+SECRET+'&_t='+Date.now();
   for(let i=0;i<3;i++){
     try{const r=await fetch(url);const d=await r.json();
-      if(d.ok){if(d.coins!==undefined){coins=d.coins;$i('coinCount').textContent=coins;$i('winCoins').textContent='+1 💰 (всього: '+coins+')';}return;}
+      if(d.ok){
+        if(d.coins!==undefined){coins=d.coins;$i('coinCount').textContent=coins;}
+        return d;
+      }
     }catch(e){}
     await new Promise(r=>setTimeout(r,2000));
   }
+  return null;
 }
 
 // ── INIT ──────────────────────────────────────────────
