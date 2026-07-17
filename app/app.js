@@ -344,7 +344,7 @@ async function loadMyItems(containerId){
     const r = await api("my_items");
     if (!r.ok || !r.items.length) { wrap.innerHTML = emptyBlock("🎁","Поки що порожньо","Товари з магазину з'являться тут."); return; }
     wrap.innerHTML = `<div class="list">` + r.items.map(it => {
-      const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
+      const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim().replace(/^Крафт: |^Кейс: /,"").replace(/\s*\((Rare|Epic|Legendary)\)\s*$/,"");
       const selfUse = !it.isMerch && /^Кейс:|^Крафт:/.test(it.name||"");
       let statusTxt = selfUse ? "🎁 Готово до використання — натисніть" : "⏳ Очікує використання";
       if (it.isMerch) {
@@ -406,7 +406,7 @@ async function openItemDetail(row, isMerch, it){
       : `<div class="sub" style="margin-bottom:10px;">Для використання зверніться до СС особисто 💚</div>
         <button class="btn danger" onclick="cancelItem(${row})">❌ Скасувати покупку</button>`;
   }
-  showModal(`<div class="mh">🎁 ${esc(shortName)}</div>${body}`);
+  showModal(`<div class="mh">🎁 ${esc((shortName||"").replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,""))}</div>${body}`);
 }
 
 async function selfUseItem(row){
@@ -1486,13 +1486,17 @@ function startCarouselAnim(){
 // і markdown-розмітки. Повний текст з усіма деталями гравець бачить у Telegram.
 function _shortRewardText(resultText, drop){
   if (!resultText) return "";
-  // Для скінів — показуємо назву + рідкість (якщо є у drop)
+  const plain = resultText.replace(/\*/g,"").replace(/_/g,"");
+  // Для скінів — шукаємо назву предмета в тексті (бекенд завжди пише
+  // «Випав предмет рівня X! 🎁 Назва»), або беремо з drop.label
   if (drop && drop.type === "item") {
-    const name = drop.label || (drop.pool ? `Скін рівня ${drop.rarity}` : "");
-    return name ? `✨ ${name}` : resultText.replace(/\*/g,"").split("\n")[0].trim();
+    const m = plain.match(/🎁\s*([^\n!]+)/);
+    const name = (m && m[1].trim()) || drop.label || "";
+    if (name) return `✨ ${name} (${drop.rarity || ""})`.replace(/\(\)$/,"").trim();
+    return plain.split("\n")[0].trim();
   }
   // Для решти — перший рядок без markdown
-  return resultText.replace(/\*/g,"").replace(/_/g,"").split("\n")[0].trim();
+  return plain.split("\n")[0].trim();
 }
 function chestOpenSceneHtml(chestId, chestName, resultText, drop){
   const rv = _rewardVisual(resultText);
