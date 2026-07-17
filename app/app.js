@@ -2034,7 +2034,7 @@ function openItemGroup(name){
   const isEquipped = isEquippable && EQUIPPED_SKINS_CACHE[poolKey] === pureName;
   showModal(`
     <div style="display:flex; justify-content:center; margin-bottom:8px;">${skinIconSvg(poolKey, pureName, 84)}</div>
-    <div class="mh" style="text-align:center;">${esc(name)} <span class="hint">×${items.length}</span></div>
+    <div class="mh" style="text-align:center;">${esc(pureName)} <span class="hint">×${items.length}</span></div>
     ${isEquippable ? `
       <div class="sub" style="text-align:center; margin-bottom:10px;">${isEquipped ? '✅ Зараз екіпіровано — застосовано в грі' : '🎨 Косметичний скін'}</div>
       ${!isEquipped ? `<button class="btn" onclick="equipSkin('${poolKey}','${esc(pureName).replace(/'/g,"\\'")}')">🎨 Екіпірувати</button>` : ''}
