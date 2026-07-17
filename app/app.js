@@ -1481,8 +1481,26 @@ function startCarouselAnim(){
     }, 4550);
   }));
 }
+// Коротка версія тексту призу для картки-результату — беремо лише першу значущу
+// частину (назва предмета або кількість нарахування), без підказок «куди йти»
+// і markdown-розмітки. Повний текст з усіма деталями гравець бачить у Telegram.
+function _shortRewardText(resultText, drop){
+  if (!resultText) return "";
+  // Для скінів — показуємо назву + рідкість (якщо є у drop)
+  if (drop && drop.type === "item") {
+    const name = drop.label || (drop.pool ? `Скін рівня ${drop.rarity}` : "");
+    return name ? `✨ ${name}` : resultText.replace(/\*/g,"").split("\n")[0].trim();
+  }
+  // Для решти — перший рядок без markdown
+  return resultText.replace(/\*/g,"").replace(/_/g,"").split("\n")[0].trim();
+}
 function chestOpenSceneHtml(chestId, chestName, resultText, drop){
   const rv = _rewardVisual(resultText);
+  const shortText = _shortRewardText(resultText, drop);
+  // Для скінів додатково показуємо до якої гри відноситься предмет
+  const gameHint = (drop && drop.type === "item" && drop.pool)
+    ? `<div class="sub" style="text-align:center; margin-top:4px; opacity:.7;">${_poolGameLabel(drop.pool)}</div>`
+    : "";
   return `
     <div class="mh" style="text-align:center;">🎁 ${esc(chestName)}</div>
     <div class="sub" style="text-align:center; margin-bottom:2px;">Відкриваємо...</div>
@@ -1490,9 +1508,18 @@ function chestOpenSceneHtml(chestId, chestName, resultText, drop){
     <div class="mh reward-pop" style="text-align:center; animation-delay:4.8s;">🎉 Вітаємо!</div>
     <div class="reward-card reward-pop" style="--rc:${rv.color}; animation-delay:4.8s;">
       <div class="reward-card-icon">${rv.icon}</div>
-      <div class="reward-card-text">${esc(resultText).replace(/\*/g,'')}</div>
+      <div class="reward-card-text">${esc(shortText)}</div>
+      ${gameHint}
     </div>
   `;
+}
+// Визначає назву гри за ключем пулу скінів (для підказки в картці результату)
+function _poolGameLabel(pool){
+  if (!pool) return "";
+  if (pool.indexOf("runner") === 0) return "🏃 Runner";
+  if (pool.indexOf("wordle") === 0) return "🔤 Вгадай слово";
+  if (pool.indexOf("circle") === 0) return "🔵 Слова по колу";
+  return "";
 }
 
 function openVipManageModal(){
@@ -1563,7 +1590,7 @@ async function renderCraft(){
       </div>
 
       <div class="h2">🧧 Створити кейс <span class="hint">🔮 ${fmt(shards)}</span></div>
-      <div class="sub" style="margin:-4px 2px 10px;">Той самий кейс, що й у Магазині, але за осколки — і відкривається безкоштовно одразу тут.</div>
+      <div class="sub" style="margin:-4px 2px 10px;">Кейси можливо вибити, а можливо створити за осколки — і відкривається безкоштовно одразу тут.</div>
       <div class="list" style="margin-bottom:18px;">
         ${(r.craftPaidChestRecipes||[]).map(rc => `
           <div class="item"><div style="flex:none;">${chestArtSvg(rc.chestId, 34)}</div><div class="txt"><div class="t">${esc((chestDef(rc.chestId)||{}).name || rc.chestId)}</div></div>
@@ -1572,7 +1599,7 @@ async function renderCraft(){
       </div>
 
       <div class="h2">🎨 Створити предмет <span class="hint">🔮 ${fmt(shards)}</span></div>
-      <div class="sub" style="margin:-4px 2px 10px;">Випадковий скін заданої рідкості — одразу в «Мої скіни».</div>
+      <div class="sub" style="margin:-4px 2px 10px;">Створити випадковий скін заданої рідкості — потрапляє одразу в «Мої скіни».</div>
       <div class="btn-row" style="flex-wrap:wrap; margin-bottom:18px;">
         ${(r.craftItemRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${shards<rc.cost?'disabled':''} onclick="craftSkinItem('${rc.rarity}')">${esc(rc.rarity)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
       </div>
@@ -1618,10 +1645,12 @@ async function craftSkinItem(rarity){
       if (!r.ok) { toast(r.error === "insufficient_shards" ? "Недостатньо осколків" : "Помилка", "err"); return; }
       const pools = await loadSkinsCatalog();
       const poolKey = findPoolKeyForItem(r.itemName, pools);
+      const gameLabel = _poolGameLabel(poolKey);
       showModal(`
         <div style="display:flex; justify-content:center; margin-bottom:8px;">${skinIconSvg(poolKey, r.itemName, 84)}</div>
         <div class="mh" style="text-align:center;">✨ Скраф­чено!</div>
-        <div class="sub" style="text-align:center; margin-bottom:10px;">${esc(r.itemName)} <span class="hint">${esc(r.rarity)}</span></div>
+        <div class="sub" style="text-align:center; margin-bottom:4px;">${esc(r.itemName)} <span class="hint">${esc(r.rarity)}</span></div>
+        ${gameLabel ? `<div class="sub" style="text-align:center; margin-bottom:8px; opacity:.75;">${gameLabel}</div>` : ""}
         <div class="sub" style="text-align:center;">Дивіться в «Інвентар» → «Мої скіни», щоб екіпірувати.</div>
       `);
       await refreshDashboard();
@@ -1698,11 +1727,7 @@ function paintInventory(){
       <div class="item"><div class="ic">⚡️</div><div class="txt"><div class="t">x3 щоденний бонус</div><div class="s">${eff.x3Active?('Діє до '+fmtDate(eff.x3Until)):'Не активний'}</div></div><div class="right">${eff.x3Active?'<span class="badge ok">АКТИВНО</span>':'<span class="mono">0</span>'}</div></div>
     </div>
 
-    <div class="card" style="margin-top:12px; text-align:center;">
-      <div style="font-size:13.5px; font-weight:700; margin-bottom:6px;">🔨 Хочете скрафтити щось із осколків?</div>
-      <div class="sub" style="margin-bottom:10px;">Сундуки, кейси та скіни — тепер у окремому меню «Створити»</div>
-      <button class="btn secondary sm" onclick="nav('craft')">🔨 Перейти до «Створити»</button>
-    </div>
+
   `;
   startSlotTicker();
 }
