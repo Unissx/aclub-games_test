@@ -1774,7 +1774,8 @@ function paintMySkins(){
 
   const groups = {};
   CHEST_ITEMS_STATE.forEach(it => {
-    const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
+    const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim()
+      .replace(/^Крафт: |^Кейс: /,"").replace(/\s*\((Rare|Epic|Legendary)\)\s*$/,"");
     if (!groups[shortName]) groups[shortName] = { name: shortName, comment: it.comment, items: [] };
     groups[shortName].items.push(it);
   });
@@ -2025,10 +2026,14 @@ async function buyChest(chestId){
 
 // ── Предмети з кейсів (самообслуговування) ──
 function openItemGroup(name){
-  const items = CHEST_ITEMS_STATE.filter(it => (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim() === name);
-  const rarityMatch = name.match(/^Крафт: предмет рівня (Rare|Epic|Legendary)$/);
+  const items = CHEST_ITEMS_STATE.filter(it => {
+    const clean = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim()
+      .replace(/^Крафт: |^Кейс: /,"").replace(/\s*\((Rare|Epic|Legendary)\)\s*$/,"");
+    return clean === name;
+  });
+  const rarityMatch = name.match(/^предмет рівня (Rare|Epic|Legendary)$/);
   const pools = SKINS_CATALOG_CACHE || [];
-  const pureName = name.replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,"");
+  const pureName = name; // вже очищено при формуванні групи
   const poolKey = findPoolKeyForItem(pureName, pools);
   const isEquippable = !!poolKey; // будь-який предмет зі SKIN_POOLS можна екіпірувати
   const isEquipped = isEquippable && EQUIPPED_SKINS_CACHE[poolKey] === pureName;
