@@ -344,7 +344,7 @@ async function loadMyItems(containerId){
     const r = await api("my_items");
     if (!r.ok || !r.items.length) { wrap.innerHTML = emptyBlock("🎁","Поки що порожньо","Товари з магазину з'являться тут."); return; }
     wrap.innerHTML = `<div class="list">` + r.items.map(it => {
-      const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim().replace(/^Крафт: |^Кейс: /,"").replace(/\s*\((Rare|Epic|Legendary)\)\s*$/,"");
+      const shortName = (it.name||"").replace(/\s*\(\d+.*?\)/,"").trim();
       const selfUse = !it.isMerch && /^Кейс:|^Крафт:/.test(it.name||"");
       let statusTxt = selfUse ? "🎁 Готово до використання — натисніть" : "⏳ Очікує використання";
       if (it.isMerch) {
@@ -406,7 +406,7 @@ async function openItemDetail(row, isMerch, it){
       : `<div class="sub" style="margin-bottom:10px;">Для використання зверніться до СС особисто 💚</div>
         <button class="btn danger" onclick="cancelItem(${row})">❌ Скасувати покупку</button>`;
   }
-  showModal(`<div class="mh">🎁 ${esc((shortName||"").replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,""))}</div>${body}`);
+  showModal(`<div class="mh">🎁 ${esc(shortName)}</div>${body}`);
 }
 
 async function selfUseItem(row){
@@ -1215,6 +1215,23 @@ function skinIconSvg(poolKey, itemName, size){
   size = size || 44;
   const cat = skinCategoryOf(poolKey);
   const key = itemName || poolKey || "x";
+  // ── УНІКАЛЬНИЙ 3D-АРТ: якщо для цієї назви є намальована вручну
+  // об'ємна іконка в бібліотеці SKIN_ART (skin-art.js) — використовуємо
+  // її замість процедурної форми. Це чиста косметика прев'ю в каталозі
+  // й інвентарі, на гру не впливає.
+  if (typeof SKIN_ART !== "undefined" && SKIN_ART[key]) {
+    const gid = "sa" + _hashHue(key) + "_" + Math.floor(Math.random()*1e5);
+    const art = SKIN_ART[key](gid);
+    const rar = skinRarityOf(poolKey);
+    const frame = rarityFrameSvg(rar, gid);
+    return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>${art.defs||""}${frame.defs}</defs>
+      <rect x="2" y="2" width="96" height="96" rx="18" fill="hsl(228,30%,13%)"/>
+      ${frame.back}
+      ${art.body}
+      ${frame.front}
+    </svg>`;
+  }
   // Для скіна персонажа використовуємо ТІ Ж САМІ кольори й форму, що й у
   // самій грі (CHARACTER_SKIN_STYLES / CHARACTER_ICON_ART), а не окремий
   // хеш-колір — інакше іконка в каталозі могла відрізнятись від реального
@@ -1481,30 +1498,8 @@ function startCarouselAnim(){
     }, 4550);
   }));
 }
-// Коротка версія тексту призу для картки-результату — беремо лише першу значущу
-// частину (назва предмета або кількість нарахування), без підказок «куди йти»
-// і markdown-розмітки. Повний текст з усіма деталями гравець бачить у Telegram.
-function _shortRewardText(resultText, drop){
-  if (!resultText) return "";
-  const plain = resultText.replace(/\*/g,"").replace(/_/g,"");
-  // Для скінів — шукаємо назву предмета в тексті (бекенд завжди пише
-  // «Випав предмет рівня X! 🎁 Назва»), або беремо з drop.label
-  if (drop && drop.type === "item") {
-    const m = plain.match(/🎁\s*([^\n!]+)/);
-    const name = (m && m[1].trim()) || drop.label || "";
-    if (name) return `✨ ${name} (${drop.rarity || ""})`.replace(/\(\)$/,"").trim();
-    return plain.split("\n")[0].trim();
-  }
-  // Для решти — перший рядок без markdown
-  return plain.split("\n")[0].trim();
-}
 function chestOpenSceneHtml(chestId, chestName, resultText, drop){
   const rv = _rewardVisual(resultText);
-  const shortText = _shortRewardText(resultText, drop);
-  // Для скінів додатково показуємо до якої гри відноситься предмет
-  const gameHint = (drop && drop.type === "item" && drop.pool)
-    ? `<div class="sub" style="text-align:center; margin-top:4px; opacity:.7;">${_poolGameLabel(drop.pool)}</div>`
-    : "";
   return `
     <div class="mh" style="text-align:center;">🎁 ${esc(chestName)}</div>
     <div class="sub" style="text-align:center; margin-bottom:2px;">Відкриваємо...</div>
@@ -1512,18 +1507,9 @@ function chestOpenSceneHtml(chestId, chestName, resultText, drop){
     <div class="mh reward-pop" style="text-align:center; animation-delay:4.8s;">🎉 Вітаємо!</div>
     <div class="reward-card reward-pop" style="--rc:${rv.color}; animation-delay:4.8s;">
       <div class="reward-card-icon">${rv.icon}</div>
-      <div class="reward-card-text">${esc(shortText)}</div>
-      ${gameHint}
+      <div class="reward-card-text">${esc(resultText).replace(/\*/g,'')}</div>
     </div>
   `;
-}
-// Визначає назву гри за ключем пулу скінів (для підказки в картці результату)
-function _poolGameLabel(pool){
-  if (!pool) return "";
-  if (pool.indexOf("runner") === 0) return "🏃 Runner";
-  if (pool.indexOf("wordle") === 0) return "🔤 Вгадай слово";
-  if (pool.indexOf("circle") === 0) return "🔵 Слова по колу";
-  return "";
 }
 
 function openVipManageModal(){
@@ -1594,7 +1580,7 @@ async function renderCraft(){
       </div>
 
       <div class="h2">🧧 Створити кейс <span class="hint">🔮 ${fmt(shards)}</span></div>
-      <div class="sub" style="margin:-4px 2px 10px;">Кейси можливо вибити, а можливо створити за осколки — і відкривається безкоштовно одразу тут.</div>
+      <div class="sub" style="margin:-4px 2px 10px;">Той самий кейс, що й у Магазині, але за осколки — і відкривається безкоштовно одразу тут.</div>
       <div class="list" style="margin-bottom:18px;">
         ${(r.craftPaidChestRecipes||[]).map(rc => `
           <div class="item"><div style="flex:none;">${chestArtSvg(rc.chestId, 34)}</div><div class="txt"><div class="t">${esc((chestDef(rc.chestId)||{}).name || rc.chestId)}</div></div>
@@ -1603,7 +1589,7 @@ async function renderCraft(){
       </div>
 
       <div class="h2">🎨 Створити предмет <span class="hint">🔮 ${fmt(shards)}</span></div>
-      <div class="sub" style="margin:-4px 2px 10px;">Створити випадковий скін заданої рідкості — потрапляє одразу в «Мої скіни».</div>
+      <div class="sub" style="margin:-4px 2px 10px;">Випадковий скін заданої рідкості — одразу в «Мої скіни».</div>
       <div class="btn-row" style="flex-wrap:wrap; margin-bottom:18px;">
         ${(r.craftItemRecipes||[]).map(rc => `<button class="btn secondary sm" style="flex:1 1 30%;" ${shards<rc.cost?'disabled':''} onclick="craftSkinItem('${rc.rarity}')">${esc(rc.rarity)}<br><span class="mono">${rc.cost} 🔮</span></button>`).join("")}
       </div>
@@ -1649,12 +1635,10 @@ async function craftSkinItem(rarity){
       if (!r.ok) { toast(r.error === "insufficient_shards" ? "Недостатньо осколків" : "Помилка", "err"); return; }
       const pools = await loadSkinsCatalog();
       const poolKey = findPoolKeyForItem(r.itemName, pools);
-      const gameLabel = _poolGameLabel(poolKey);
       showModal(`
         <div style="display:flex; justify-content:center; margin-bottom:8px;">${skinIconSvg(poolKey, r.itemName, 84)}</div>
         <div class="mh" style="text-align:center;">✨ Скраф­чено!</div>
-        <div class="sub" style="text-align:center; margin-bottom:4px;">${esc(r.itemName)} <span class="hint">${esc(r.rarity)}</span></div>
-        ${gameLabel ? `<div class="sub" style="text-align:center; margin-bottom:8px; opacity:.75;">${gameLabel}</div>` : ""}
+        <div class="sub" style="text-align:center; margin-bottom:10px;">${esc(r.itemName)} <span class="hint">${esc(r.rarity)}</span></div>
         <div class="sub" style="text-align:center;">Дивіться в «Інвентар» → «Мої скіни», щоб екіпірувати.</div>
       `);
       await refreshDashboard();
@@ -1731,7 +1715,11 @@ function paintInventory(){
       <div class="item"><div class="ic">⚡️</div><div class="txt"><div class="t">x3 щоденний бонус</div><div class="s">${eff.x3Active?('Діє до '+fmtDate(eff.x3Until)):'Не активний'}</div></div><div class="right">${eff.x3Active?'<span class="badge ok">АКТИВНО</span>':'<span class="mono">0</span>'}</div></div>
     </div>
 
-
+    <div class="card" style="margin-top:12px; text-align:center;">
+      <div style="font-size:13.5px; font-weight:700; margin-bottom:6px;">🔨 Хочете скрафтити щось із осколків?</div>
+      <div class="sub" style="margin-bottom:10px;">Сундуки, кейси та скіни — тепер у окремому меню «Створити»</div>
+      <button class="btn secondary sm" onclick="nav('craft')">🔨 Перейти до «Створити»</button>
+    </div>
   `;
   startSlotTicker();
 }
@@ -1817,17 +1805,28 @@ function paintMySkins(){
   }).join("");
 
   const shown = resolvedGroups.filter(g => g.game === MY_SKINS_GAME);
-  const gridHtml = shown.length ? `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:10px;">` +
+  // Стилі картки за рарністю: кольорова рамка + м'яке світіння + підпис.
+  const RARITY_CARD = {
+    rare:      { bd:"#4E8FE0", glow:"rgba(78,143,224,.28)",  lb:"Rare",      lc:"#8fc0ff" },
+    epic:      { bd:"#B15EF0", glow:"rgba(177,94,240,.30)",  lb:"Epic",      lc:"#d9aaff" },
+    legendary: { bd:"#F2A93B", glow:"rgba(242,169,59,.32)",  lb:"Legendary", lc:"#ffd98f" },
+  };
+  const gridHtml = shown.length ? `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(88px, 1fr)); gap:10px;">` +
     shown.map(g => {
       const available = g.items.filter(x => x.status === "Не використано");
-      const countLabel = g.items.length > 1 ? `<div class="badge" style="position:absolute; top:-4px; right:-4px;">×${g.items.length}</div>` : "";
+      const countLabel = g.items.length > 1 ? `<div class="badge" style="position:absolute; top:-4px; right:-4px; z-index:2;">×${g.items.length}</div>` : "";
       const cleanName = g.name.replace(/^Крафт: предмет рівня /,"").replace(/^Крафт: |^Кейс: /,"").replace(/\s*\([^)]*\)\s*$/,"");
       const isEquipped = !!g.poolKey && EQUIPPED_SKINS_CACHE[g.poolKey] === cleanName;
-      return `<div data-chest-group="${esc(g.name)}" style="cursor:pointer; text-align:center; position:relative; background:var(--panel3); border:1px solid var(--line); border-radius:14px; padding:8px 4px 10px;">
+      const rc = RARITY_CARD[skinRarityOf(g.poolKey)] || { bd:"var(--line)", glow:"transparent", lb:"", lc:"var(--text-faint)" };
+      const eqStyle = isEquipped
+        ? `border:1.5px solid var(--success); box-shadow:0 0 14px rgba(0,230,118,.35), inset 0 0 20px rgba(0,230,118,.06);`
+        : `border:1.5px solid ${rc.bd}; box-shadow:0 0 12px ${rc.glow}, inset 0 -18px 24px -18px ${rc.glow};`;
+      return `<div data-chest-group="${esc(g.name)}" style="cursor:pointer; text-align:center; position:relative; background:linear-gradient(180deg, var(--panel3), rgba(10,14,28,.9)); ${eqStyle} border-radius:15px; padding:9px 4px 10px; transition:transform .12s ease;" onmousedown="this.style.transform='scale(.95)'" onmouseup="this.style.transform=''" onmouseleave="this.style.transform=''">
         ${countLabel}
-        <div style="opacity:${available.length>0?1:.4}; ${isEquipped?'filter:drop-shadow(0 0 6px var(--success));':''}">${skinIconSvg(g.poolKey, cleanName, 68)}</div>
-        <div class="sub" style="font-size:10px; margin-top:3px; line-height:1.25;">${esc(cleanName)}</div>
-        ${isEquipped ? `<div class="badge ok" style="margin-top:2px;">✓ Екіпіровано</div>` : (available.length>0 ? `<div class="badge new" style="margin-top:2px;">Обрати →</div>` : `<div class="badge ok" style="margin-top:2px;">Отримано</div>`)}
+        <div style="opacity:${available.length>0?1:.45}; ${isEquipped?'filter:drop-shadow(0 0 7px var(--success));':''}">${skinIconSvg(g.poolKey, cleanName, 70)}</div>
+        <div class="sub" style="font-size:10px; margin-top:4px; line-height:1.25; font-weight:600;">${esc(cleanName)}</div>
+        ${rc.lb ? `<div style="font-size:8.5px; font-weight:800; letter-spacing:.06em; color:${rc.lc}; margin-top:1px; text-transform:uppercase;">${rc.lb}</div>` : ""}
+        ${isEquipped ? `<div class="badge ok" style="margin-top:3px;">✓ Екіпіровано</div>` : (available.length>0 ? `<div class="badge new" style="margin-top:3px;">Обрати →</div>` : `<div class="badge ok" style="margin-top:3px;">Отримано</div>`)}
       </div>`;
     }).join("") + `</div>` : emptyBlock("🎨","Тут поки порожньо","Скіни цієї гри ще не випадали");
 
