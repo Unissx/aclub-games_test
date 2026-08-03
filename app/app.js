@@ -2347,24 +2347,30 @@ async function loadRating(){
 // ЧАТ
 // ============================================================
 let CHAT_POLL_TIMER = null;
-let CHAT_LAST_ROW = null;
+let CHAT_REPLY_TO = null;   // {id, name, text} — повідомлення, на яке відповідаємо
+let CHAT_EDITING_ID = null; // id повідомлення, яке зараз редагується
+let CHAT_MUTED_UNTIL = null;
+
 function renderChat(){
   const screen = document.getElementById("screen");
   screen.innerHTML = `
     <div class="h1">💬 Загальний чат</div>
-    <div class="card" id="chatMessages" style="max-height:60vh; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">${loadingBlock()}</div>
-    <div class="row" style="gap:8px; margin-top:10px;">
+    <div class="card" id="chatMessages" style="max-height:56vh; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">${loadingBlock()}</div>
+    <div id="chatMuteBanner"></div>
+    <div id="chatReplyBar"></div>
+    <div class="row" style="gap:8px; margin-top:8px;">
       <input class="field" id="chatInput" placeholder="Напишіть повідомлення..." style="flex:1;" maxlength="500" onkeydown="if(event.key==='Enter')sendChatMessage()">
-      <button class="btn sm" style="width:auto; padding:10px 16px;" onclick="sendChatMessage()">➤</button>
+      <button class="btn sm" id="chatSendBtn" style="width:auto; padding:10px 16px;" onclick="sendChatMessage()">➤</button>
     </div>
   `;
-  CHAT_LAST_ROW = null;
-  loadChat(true);
+  CHAT_REPLY_TO = null;
+  CHAT_EDITING_ID = null;
+  loadChat();
   startChatPolling();
 }
 function startChatPolling(){
   stopChatPolling();
-  CHAT_POLL_TIMER = setInterval(() => loadChat(false), 4000);
+  CHAT_POLL_TIMER = setInterval(loadChat, 4000);
 }
 function stopChatPolling(){
   if (CHAT_POLL_TIMER) { clearInterval(CHAT_POLL_TIMER); CHAT_POLL_TIMER = null; }
@@ -2373,42 +2379,148 @@ function _chatTime(iso){
   const d = new Date(iso);
   return d.toLocaleTimeString("uk-UA", { hour:"2-digit", minute:"2-digit" });
 }
-async function loadChat(initial){
+function chatMessageHtml(m){
+  const mine = m.userId === USER_ID;
+  const isAdmin = !!(DASH && (DASH.isAdmin || DASH.isMainAdmin));
+  if (m.deleted) {
+    return `<div style="align-self:${mine?'flex-end':'flex-start'}; max-width:80%; font-style:italic; opacity:.5; font-size:12.5px; padding:6px 11px;">🚫 Повідомлення видалено</div>`;
+  }
+  const replyHtml = m.replyToId ? `<div style="border-left:2.5px solid rgba(255,255,255,.35); padding-left:7px; margin-bottom:4px; opacity:.75; font-size:11.5px;"><b>${esc(m.replyName||"…")}</b><br>${esc((m.replyText||"").slice(0,60))}</div>` : "";
+  const actions = [];
+  actions.push(`<span onclick="chatStartReply(${m.id},'${esc(m.name).replace(/'/g,"&#39;")}','${esc(m.text).replace(/'/g,"&#39;").slice(0,80)}')" style="cursor:pointer; opacity:.6;">↩️</span>`);
+  if (mine) actions.push(`<span onclick="chatStartEdit(${m.id},'${esc(m.text).replace(/'/g,"&#39;")}')" style="cursor:pointer; opacity:.6;">✏️</span>`);
+  if (isAdmin) {
+    actions.push(`<span onclick="chatDeleteMsg(${m.id})" style="cursor:pointer; opacity:.6;">🗑</span>`);
+    if (!mine) actions.push(`<span onclick="chatMuteMenu('${m.userId}','${esc(m.name).replace(/'/g,"&#39;")}')" style="cursor:pointer; opacity:.6;">🔇</span>`);
+  }
+  return `
+    <div style="align-self:${mine?'flex-end':'flex-start'}; max-width:82%; background:${mine?'var(--success)':'var(--panel3)'}; color:${mine?'#0a2a1c':'var(--text)'}; border-radius:12px; padding:7px 11px;">
+      ${mine?'':`<div style="font-size:11px; font-weight:700; opacity:.7; margin-bottom:2px;">${esc(m.name)}</div>`}
+      ${replyHtml}
+      <div style="font-size:13.5px; word-break:break-word; white-space:pre-wrap;">${esc(m.text)}</div>
+      <div class="row between" style="margin-top:3px; gap:8px;">
+        <div style="font-size:11px;">${actions.join(" ")}</div>
+        <div style="font-size:10px; opacity:.55;">${m.edited?'ред. · ':''}${_chatTime(m.time)}</div>
+      </div>
+    </div>`;
+}
+async function loadChat(){
   const wrap = document.getElementById("chatMessages");
-  if (!wrap) return; // користувач вже пішов з вкладки — таймер зупиниться на наступному тіку
+  if (!wrap) { stopChatPolling(); return; } // вкладку покинули — зупиняємо таймер на наступному тіку
   try {
-    const r = await api("chat_get", { sinceRow: CHAT_LAST_ROW });
-    if (!r.ok) { if (initial) wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
-    const wasAtBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 30;
-    if (initial) wrap.innerHTML = "";
-    if (r.messages.length) {
-      r.messages.forEach(m => {
-        const mine = m.userId === USER_ID;
-        const el = document.createElement("div");
-        el.style.cssText = `align-self:${mine?'flex-end':'flex-start'}; max-width:80%; background:${mine?'var(--success)':'var(--panel3)'}; color:${mine?'#0a2a1c':'var(--text)'}; border-radius:12px; padding:7px 11px;`;
-        el.innerHTML = `${mine?'':`<div style="font-size:11px; font-weight:700; opacity:.7; margin-bottom:2px;">${esc(m.name)}</div>`}<div style="font-size:13.5px; word-break:break-word;">${esc(m.text)}</div><div style="font-size:10px; opacity:.55; text-align:right; margin-top:2px;">${_chatTime(m.time)}</div>`;
-        wrap.appendChild(el);
-      });
-      CHAT_LAST_ROW = r.lastRow;
-      if (initial || wasAtBottom) wrap.scrollTop = wrap.scrollHeight;
-    } else if (initial) {
-      CHAT_LAST_ROW = r.lastRow;
+    const r = await api("chat_get", {});
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    const wasAtBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 40;
+    wrap.innerHTML = r.messages.length ? r.messages.map(chatMessageHtml).join("") : `<div class="sub" style="text-align:center; padding:20px 0;">Повідомлень ще немає — напишіть перше!</div>`;
+    if (wasAtBottom) wrap.scrollTop = wrap.scrollHeight;
+
+    CHAT_MUTED_UNTIL = r.mutedUntil;
+    const banner = document.getElementById("chatMuteBanner");
+    const input = document.getElementById("chatInput");
+    const btn = document.getElementById("chatSendBtn");
+    if (banner) {
+      if (CHAT_MUTED_UNTIL && new Date(CHAT_MUTED_UNTIL) > new Date()) {
+        banner.innerHTML = `<div class="sub" style="color:var(--danger); text-align:center; margin:4px 0;">🔇 Вас обмежено в чаті до ${new Date(CHAT_MUTED_UNTIL).toLocaleString("uk-UA")}</div>`;
+        if (input) input.disabled = true;
+        if (btn) btn.disabled = true;
+      } else {
+        banner.innerHTML = "";
+        if (input) input.disabled = false;
+        if (btn) btn.disabled = false;
+      }
     }
   } catch(e) {}
+}
+function chatStartReply(id, name, text){
+  CHAT_REPLY_TO = { id, name, text };
+  CHAT_EDITING_ID = null;
+  renderChatReplyBar();
+  document.getElementById("chatInput").focus();
+}
+function chatStartEdit(id, text){
+  CHAT_EDITING_ID = id;
+  CHAT_REPLY_TO = null;
+  document.getElementById("chatInput").value = text;
+  document.getElementById("chatSendBtn").textContent = "✓";
+  renderChatReplyBar();
+  document.getElementById("chatInput").focus();
+}
+function chatCancelReplyEdit(){
+  CHAT_REPLY_TO = null;
+  CHAT_EDITING_ID = null;
+  document.getElementById("chatInput").value = "";
+  document.getElementById("chatSendBtn").textContent = "➤";
+  renderChatReplyBar();
+}
+function renderChatReplyBar(){
+  const bar = document.getElementById("chatReplyBar");
+  if (!bar) return;
+  if (CHAT_EDITING_ID) {
+    bar.innerHTML = `<div class="row between" style="background:var(--panel3); border-radius:8px; padding:6px 10px; margin-top:6px;">
+      <div class="sub">✏️ Редагування повідомлення</div>
+      <span onclick="chatCancelReplyEdit()" style="cursor:pointer;">✕</span>
+    </div>`;
+  } else if (CHAT_REPLY_TO) {
+    bar.innerHTML = `<div class="row between" style="background:var(--panel3); border-radius:8px; padding:6px 10px; margin-top:6px;">
+      <div class="sub">↩️ Відповідь: <b>${esc(CHAT_REPLY_TO.name)}</b> — ${esc(CHAT_REPLY_TO.text)}</div>
+      <span onclick="chatCancelReplyEdit()" style="cursor:pointer;">✕</span>
+    </div>`;
+  } else {
+    bar.innerHTML = "";
+  }
 }
 async function sendChatMessage(){
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
   if (!text) return;
-  input.value = "";
   input.disabled = true;
   try {
-    const r = await api("chat_send", { text });
-    if (!r.ok) toast(r.error === "too_fast" ? "Зачекайте секунду перед наступним повідомленням" : "Помилка", "err");
-    else loadChat(false);
+    if (CHAT_EDITING_ID) {
+      const r = await api("chat_edit", { id: CHAT_EDITING_ID, text });
+      if (!r.ok) toast(r.error === "not_your_message" ? "Можна редагувати лише свої повідомлення" : "Помилка", "err");
+      chatCancelReplyEdit();
+    } else {
+      const r = await api("chat_send", { text, replyToId: CHAT_REPLY_TO ? CHAT_REPLY_TO.id : null });
+      if (!r.ok) toast(r.error === "too_fast" ? "Зачекайте секунду перед наступним повідомленням" : (r.error === "muted" ? "Ви обмежені в чаті" : "Помилка"), "err");
+      else { input.value = ""; CHAT_REPLY_TO = null; renderChatReplyBar(); }
+    }
+    loadChat();
   } catch(e) { toast("Помилка з'єднання", "err"); }
   input.disabled = false;
   input.focus();
+}
+async function chatDeleteMsg(id){
+  showConfirmModal("Видалити це повідомлення?", async () => {
+    const r = await api("chat_delete", { id });
+    if (!r.ok) { toast("Помилка", "err"); return; }
+    loadChat();
+  }, "Видалити");
+}
+function chatMuteMenu(targetUserId, name){
+  showModal(`
+    <div class="mh">🔇 Обмежити ${esc(name)}</div>
+    <div class="sub" style="margin-bottom:10px;">Користувач тимчасово не зможе писати в чат.</div>
+    <div class="list">
+      <div class="item" style="cursor:pointer" onclick="chatDoMute('${targetUserId}',10)"><div class="txt"><div class="t">10 хвилин</div></div></div>
+      <div class="item" style="cursor:pointer" onclick="chatDoMute('${targetUserId}',60)"><div class="txt"><div class="t">1 година</div></div></div>
+      <div class="item" style="cursor:pointer" onclick="chatDoMute('${targetUserId}',1440)"><div class="txt"><div class="t">24 години</div></div></div>
+      <div class="item" style="cursor:pointer" onclick="chatDoUnmute('${targetUserId}')"><div class="txt"><div class="t">✅ Зняти обмеження</div></div></div>
+    </div>
+  `);
+}
+async function chatDoMute(targetUserId, minutes){
+  closeModal();
+  const r = await api("chat_mute", { targetUserId, minutes });
+  if (!r.ok) { toast(r.error === "forbidden" ? "Лише адмін може обмежувати" : "Помилка", "err"); return; }
+  toast("Користувача обмежено", "ok");
+  loadChat();
+}
+async function chatDoUnmute(targetUserId){
+  closeModal();
+  const r = await api("chat_unmute", { targetUserId });
+  if (!r.ok) { toast("Помилка", "err"); return; }
+  toast("Обмеження знято", "ok");
+  loadChat();
 }
 
 // ============================================================
