@@ -2381,20 +2381,32 @@ async function loadPredMatches(){
   try {
     const r = await api("predictions_get_matches");
     if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
-    if (!r.matches.length) { wrap.innerHTML = emptyBlock("⚽","Немає відкритих матчів","Адмін ще не додав матчі на цей тиждень — зазирни пізніше."); return; }
-    wrap.innerHTML = `<div class="list">` + r.matches.map(m => `
-      <div class="card" style="margin-bottom:8px;">
-        <div class="sub" style="margin-bottom:6px;">${esc(m.league)} · ${_predDateFmt(m.kickoff)}</div>
-        <div class="row between" style="align-items:center; gap:8px;">
-          <div style="flex:1; font-weight:700; font-size:13.5px; text-align:right;">${esc(m.home)}</div>
-          <input type="number" min="0" max="30" class="field" id="pm_h_${m.matchId}" value="${m.myPrediction?m.myPrediction.home:''}" style="width:52px; text-align:center; padding:8px 4px;">
-          <div class="sub">:</div>
-          <input type="number" min="0" max="30" class="field" id="pm_a_${m.matchId}" value="${m.myPrediction?m.myPrediction.away:''}" style="width:52px; text-align:center; padding:8px 4px;">
-          <div style="flex:1; font-weight:700; font-size:13.5px;">${esc(m.away)}</div>
+    if (!r.matches.length) { wrap.innerHTML = emptyBlock("⚽","Немає відкритих матчів","Матчі з'являються автоматично — зазирни пізніше."); return; }
+    wrap.innerHTML = r.matches.map(m => `
+      <div class="card" style="margin-bottom:10px; background:linear-gradient(155deg, var(--panel3), rgba(10,14,28,.95)); overflow:hidden; padding:0;">
+        <div style="padding:8px 14px; background:rgba(255,255,255,.04); font-size:11px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; opacity:.65;">${esc(m.league)} · ${_predDateFmt(m.kickoff)}</div>
+        <div style="padding:14px;">
+          <div class="row" style="align-items:center; justify-content:center; gap:14px;">
+            <div style="flex:1; text-align:center;">
+              ${m.homeLogo ? `<img src="${esc(m.homeLogo)}" style="width:42px; height:42px; object-fit:contain; display:block; margin:0 auto 6px;">` : `<div style="width:42px; height:42px; margin:0 auto 6px; border-radius:50%; background:var(--panel3); display:flex; align-items:center; justify-content:center; font-size:18px;">⚽</div>`}
+              <div style="font-weight:800; font-size:12.5px; line-height:1.25;">${esc(m.home)}</div>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+              <input type="number" min="0" max="30" class="field" id="pm_h_${m.matchId}" value="${m.myPrediction?m.myPrediction.home:''}" placeholder="-" style="width:44px; height:44px; text-align:center; font-size:17px; font-weight:800; padding:0;">
+            </div>
+            <div style="font-weight:900; font-size:13px; opacity:.4;">:</div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+              <input type="number" min="0" max="30" class="field" id="pm_a_${m.matchId}" value="${m.myPrediction?m.myPrediction.away:''}" placeholder="-" style="width:44px; height:44px; text-align:center; font-size:17px; font-weight:800; padding:0;">
+            </div>
+            <div style="flex:1; text-align:center;">
+              ${m.awayLogo ? `<img src="${esc(m.awayLogo)}" style="width:42px; height:42px; object-fit:contain; display:block; margin:0 auto 6px;">` : `<div style="width:42px; height:42px; margin:0 auto 6px; border-radius:50%; background:var(--panel3); display:flex; align-items:center; justify-content:center; font-size:18px;">⚽</div>`}
+              <div style="font-weight:800; font-size:12.5px; line-height:1.25;">${esc(m.away)}</div>
+            </div>
+          </div>
+          <button class="btn sm" style="margin-top:14px;" onclick="savePrediction('${m.matchId}')">${m.myPrediction?'✏️ Оновити прогноз':'💾 Зберегти прогноз'}</button>
         </div>
-        <button class="btn sm" style="margin-top:10px;" onclick="savePrediction('${m.matchId}')">${m.myPrediction?'✏️ Оновити прогноз':'💾 Зберегти прогноз'}</button>
       </div>
-    `).join("") + `</div>`;
+    `).join("");
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
 }
 async function savePrediction(matchId){
@@ -2417,7 +2429,7 @@ async function loadPredMy(){
       const resolved = p.status === "Завершено";
       const ptsLabel = resolved ? (p.points === null ? "—" : `+${p.points} б.`) : "очікує";
       return `<div class="item">
-        <div class="ic">${resolved ? (p.points===3?'🎯':(p.points===1?'✅':'❌')) : '⏳'}</div>
+        <div class="ic">${p.homeLogo?`<img src="${esc(p.homeLogo)}" style="width:22px; height:22px; object-fit:contain;">`:(resolved ? (p.points===3?'🎯':(p.points===1?'✅':'❌')) : '⏳')}</div>
         <div class="txt"><div class="t">${esc(p.home)} ${resolved?`${p.realHome}:${p.realAway}`:''} ${esc(p.away)}</div>
         <div class="s">Твій прогноз: ${p.predHome}:${p.predAway} · ${_predDateFmt(p.kickoff)}</div></div>
         <div class="right badge ${resolved && p.points>0 ?'ok':''}">${ptsLabel}</div>
@@ -2917,6 +2929,7 @@ async function loadAdminPred(){
   const isMain = !!(DASH && DASH.isMainAdmin);
   try {
     const cfg = isMain ? await api("admin_pred_get_config") : { ok: true, hasKey: null };
+    const trigStatus = isMain ? await api("admin_pred_trigger_status") : { ok: true, active: false };
     const matchesR = await api("admin_pred_list_matches");
     const matches = matchesR.ok ? matchesR.matches : [];
     wrap.innerHTML = `
@@ -2937,19 +2950,29 @@ async function loadAdminPred(){
         <button class="btn sm" style="margin-top:10px;" onclick="predSaveConfig()">💾 Зберегти налаштування</button>
       </div>` : ""}
 
+      ${isMain ? `
+      <div class="card" style="margin-top:10px; background:${trigStatus.active?'rgba(0,230,118,.08)':'var(--panel3)'}; border-color:${trigStatus.active?'var(--success)':'var(--line)'};">
+        <div class="row between">
+          <div style="font-weight:800; font-size:14px;">🔁 Автоматичне оновлення</div>
+          <div class="badge ${trigStatus.active?'ok':''}">${trigStatus.active?'Увімкнено':'Вимкнено'}</div>
+        </div>
+        <div class="sub" style="margin:6px 0 10px;">Кожні 6 годин система сама підтягує нові матчі та синхронізує результати — не треба тиснути кнопки нижче вручну.</div>
+        <button class="btn ${trigStatus.active?'secondary':''} sm" onclick="predToggleAutoTrigger(${!trigStatus.active})">${trigStatus.active?'⏹ Вимкнути':'▶️ Увімкнути автооновлення'}</button>
+      </div>` : ""}
+
       <div class="card" style="margin-top:10px;">
-        <div style="font-weight:800; font-size:14px;">📥 Імпорт матчів</div>
-        <div class="sub" style="margin:6px 0 10px;">Додає нові матчі обраної ліги на найближчі N днів (уже додані пропускаються).</div>
+        <div style="font-weight:800; font-size:14px;">📥 Імпорт матчів (вручну)</div>
+        <div class="sub" style="margin:6px 0 10px;">Додає нові матчі обраної ліги на найближчі N днів (уже додані пропускаються). Не потрібно, якщо увімкнено автооновлення вище.</div>
         <div class="row" style="gap:6px;">
           <input class="field" type="number" id="predDaysAhead" value="7" style="width:70px;">
-          <button class="btn sm" style="flex:1;" onclick="predImportMatches()">📥 Імпортувати</button>
+          <button class="btn secondary sm" style="flex:1;" onclick="predImportMatches()">📥 Імпортувати</button>
         </div>
       </div>
 
       <div class="card" style="margin-top:10px;">
-        <div style="font-weight:800; font-size:14px;">🔄 Синхронізація результатів</div>
-        <div class="sub" style="margin:6px 0 10px;">Перевіряє завершені матчі та нараховує бали за прогнози.</div>
-        <button class="btn sm" onclick="predSyncResults()">🔄 Синхронізувати зараз</button>
+        <div style="font-weight:800; font-size:14px;">🔄 Синхронізація результатів (вручну)</div>
+        <div class="sub" style="margin:6px 0 10px;">Перевіряє завершені матчі та нараховує бали за прогнози. Не потрібно, якщо увімкнено автооновлення вище.</div>
+        <button class="btn secondary sm" onclick="predSyncResults()">🔄 Синхронізувати зараз</button>
       </div>
 
       <div class="h2">Матчі (${matches.length})</div>
@@ -2973,6 +2996,12 @@ async function predFindLeague(){
     <div class="item" style="cursor:pointer" onclick="document.getElementById('predLeagueId').value='${l.id}'; toast('ID ${l.id} підставлено','ok');">
       <div class="txt"><div class="t">${esc(l.name)}</div><div class="s">${esc(l.country)} · ID: ${l.id} · сезони: ${l.seasons.slice(-3).join(', ')}</div></div>
     </div>`).join("") + `</div>` : `<div class="sub" style="margin-top:6px;">Нічого не знайдено</div>`;
+}
+async function predToggleAutoTrigger(enable){
+  const r = await api(enable ? "admin_pred_install_trigger" : "admin_pred_uninstall_trigger");
+  if (!r.ok) { toast(r.error === "forbidden_not_main_admin" ? "Лише Головний адмін" : "Помилка", "err"); return; }
+  toast(enable ? "Автооновлення увімкнено" : "Автооновлення вимкнено", "ok");
+  loadAdminPred();
 }
 async function predSaveConfig(){
   const apiKey = document.getElementById("predApiKey").value.trim();
