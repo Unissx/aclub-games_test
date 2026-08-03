@@ -2378,6 +2378,7 @@ function _predDateFmt(iso){
 }
 async function loadPredMatches(){
   const wrap = document.getElementById("predBody");
+  if (!wrap) return; // користувач уже пішов з екрану, поки чекали відповідь
   try {
     const r = await api("predictions_get_matches");
     if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
@@ -2421,6 +2422,7 @@ async function savePrediction(matchId){
 }
 async function loadPredMy(){
   const wrap = document.getElementById("predBody");
+  if (!wrap) return;
   try {
     const r = await api("predictions_my");
     if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
@@ -2439,6 +2441,7 @@ async function loadPredMy(){
 }
 async function loadPredTable(){
   const wrap = document.getElementById("predBody");
+  if (!wrap) return;
   try {
     const r = await api("predictions_leaderboard");
     if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
@@ -2926,6 +2929,7 @@ async function submitYearlyStop(){
 }
 async function loadAdminPred(){
   const wrap = document.getElementById("adminBody");
+  if (!wrap) return;
   const isMain = !!(DASH && DASH.isMainAdmin);
   try {
     const cfg = isMain ? await api("admin_pred_get_config") : { ok: true, hasKey: null, catalog: [] };
