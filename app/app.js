@@ -2928,7 +2928,8 @@ async function loadAdminPred(){
   const wrap = document.getElementById("adminBody");
   const isMain = !!(DASH && DASH.isMainAdmin);
   try {
-    const cfg = isMain ? await api("admin_pred_get_config") : { ok: true, hasKey: null };
+    const cfg = isMain ? await api("admin_pred_get_config") : { ok: true, hasKey: null, catalog: [] };
+    PRED_SELECTED_LEAGUES = (cfg.catalog || []).filter(l => l.enabled).map(l => l.key);
     const trigStatus = isMain ? await api("admin_pred_trigger_status") : { ok: true, active: false };
     const matchesR = await api("admin_pred_list_matches");
     const matches = matchesR.ok ? matchesR.matches : [];
@@ -2939,15 +2940,19 @@ async function loadAdminPred(){
         <div class="sub" style="margin:6px 0 10px;">Безкоштовний ключ: <a href="https://dashboard.api-football.com" target="_blank" style="color:var(--accent);">dashboard.api-football.com</a> (100 запитів/добу). ${cfg.hasKey ? '✅ Ключ вже збережено.' : '⚠️ Ключ ще не встановлено.'}</div>
         <div class="field-label">API-ключ (лишіть порожнім, щоб не змінювати)</div>
         <input class="field" id="predApiKey" placeholder="••••••••••••">
-        <div class="field-label" style="margin-top:8px;">ID ліги (УПЛ)</div>
-        <div class="row" style="gap:6px;">
-          <input class="field" id="predLeagueId" style="flex:1;" value="${esc(cfg.leagueId||'')}" placeholder="напр. 333">
-          <button class="btn secondary sm" style="width:auto;" onclick="predFindLeague()">🔍 Знайти</button>
-        </div>
-        <div id="predLeagueResults"></div>
         <div class="field-label" style="margin-top:8px;">Сезон (рік)</div>
         <input class="field" id="predSeason" value="${esc(cfg.season||String(new Date().getFullYear()))}">
-        <button class="btn sm" style="margin-top:10px;" onclick="predSaveConfig()">💾 Зберегти налаштування</button>
+        <button class="btn sm" style="margin-top:10px;" onclick="predSaveConfig()">💾 Зберегти ключ і сезон</button>
+      </div>
+      <div class="card" style="margin-top:10px;">
+        <div style="font-weight:800; font-size:14px;">🌍 Ліги для прогнозів</div>
+        <div class="sub" style="margin:6px 0 10px;">Обери, які ліги показувати для прогнозів. ID кожної ліги система знаходить сама через API — вводити нічого не треба.</div>
+        <div class="list">${(cfg.catalog||[]).map(l => `
+          <div class="item" style="cursor:pointer" onclick="predToggleLeagueCheckbox('${l.key}')">
+            <div class="ic">${l.enabled ? '✅' : '⬜'}</div>
+            <div class="txt"><div class="t">${l.name}</div></div>
+          </div>`).join("")}</div>
+        <button class="btn sm" style="margin-top:10px;" onclick="predSaveLeagues()">💾 Зберегти обрані ліги</button>
       </div>` : ""}
 
       ${isMain ? `
@@ -2962,7 +2967,7 @@ async function loadAdminPred(){
 
       <div class="card" style="margin-top:10px;">
         <div style="font-weight:800; font-size:14px;">📥 Імпорт матчів (вручну)</div>
-        <div class="sub" style="margin:6px 0 10px;">Додає нові матчі обраної ліги на найближчі N днів (уже додані пропускаються). Не потрібно, якщо увімкнено автооновлення вище.</div>
+        <div class="sub" style="margin:6px 0 10px;">Додає нові матчі обраних ліг на найближчі N днів (уже додані пропускаються). Не потрібно, якщо увімкнено автооновлення вище.</div>
         <div class="row" style="gap:6px;">
           <input class="field" type="number" id="predDaysAhead" value="7" style="width:70px;">
           <button class="btn secondary sm" style="flex:1;" onclick="predImportMatches()">📥 Імпортувати</button>
@@ -2986,16 +2991,27 @@ async function loadAdminPred(){
     `;
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
 }
-async function predFindLeague(){
-  const term = prompt("Пошук ліги (напр. Ukraine):", "Ukraine");
-  if (!term) return;
-  const r = await api("admin_pred_find_league", { searchTerm: term });
-  const box = document.getElementById("predLeagueResults");
-  if (!r.ok) { toast("Помилка пошуку", "err"); return; }
-  box.innerHTML = r.results.length ? `<div class="list" style="margin-top:6px;">` + r.results.map(l => `
-    <div class="item" style="cursor:pointer" onclick="document.getElementById('predLeagueId').value='${l.id}'; toast('ID ${l.id} підставлено','ok');">
-      <div class="txt"><div class="t">${esc(l.name)}</div><div class="s">${esc(l.country)} · ID: ${l.id} · сезони: ${l.seasons.slice(-3).join(', ')}</div></div>
-    </div>`).join("") + `</div>` : `<div class="sub" style="margin-top:6px;">Нічого не знайдено</div>`;
+let PRED_SELECTED_LEAGUES = null;
+function predToggleLeagueCheckbox(key){
+  if (!PRED_SELECTED_LEAGUES) return;
+  const idx = PRED_SELECTED_LEAGUES.indexOf(key);
+  if (idx >= 0) PRED_SELECTED_LEAGUES.splice(idx, 1);
+  else PRED_SELECTED_LEAGUES.push(key);
+  // Перемальовуємо лише іконку без повного перезавантаження — простіше
+  // повністю перерендерити панель.
+  const enabled = PRED_SELECTED_LEAGUES;
+  document.querySelectorAll("[onclick^=\"predToggleLeagueCheckbox\"]").forEach(el => {
+    const k = el.getAttribute("onclick").match(/'([^']+)'/)[1];
+    el.querySelector(".ic").textContent = enabled.includes(k) ? "✅" : "⬜";
+  });
+}
+async function predSaveLeagues(){
+  if (!PRED_SELECTED_LEAGUES) return;
+  const r = await api("admin_pred_set_leagues", { keys: PRED_SELECTED_LEAGUES });
+  if (!r.ok) { toast(r.error === "forbidden_not_main_admin" ? "Лише Головний адмін" : "Помилка", "err"); return; }
+  const msg = r.failedToResolve && r.failedToResolve.length ? `Увімкнено, але не вдалось знайти: ${r.failedToResolve.join(', ')}` : "Ліги збережено";
+  toast(msg, r.failedToResolve && r.failedToResolve.length ? "err" : "ok");
+  loadAdminPred();
 }
 async function predToggleAutoTrigger(enable){
   const r = await api(enable ? "admin_pred_install_trigger" : "admin_pred_uninstall_trigger");
@@ -3005,9 +3021,8 @@ async function predToggleAutoTrigger(enable){
 }
 async function predSaveConfig(){
   const apiKey = document.getElementById("predApiKey").value.trim();
-  const leagueId = document.getElementById("predLeagueId").value.trim();
   const season = document.getElementById("predSeason").value.trim();
-  const r = await api("admin_pred_set_config", { apiKey, leagueId, season });
+  const r = await api("admin_pred_set_config", { apiKey, season });
   if (!r.ok) { toast(r.error === "forbidden_not_main_admin" ? "Лише Головний адмін" : "Помилка", "err"); return; }
   toast("Налаштування збережено", "ok");
   loadAdminPred();
