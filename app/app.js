@@ -224,22 +224,6 @@ function renderHome(){
   screen.innerHTML = `
     <div class="h1">👋 Привіт, ${esc(firstNameOf(DASH.name))}!</div>
     ${badges.length ? `<div class="row" style="flex-wrap:wrap; gap:6px; margin:-6px 2px 12px;">${badges.join("")}</div>` : ""}
-    <div class="stat-row">
-      <div class="stat-card coin"><div class="label">Баланс</div><div class="value mono">${fmt(DASH.balance)} 💰</div></div>
-      <div class="stat-card shard"><div class="label">Осколки</div><div class="value mono">${fmt(DASH.shards)} 🔮</div></div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <div class="row between">
-        <div class="display" style="font-weight:700; font-size:14px;">👑 VIP-статус</div>
-        <div class="badge ${vip.active?'ok':''}">${vip.active ? ('до '+fmtDate(vip.until)) : 'не активний'}</div>
-      </div>
-      <div class="sub" style="margin:8px 0 10px;">Максимальна прокачка в іграх, пріоритет у підтримці, щоденні безкоштовні кейси та інші привілеї.</div>
-      <div class="btn-row">
-        <button class="btn secondary sm" style="flex:1;" onclick="showVipDetailsModal()">ℹ️ Детальніше</button>
-        ${vip.active ? "" : `<button class="btn sm" style="flex:1;" onclick="goToShopVip()">🛍 Придбати VIP</button>`}
-      </div>
-    </div>
 
     <div class="card" style="margin-top:12px;">
       <div class="row between">
@@ -295,6 +279,18 @@ function renderProfile(){
     <div class="stat-row">
       <div class="stat-card coin"><div class="label">Баланс</div><div class="value mono">${fmt(DASH.balance)} 💰</div></div>
       <div class="stat-card shard"><div class="label">Осколки</div><div class="value mono">${fmt(DASH.shards)} 🔮</div></div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="row between">
+        <div class="display" style="font-weight:700; font-size:14px;">👑 VIP-статус</div>
+        <div class="badge ${vip.active?'ok':''}">${vip.active ? ('до '+fmtDate(vip.until)) : 'не активний'}</div>
+      </div>
+      <div class="sub" style="margin:8px 0 10px;">Максимальна прокачка в іграх, пріоритет у підтримці, щоденні безкоштовні кейси та інші привілеї.</div>
+      <div class="btn-row">
+        <button class="btn secondary sm" style="flex:1;" onclick="showVipDetailsModal()">ℹ️ Детальніше</button>
+        ${vip.active ? "" : `<button class="btn sm" style="flex:1;" onclick="goToShopVip()">🛍 Придбати VIP</button>`}
+      </div>
     </div>
 
     <div class="card" style="margin-top:12px;">
