@@ -115,14 +115,11 @@ let DASH = null;
 let TAB = "home";
 let SHOP_SUB = "abank";
 const TABS = [
-  { id:"home",      ic:"🏠", lb:"Головна" },
-  { id:"games",     ic:"🎮", lb:"Ігри" },
-  { id:"shop",      ic:"🏪", lb:"Магазин" },
-  { id:"craft",     ic:"🔨", lb:"Створити" },
-  { id:"inventory", ic:"🎒", lb:"Інвентар" },
-  { id:"rating",    ic:"🏆", lb:"Топ року" },
-  { id:"chat",      ic:"💬", lb:"Чат" },
-  { id:"support",   ic:"🆘", lb:"Підтримка" },
+  { id:"home",    ic:"🏠", lb:"Головна" },
+  { id:"games",   ic:"🎮", lb:"Ігри" },
+  { id:"shop",    ic:"🏪", lb:"Магазин" },
+  { id:"chat",    ic:"💬", lb:"Чат" },
+  { id:"profile", ic:"👤", lb:"Профіль" },
 ];
 
 function renderNav(){
@@ -206,6 +203,7 @@ function render(){
   if (TAB === "rating") return renderRating();
   if (TAB === "chat") return renderChat();
   if (TAB === "support") return renderSupport();
+  if (TAB === "profile") return renderProfile();
   if (TAB === "admin") return renderAdmin();
 }
 
@@ -259,8 +257,8 @@ function renderHome(){
         <div class="ic">🎮</div><div class="txt"><div class="t">Заробити á-coin</div><div class="s">Ребус, Щасливчик, Runner, Wordle</div></div>
         <div class="right">→</div>
       </div>
-      <div class="item" data-nav="inventory" style="cursor:pointer">
-        <div class="ic">🎒</div><div class="txt"><div class="t">Інвентар</div><div class="s">Кейси, VIP, заряди, товари, мерч</div></div>
+      <div class="item" data-nav="profile" style="cursor:pointer">
+        <div class="ic">👤</div><div class="txt"><div class="t">Профіль</div><div class="s">Інвентар, кейси, VIP, підтримка та інше</div></div>
         <div class="right">→</div>
       </div>
     </div>
@@ -272,6 +270,75 @@ function renderHome(){
   document.getElementById("goHistory").addEventListener("click", () => openHistoryModal());
   document.getElementById("btnDaily").addEventListener("click", claimDaily);
   loadHistoryPreview();
+}
+// ============================================================
+// ПРОФІЛЬ — особиста інфа гравця + доступ до другорядних розділів
+// (щоб кнопки в нижній навігації не накопичувались, Створити/Інвентар/
+// Топ року/Підтримка перенесено сюди зі звичайних вкладок).
+// ============================================================
+function renderProfile(){
+  const vip = DASH.vip || {};
+  const db = DASH.dailyBonus || {};
+  const streak = db.streak || 0;
+  const badges = [];
+  if (DASH.isMainAdmin) badges.push('<span class="badge" style="background:linear-gradient(155deg,#F2A93B,#B15EF0); color:#1a0f2e; font-weight:800;">⭐ ГОЛОВНИЙ АДМІН</span>');
+  else if (DASH.isAdmin) badges.push('<span class="badge" style="background:var(--epic); color:#fff; font-weight:800;">🛡 АДМІН</span>');
+  if (DASH.isMerchAdmin) badges.push('<span class="badge" style="background:var(--rare); color:#fff; font-weight:800;">📦 МЕРЧ-АДМІН</span>');
+  if (vip.active) badges.push('<span class="badge ok" style="font-weight:800;">👑 VIP до ' + fmtDate(vip.until) + '</span>');
+
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `
+    <div class="h1">👤 ${esc(DASH.name)}</div>
+    ${DASH.sector ? `<div class="sub" style="margin:-8px 2px 10px;">Сектор: ${esc(DASH.sector)}</div>` : ""}
+    ${badges.length ? `<div class="row" style="flex-wrap:wrap; gap:6px; margin-bottom:12px;">${badges.join("")}</div>` : ""}
+
+    <div class="stat-row">
+      <div class="stat-card coin"><div class="label">Баланс</div><div class="value mono">${fmt(DASH.balance)} 💰</div></div>
+      <div class="stat-card shard"><div class="label">Осколки</div><div class="value mono">${fmt(DASH.shards)} 🔮</div></div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="row between">
+        <div class="display" style="font-weight:700; font-size:14px;">🎁 Щоденний бонус</div>
+        <div class="badge">${streak} 🔥 стрік</div>
+      </div>
+      <div class="progress" style="margin:10px 0 2px;"><div style="width:${Math.min(100, streak/7*100)}%"></div></div>
+      <div class="sub" style="margin:6px 0 0;">${streak>=7 ? 'Преміум-стрік активний — щодня +2 á-coin!' : `Ще ${7-streak} дн. до бонусу ×2 щодня`}</div>
+    </div>
+
+    <div class="h2">Розділи</div>
+    <div class="list">
+      <div class="item" data-nav="craft" style="cursor:pointer">
+        <div class="ic">🔨</div><div class="txt"><div class="t">Створити</div><div class="s">Кейси, сундуки, скіни за осколки</div></div>
+        <div class="right">→</div>
+      </div>
+      <div class="item" data-nav="inventory" style="cursor:pointer">
+        <div class="ic">🎒</div><div class="txt"><div class="t">Інвентар</div><div class="s">Кейси, VIP, заряди, товари, мерч</div></div>
+        <div class="right">→</div>
+      </div>
+      <div class="item" data-nav="rating" style="cursor:pointer">
+        <div class="ic">🏆</div><div class="txt"><div class="t">Топ-10 року</div><div class="s">Зарядна станція — річний рейтинг активності</div></div>
+        <div class="right">→</div>
+      </div>
+      <div class="item" data-nav="support" style="cursor:pointer">
+        <div class="ic">🆘</div><div class="txt"><div class="t">Підтримка</div><div class="s">Питання та технічні заявки</div></div>
+        <div class="right">→</div>
+      </div>
+    </div>
+
+    <div class="h2">Історія<span class="hint" id="goHistoryProfile" style="cursor:pointer">вся історія →</span></div>
+    <div class="list" id="historyPreviewProfile">${loadingBlock()}</div>
+  `;
+  screen.querySelectorAll("[data-nav]").forEach(el => el.addEventListener("click", () => nav(el.getAttribute("data-nav"))));
+  document.getElementById("goHistoryProfile").addEventListener("click", () => openHistoryModal());
+  loadHistoryPreview("historyPreviewProfile");
+}
+
+// Кнопка "← Профіль" для другорядних екранів (Створити/Інвентар/Топ
+// року/Підтримка) — вони більше не в нижній навігації, тож повертатись
+// туди, звідки прийшли (Профіль), треба явною кнопкою.
+function backToProfileBtn(){
+  return `<button onclick="nav('profile')" style="background:var(--panel3); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:7px 12px; font-weight:700; font-size:12.5px; margin-bottom:10px;">← Профіль</button>`;
 }
 function showVipDetailsModal(){
   showModal(`
@@ -302,10 +369,10 @@ async function claimDaily(){
   render();
 }
 
-async function loadHistoryPreview(){
+async function loadHistoryPreview(elId){
   try {
     const r = await api("history_list");
-    const wrap = document.getElementById("historyPreview");
+    const wrap = document.getElementById(elId || "historyPreview");
     if (!wrap) return;
     if (!r.ok) { wrap.innerHTML = emptyBlock("📭","Немає даних",""); return; }
     const merged = [
@@ -1566,7 +1633,7 @@ const CHEST_SLOTS_MAX_CLIENT = 4;
 // ============================================================
 async function renderCraft(){
   const screen = document.getElementById("screen");
-  screen.innerHTML = `<div class="h1">🔨 Створити</div><div id="craftBody">${loadingBlock()}</div>`;
+  screen.innerHTML = `${backToProfileBtn()}<div class="h1">🔨 Створити</div><div id="craftBody">${loadingBlock()}</div>`;
   const wrap = document.getElementById("craftBody");
   try {
     const r = await apiRaw("get_inventory");
@@ -1654,7 +1721,7 @@ async function craftSkinItem(rarity){
 
 async function renderInventory(){
   const screen = document.getElementById("screen");
-  screen.innerHTML = `<div class="h1">🎒 Інвентар</div><div id="invBody">${loadingBlock()}</div>`;
+  screen.innerHTML = `${backToProfileBtn()}<div class="h1">🎒 Інвентар</div><div id="invBody">${loadingBlock()}</div>`;
   await loadInventoryData();
   paintInventory();
 }
@@ -2159,6 +2226,7 @@ let SUPPORT_TYPE = "Питання";
 function renderSupport(){
   const screen = document.getElementById("screen");
   screen.innerHTML = `
+    ${backToProfileBtn()}
     <div class="h1">🆘 Підтримка</div>
     <div class="tabs2">
       <div class="t2 ${SUPPORT_TYPE==='Питання'?'active':''}" data-st="Питання">❓ Питання</div>
@@ -2227,6 +2295,7 @@ async function loadMyTickets(){
 function renderRating(){
   const screen = document.getElementById("screen");
   screen.innerHTML = `
+    ${backToProfileBtn()}
     <div class="h1">🏆 Топ-10 року — Зарядна станція</div>
     <div id="ratingBody">${loadingBlock()}</div>
   `;
