@@ -204,6 +204,7 @@ function render(){
   if (TAB === "chat") return renderChat();
   if (TAB === "support") return renderSupport();
   if (TAB === "profile") return renderProfile();
+  if (TAB === "predictions") return renderPredictions();
   if (TAB === "admin") return renderAdmin();
 }
 
@@ -314,6 +315,10 @@ function renderProfile(){
       </div>
       <div class="item" data-nav="rating" style="cursor:pointer">
         <div class="ic">🏆</div><div class="txt"><div class="t">Топ-10 року</div><div class="s">Зарядна станція — річний рейтинг активності</div></div>
+        <div class="right">→</div>
+      </div>
+      <div class="item" data-nav="predictions" style="cursor:pointer">
+        <div class="ic">⚽</div><div class="txt"><div class="t">Ліга прогнозистів</div><div class="s">Прогнози на матчі УПЛ — безкоштовно, за бали</div></div>
         <div class="right">→</div>
       </div>
       <div class="item" data-nav="support" style="cursor:pointer">
@@ -2344,6 +2349,105 @@ async function loadRating(){
 }
 
 // ============================================================
+// ЛІГА ПРОГНОЗИСТІВ — прогнози на матчі УПЛ, безкоштовна участь,
+// бали за вгадані результати (жодних ставок і списання á-coin).
+// ============================================================
+let PRED_SUB = "matches";
+function renderPredictions(){
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `
+    ${backToProfileBtn()}
+    <div class="h1">⚽ Ліга прогнозистів</div>
+    <div class="sub" style="margin:-8px 2px 12px;">Прогнозуй рахунки матчів безкоштовно — бали за вгадані результати, приз найкращим наприкінці сезону.</div>
+    <div class="tabs2">
+      <div class="t2 ${PRED_SUB==='matches'?'active':''}" data-pt="matches">⚽ Матчі</div>
+      <div class="t2 ${PRED_SUB==='my'?'active':''}" data-pt="my">📋 Мої прогнози</div>
+      <div class="t2 ${PRED_SUB==='table'?'active':''}" data-pt="table">🏆 Турнірна таблиця</div>
+    </div>
+    <div id="predBody">${loadingBlock()}</div>
+  `;
+  screen.querySelectorAll("[data-pt]").forEach(el => {
+    el.addEventListener("click", () => { PRED_SUB = el.getAttribute("data-pt"); renderPredictions(); });
+  });
+  const loaders = { matches: loadPredMatches, my: loadPredMy, table: loadPredTable };
+  (loaders[PRED_SUB] || loadPredMatches)();
+}
+function _predDateFmt(iso){
+  const d = new Date(iso);
+  return d.toLocaleString("uk-UA", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" });
+}
+async function loadPredMatches(){
+  const wrap = document.getElementById("predBody");
+  try {
+    const r = await api("predictions_get_matches");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    if (!r.matches.length) { wrap.innerHTML = emptyBlock("⚽","Немає відкритих матчів","Адмін ще не додав матчі на цей тиждень — зазирни пізніше."); return; }
+    wrap.innerHTML = `<div class="list">` + r.matches.map(m => `
+      <div class="card" style="margin-bottom:8px;">
+        <div class="sub" style="margin-bottom:6px;">${esc(m.league)} · ${_predDateFmt(m.kickoff)}</div>
+        <div class="row between" style="align-items:center; gap:8px;">
+          <div style="flex:1; font-weight:700; font-size:13.5px; text-align:right;">${esc(m.home)}</div>
+          <input type="number" min="0" max="30" class="field" id="pm_h_${m.matchId}" value="${m.myPrediction?m.myPrediction.home:''}" style="width:52px; text-align:center; padding:8px 4px;">
+          <div class="sub">:</div>
+          <input type="number" min="0" max="30" class="field" id="pm_a_${m.matchId}" value="${m.myPrediction?m.myPrediction.away:''}" style="width:52px; text-align:center; padding:8px 4px;">
+          <div style="flex:1; font-weight:700; font-size:13.5px;">${esc(m.away)}</div>
+        </div>
+        <button class="btn sm" style="margin-top:10px;" onclick="savePrediction('${m.matchId}')">${m.myPrediction?'✏️ Оновити прогноз':'💾 Зберегти прогноз'}</button>
+      </div>
+    `).join("") + `</div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+async function savePrediction(matchId){
+  const home = document.getElementById("pm_h_"+matchId).value;
+  const away = document.getElementById("pm_a_"+matchId).value;
+  if (home === "" || away === "") { toast("Введіть рахунок обох команд", "err"); return; }
+  try {
+    const r = await api("predictions_submit", { matchId, home, away });
+    if (!r.ok) toast(r.error === "match_started" ? "Матч уже почався — прогноз не приймається" : "Помилка", "err");
+    else toast("Прогноз збережено!", "ok");
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+}
+async function loadPredMy(){
+  const wrap = document.getElementById("predBody");
+  try {
+    const r = await api("predictions_my");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    if (!r.predictions.length) { wrap.innerHTML = emptyBlock("📋","Прогнозів ще немає","Зроби перший прогноз у вкладці «Матчі»!"); return; }
+    wrap.innerHTML = `<div class="list">` + r.predictions.map(p => {
+      const resolved = p.status === "Завершено";
+      const ptsLabel = resolved ? (p.points === null ? "—" : `+${p.points} б.`) : "очікує";
+      return `<div class="item">
+        <div class="ic">${resolved ? (p.points===3?'🎯':(p.points===1?'✅':'❌')) : '⏳'}</div>
+        <div class="txt"><div class="t">${esc(p.home)} ${resolved?`${p.realHome}:${p.realAway}`:''} ${esc(p.away)}</div>
+        <div class="s">Твій прогноз: ${p.predHome}:${p.predAway} · ${_predDateFmt(p.kickoff)}</div></div>
+        <div class="right badge ${resolved && p.points>0 ?'ok':''}">${ptsLabel}</div>
+      </div>`;
+    }).join("") + `</div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+async function loadPredTable(){
+  const wrap = document.getElementById("predBody");
+  try {
+    const r = await api("predictions_leaderboard");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    const medals = ["🥇","🥈","🥉"];
+    wrap.innerHTML = (r.top.length ? `<div class="list">` + r.top.map(u => `
+      <div class="item" style="${u.userId===USER_ID?'border-color:var(--success);':''}">
+        <div class="ic">${medals[u.place-1] || ("#"+u.place)}</div>
+        <div class="txt"><div class="t">${esc(u.name)}${u.userId===USER_ID?' (ви)':''}</div><div class="s">Прогнозів: ${u.predictions}</div></div>
+        <div class="right badge">${u.points} б.</div>
+      </div>`).join("") + `</div>` : emptyBlock("🏆","Ще немає результатів","Дочекайся завершення перших матчів")) +
+      (r.me && r.me.place > 10 ? `
+        <div class="h2">Ваше місце</div>
+        <div class="item"><div class="ic">#${r.me.place}</div>
+          <div class="txt"><div class="t">${esc(r.me.name)} (ви)</div><div class="s">Прогнозів: ${r.me.predictions}</div></div>
+          <div class="right badge">${r.me.points} б.</div>
+        </div>` : "") +
+      `<div class="sub" style="margin-top:10px; text-align:center;">3 бали — точний рахунок, 1 бал — вгаданий результат. Всього учасників: ${r.totalParticipants}</div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+
+// ============================================================
 // ЧАТ
 // ============================================================
 let CHAT_POLL_TIMER = null;
@@ -2387,12 +2491,11 @@ function chatMessageHtml(m){
   }
   const replyHtml = m.replyToId ? `<div style="border-left:2.5px solid rgba(255,255,255,.35); padding-left:7px; margin-bottom:4px; opacity:.75; font-size:11.5px;"><b>${esc(m.replyName||"…")}</b><br>${esc((m.replyText||"").slice(0,60))}</div>` : "";
   const actions = [];
+  const editWindowOpen = (Date.now() - new Date(m.time).getTime()) < 2*3600*1000;
   actions.push(`<span onclick="chatStartReply(${m.id},'${esc(m.name).replace(/'/g,"&#39;")}','${esc(m.text).replace(/'/g,"&#39;").slice(0,80)}')" style="cursor:pointer; opacity:.6;">↩️</span>`);
-  if (mine) actions.push(`<span onclick="chatStartEdit(${m.id},'${esc(m.text).replace(/'/g,"&#39;")}')" style="cursor:pointer; opacity:.6;">✏️</span>`);
-  if (isAdmin) {
-    actions.push(`<span onclick="chatDeleteMsg(${m.id})" style="cursor:pointer; opacity:.6;">🗑</span>`);
-    if (!mine) actions.push(`<span onclick="chatMuteMenu('${m.userId}','${esc(m.name).replace(/'/g,"&#39;")}')" style="cursor:pointer; opacity:.6;">🔇</span>`);
-  }
+  if (mine && editWindowOpen) actions.push(`<span onclick="chatStartEdit(${m.id},'${esc(m.text).replace(/'/g,"&#39;")}')" style="cursor:pointer; opacity:.6;">✏️</span>`);
+  if (mine || isAdmin) actions.push(`<span onclick="chatDeleteMsg(${m.id})" style="cursor:pointer; opacity:.6;">🗑</span>`);
+  if (isAdmin && !mine) actions.push(`<span onclick="chatMuteMenu('${m.userId}','${esc(m.name).replace(/'/g,"&#39;")}')" style="cursor:pointer; opacity:.6;">🔇</span>`);
   return `
     <div style="align-self:${mine?'flex-end':'flex-start'}; max-width:82%; background:${mine?'var(--success)':'var(--panel3)'}; color:${mine?'#0a2a1c':'var(--text)'}; border-radius:12px; padding:7px 11px;">
       ${mine?'':`<div style="font-size:11px; font-weight:700; opacity:.7; margin-bottom:2px;">${esc(m.name)}</div>`}
@@ -2477,7 +2580,7 @@ async function sendChatMessage(){
   try {
     if (CHAT_EDITING_ID) {
       const r = await api("chat_edit", { id: CHAT_EDITING_ID, text });
-      if (!r.ok) toast(r.error === "not_your_message" ? "Можна редагувати лише свої повідомлення" : "Помилка", "err");
+      if (!r.ok) toast(r.error === "not_your_message" ? "Можна редагувати лише свої повідомлення" : (r.error === "edit_window_expired" ? "Минуло більше 2 годин — редагування недоступне" : "Помилка"), "err");
       chatCancelReplyEdit();
     } else {
       const r = await api("chat_send", { text, replyToId: CHAT_REPLY_TO ? CHAT_REPLY_TO.id : null });
@@ -2531,7 +2634,7 @@ function renderAdmin(){
   const screen = document.getElementById("screen");
   const tabs = [
     ["state","📊","Огляд"], ["rebus","🧩","Ребус"], ["tournament","🏆","Турнір"],
-    ["award","💰","Нарахування"], ["skins","🎨","Скіни"], ["yearly","⚡","Сезон"], ["admins","👤","Адміни"], ["support","📨","Звернення"], ["merch","📦","Мерч"]
+    ["award","💰","Нарахування"], ["skins","🎨","Скіни"], ["yearly","⚡","Сезон"], ["pred","⚽","Прогнози"], ["admins","👤","Адміни"], ["support","📨","Звернення"], ["merch","📦","Мерч"]
   ];
   screen.innerHTML = `
     <div class="h1">🔐 Адмін-панель</div>
@@ -2544,7 +2647,7 @@ function renderAdmin(){
     if (el.getAttribute("data-asub") === ADMIN_SUB) el.classList.add("active");
     el.addEventListener("click", () => { ADMIN_SUB = el.getAttribute("data-asub"); renderAdmin(); });
   });
-  const loaders = { state:loadAdminState, rebus:loadAdminRebus, tournament:loadAdminTournament, award:loadAdminAward, skins:loadAdminSkins, yearly:loadAdminYearly, admins:loadAdminAdmins, support:loadAdminSupport, merch:loadAdminMerch };
+  const loaders = { state:loadAdminState, rebus:loadAdminRebus, tournament:loadAdminTournament, award:loadAdminAward, skins:loadAdminSkins, yearly:loadAdminYearly, pred:loadAdminPred, admins:loadAdminAdmins, support:loadAdminSupport, merch:loadAdminMerch };
   (loaders[ADMIN_SUB] || loadAdminState)();
 }
 
@@ -2808,6 +2911,90 @@ async function submitYearlyStop(){
     toast("Сезон зупинено", "ok");
     loadAdminYearly();
   }, "Зупинити");
+}
+async function loadAdminPred(){
+  const wrap = document.getElementById("adminBody");
+  const isMain = !!(DASH && DASH.isMainAdmin);
+  try {
+    const cfg = isMain ? await api("admin_pred_get_config") : { ok: true, hasKey: null };
+    const matchesR = await api("admin_pred_list_matches");
+    const matches = matchesR.ok ? matchesR.matches : [];
+    wrap.innerHTML = `
+      ${isMain ? `
+      <div class="card">
+        <div style="font-weight:800; font-size:14px;">⚽ Налаштування API-Football</div>
+        <div class="sub" style="margin:6px 0 10px;">Безкоштовний ключ: <a href="https://dashboard.api-football.com" target="_blank" style="color:var(--accent);">dashboard.api-football.com</a> (100 запитів/добу). ${cfg.hasKey ? '✅ Ключ вже збережено.' : '⚠️ Ключ ще не встановлено.'}</div>
+        <div class="field-label">API-ключ (лишіть порожнім, щоб не змінювати)</div>
+        <input class="field" id="predApiKey" placeholder="••••••••••••">
+        <div class="field-label" style="margin-top:8px;">ID ліги (УПЛ)</div>
+        <div class="row" style="gap:6px;">
+          <input class="field" id="predLeagueId" style="flex:1;" value="${esc(cfg.leagueId||'')}" placeholder="напр. 333">
+          <button class="btn secondary sm" style="width:auto;" onclick="predFindLeague()">🔍 Знайти</button>
+        </div>
+        <div id="predLeagueResults"></div>
+        <div class="field-label" style="margin-top:8px;">Сезон (рік)</div>
+        <input class="field" id="predSeason" value="${esc(cfg.season||String(new Date().getFullYear()))}">
+        <button class="btn sm" style="margin-top:10px;" onclick="predSaveConfig()">💾 Зберегти налаштування</button>
+      </div>` : ""}
+
+      <div class="card" style="margin-top:10px;">
+        <div style="font-weight:800; font-size:14px;">📥 Імпорт матчів</div>
+        <div class="sub" style="margin:6px 0 10px;">Додає нові матчі обраної ліги на найближчі N днів (уже додані пропускаються).</div>
+        <div class="row" style="gap:6px;">
+          <input class="field" type="number" id="predDaysAhead" value="7" style="width:70px;">
+          <button class="btn sm" style="flex:1;" onclick="predImportMatches()">📥 Імпортувати</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:10px;">
+        <div style="font-weight:800; font-size:14px;">🔄 Синхронізація результатів</div>
+        <div class="sub" style="margin:6px 0 10px;">Перевіряє завершені матчі та нараховує бали за прогнози.</div>
+        <button class="btn sm" onclick="predSyncResults()">🔄 Синхронізувати зараз</button>
+      </div>
+
+      <div class="h2">Матчі (${matches.length})</div>
+      <div class="list">${matches.length ? matches.map(m => `
+        <div class="item">
+          <div class="ic">${m.status==='Завершено'?'✅':'⏳'}</div>
+          <div class="txt"><div class="t">${esc(m.home)} ${m.status==='Завершено'?`${m.realHome}:${m.realAway}`:''} ${esc(m.away)}</div>
+          <div class="s">${esc(m.league)} · ${new Date(m.kickoff).toLocaleString("uk-UA")}</div></div>
+          <div class="right badge ${m.status==='Завершено'?'ok':''}">${esc(m.status)}</div>
+        </div>`).join("") : emptyBlock("⚽","Матчів ще немає","")}</div>
+    `;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
+}
+async function predFindLeague(){
+  const term = prompt("Пошук ліги (напр. Ukraine):", "Ukraine");
+  if (!term) return;
+  const r = await api("admin_pred_find_league", { searchTerm: term });
+  const box = document.getElementById("predLeagueResults");
+  if (!r.ok) { toast("Помилка пошуку", "err"); return; }
+  box.innerHTML = r.results.length ? `<div class="list" style="margin-top:6px;">` + r.results.map(l => `
+    <div class="item" style="cursor:pointer" onclick="document.getElementById('predLeagueId').value='${l.id}'; toast('ID ${l.id} підставлено','ok');">
+      <div class="txt"><div class="t">${esc(l.name)}</div><div class="s">${esc(l.country)} · ID: ${l.id} · сезони: ${l.seasons.slice(-3).join(', ')}</div></div>
+    </div>`).join("") + `</div>` : `<div class="sub" style="margin-top:6px;">Нічого не знайдено</div>`;
+}
+async function predSaveConfig(){
+  const apiKey = document.getElementById("predApiKey").value.trim();
+  const leagueId = document.getElementById("predLeagueId").value.trim();
+  const season = document.getElementById("predSeason").value.trim();
+  const r = await api("admin_pred_set_config", { apiKey, leagueId, season });
+  if (!r.ok) { toast(r.error === "forbidden_not_main_admin" ? "Лише Головний адмін" : "Помилка", "err"); return; }
+  toast("Налаштування збережено", "ok");
+  loadAdminPred();
+}
+async function predImportMatches(){
+  const daysAhead = document.getElementById("predDaysAhead").value;
+  const r = await api("admin_pred_import", { daysAhead });
+  if (!r.ok) { toast(r.error === "not_configured" ? "Спочатку налаштуйте API-ключ і ID ліги" : "Помилка API", "err"); return; }
+  toast(`Додано матчів: ${r.added} з ${r.total}`, "ok");
+  loadAdminPred();
+}
+async function predSyncResults(){
+  const r = await api("admin_pred_sync");
+  if (!r.ok) { toast(r.error === "not_configured" ? "Спочатку налаштуйте API-ключ" : "Помилка", "err"); return; }
+  toast(`Оновлено результатів: ${r.resolved}`, "ok");
+  loadAdminPred();
 }
 async function loadAdminAdmins(){
   const wrap = document.getElementById("adminBody");
