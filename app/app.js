@@ -120,6 +120,8 @@ const TABS = [
   { id:"shop",      ic:"🏪", lb:"Магазин" },
   { id:"craft",     ic:"🔨", lb:"Створити" },
   { id:"inventory", ic:"🎒", lb:"Інвентар" },
+  { id:"rating",    ic:"🏆", lb:"Топ року" },
+  { id:"chat",      ic:"💬", lb:"Чат" },
   { id:"support",   ic:"🆘", lb:"Підтримка" },
 ];
 
@@ -134,6 +136,7 @@ function renderNav(){
 }
 
 function nav(tab){
+  if (TAB === "chat" && tab !== "chat") stopChatPolling();
   TAB = tab;
   renderNav();
   render();
@@ -200,6 +203,8 @@ function render(){
   if (TAB === "shop") return renderShop();
   if (TAB === "craft") return renderCraft();
   if (TAB === "inventory") return renderInventory();
+  if (TAB === "rating") return renderRating();
+  if (TAB === "chat") return renderChat();
   if (TAB === "support") return renderSupport();
   if (TAB === "admin") return renderAdmin();
 }
@@ -2217,6 +2222,131 @@ async function loadMyTickets(){
 }
 
 // ============================================================
+// РІЧНИЙ РЕЙТИНГ («Топ-10 року — Зарядна станція»)
+// ============================================================
+function renderRating(){
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `
+    <div class="h1">🏆 Топ-10 року — Зарядна станція</div>
+    <div id="ratingBody">${loadingBlock()}</div>
+  `;
+  loadRating();
+}
+function _fmtDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString("uk-UA", { day:"2-digit", month:"2-digit", year:"numeric" });
+}
+function _daysLeft(iso){
+  const ms = new Date(iso).getTime() - Date.now();
+  return Math.max(0, Math.ceil(ms / 86400000));
+}
+async function loadRating(){
+  const wrap = document.getElementById("ratingBody");
+  try {
+    const r = await api("yearly_leaderboard_get");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    if (!r.period || !r.active) {
+      wrap.innerHTML = emptyBlock("🔌","Сезон ще не розпочато","Головний адмін скоро запустить річний рейтинг «Зарядна станція» — слідкуйте за оновленнями!");
+      return;
+    }
+    const medals = ["🥇","🥈","🥉"];
+    wrap.innerHTML = `
+      <div class="card" style="text-align:center; background:linear-gradient(155deg,#1e2a4a,#0d1226); border-color:var(--legendary);">
+        <div style="font-size:14px; font-weight:800; color:var(--legendary);">⚡ Приз топ-10: реальна зарядна станція</div>
+        <div class="sub" style="margin-top:4px;">Сезон: ${_fmtDate(r.period.startDate)} — ${_fmtDate(r.period.endDate)}</div>
+        <div class="sub" style="margin-top:2px;">Залишилось днів: <b>${_daysLeft(r.period.endDate)}</b></div>
+      </div>
+      <div class="list" style="margin-top:10px;">
+        ${r.top.length ? r.top.map(u => `
+          <div class="item" style="${u.userId===USER_ID?'border-color:var(--success);':''}">
+            <div class="ic">${medals[u.place-1] || ("#"+u.place)}</div>
+            <div class="txt"><div class="t">${esc(u.name)}${u.userId===USER_ID?' (ви)':''}</div>
+              <div class="s">Ігор: ${u.played} · Перемог: ${u.won} · Монет: ${fmt(u.coins)}</div></div>
+            <div class="right badge">${Math.round(u.score)} б.</div>
+          </div>`).join("") : emptyBlock("🎮","Ще немає активності","Грайте в ігри — активність вже рахується!")}
+      </div>
+      ${r.me && r.me.place > 10 ? `
+        <div class="h2">Ваше місце</div>
+        <div class="item">
+          <div class="ic">#${r.me.place}</div>
+          <div class="txt"><div class="t">${esc(r.me.name)} (ви)</div>
+            <div class="s">Ігор: ${r.me.played} · Перемог: ${r.me.won} · Монет: ${fmt(r.me.coins)}</div></div>
+          <div class="right badge">${Math.round(r.me.score)} б.</div>
+        </div>` : ""}
+      <div class="sub" style="margin-top:10px; text-align:center;">Рейтинг враховує кількість зіграних ігор, перемоги та зароблені á-coin. Всього учасників: ${r.totalParticipants}</div>
+    `;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+
+// ============================================================
+// ЧАТ
+// ============================================================
+let CHAT_POLL_TIMER = null;
+let CHAT_LAST_ROW = null;
+function renderChat(){
+  const screen = document.getElementById("screen");
+  screen.innerHTML = `
+    <div class="h1">💬 Загальний чат</div>
+    <div class="card" id="chatMessages" style="max-height:60vh; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">${loadingBlock()}</div>
+    <div class="row" style="gap:8px; margin-top:10px;">
+      <input class="field" id="chatInput" placeholder="Напишіть повідомлення..." style="flex:1;" maxlength="500" onkeydown="if(event.key==='Enter')sendChatMessage()">
+      <button class="btn sm" style="width:auto; padding:10px 16px;" onclick="sendChatMessage()">➤</button>
+    </div>
+  `;
+  CHAT_LAST_ROW = null;
+  loadChat(true);
+  startChatPolling();
+}
+function startChatPolling(){
+  stopChatPolling();
+  CHAT_POLL_TIMER = setInterval(() => loadChat(false), 4000);
+}
+function stopChatPolling(){
+  if (CHAT_POLL_TIMER) { clearInterval(CHAT_POLL_TIMER); CHAT_POLL_TIMER = null; }
+}
+function _chatTime(iso){
+  const d = new Date(iso);
+  return d.toLocaleTimeString("uk-UA", { hour:"2-digit", minute:"2-digit" });
+}
+async function loadChat(initial){
+  const wrap = document.getElementById("chatMessages");
+  if (!wrap) return; // користувач вже пішов з вкладки — таймер зупиниться на наступному тіку
+  try {
+    const r = await api("chat_get", { sinceRow: CHAT_LAST_ROW });
+    if (!r.ok) { if (initial) wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    const wasAtBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 30;
+    if (initial) wrap.innerHTML = "";
+    if (r.messages.length) {
+      r.messages.forEach(m => {
+        const mine = m.userId === USER_ID;
+        const el = document.createElement("div");
+        el.style.cssText = `align-self:${mine?'flex-end':'flex-start'}; max-width:80%; background:${mine?'var(--success)':'var(--panel3)'}; color:${mine?'#0a2a1c':'var(--text)'}; border-radius:12px; padding:7px 11px;`;
+        el.innerHTML = `${mine?'':`<div style="font-size:11px; font-weight:700; opacity:.7; margin-bottom:2px;">${esc(m.name)}</div>`}<div style="font-size:13.5px; word-break:break-word;">${esc(m.text)}</div><div style="font-size:10px; opacity:.55; text-align:right; margin-top:2px;">${_chatTime(m.time)}</div>`;
+        wrap.appendChild(el);
+      });
+      CHAT_LAST_ROW = r.lastRow;
+      if (initial || wasAtBottom) wrap.scrollTop = wrap.scrollHeight;
+    } else if (initial) {
+      CHAT_LAST_ROW = r.lastRow;
+    }
+  } catch(e) {}
+}
+async function sendChatMessage(){
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  input.disabled = true;
+  try {
+    const r = await api("chat_send", { text });
+    if (!r.ok) toast(r.error === "too_fast" ? "Зачекайте секунду перед наступним повідомленням" : "Помилка", "err");
+    else loadChat(false);
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+  input.disabled = false;
+  input.focus();
+}
+
+// ============================================================
 // АДМІНКА
 // ============================================================
 let ADMIN_SUB = "state";
@@ -2224,7 +2354,7 @@ function renderAdmin(){
   const screen = document.getElementById("screen");
   const tabs = [
     ["state","📊","Огляд"], ["rebus","🧩","Ребус"], ["tournament","🏆","Турнір"],
-    ["award","💰","Нарахування"], ["skins","🎨","Скіни"], ["admins","👤","Адміни"], ["support","📨","Звернення"], ["merch","📦","Мерч"]
+    ["award","💰","Нарахування"], ["skins","🎨","Скіни"], ["yearly","⚡","Сезон"], ["admins","👤","Адміни"], ["support","📨","Звернення"], ["merch","📦","Мерч"]
   ];
   screen.innerHTML = `
     <div class="h1">🔐 Адмін-панель</div>
@@ -2237,7 +2367,7 @@ function renderAdmin(){
     if (el.getAttribute("data-asub") === ADMIN_SUB) el.classList.add("active");
     el.addEventListener("click", () => { ADMIN_SUB = el.getAttribute("data-asub"); renderAdmin(); });
   });
-  const loaders = { state:loadAdminState, rebus:loadAdminRebus, tournament:loadAdminTournament, award:loadAdminAward, skins:loadAdminSkins, admins:loadAdminAdmins, support:loadAdminSupport, merch:loadAdminMerch };
+  const loaders = { state:loadAdminState, rebus:loadAdminRebus, tournament:loadAdminTournament, award:loadAdminAward, skins:loadAdminSkins, yearly:loadAdminYearly, admins:loadAdminAdmins, support:loadAdminSupport, merch:loadAdminMerch };
   (loaders[ADMIN_SUB] || loadAdminState)();
 }
 
@@ -2459,6 +2589,49 @@ async function submitAward(kind){
   await refreshDashboard(); // якщо адмін нарахував самому собі — пілюлі баланс/осколки оновляться одразу
 }
 
+async function loadAdminYearly(){
+  const wrap = document.getElementById("adminBody");
+  if (!DASH.isMainAdmin) {
+    wrap.innerHTML = emptyBlock("🔒","Доступно лише Головному адміну","Керувати сезоном річного рейтингу може тільки Головний адмін.");
+    return;
+  }
+  try {
+    const r = await api("admin_yearly_get_period");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    const p = r.period;
+    wrap.innerHTML = `
+      <div class="card">
+        <div style="font-weight:800; font-size:14px;">⚡ Топ-10 року — Зарядна станція</div>
+        <div class="sub" style="margin-top:6px;">${p ? `Сезон: <b>${_fmtDate(p.startDate)}</b> — <b>${_fmtDate(p.endDate)}</b><br>Статус: ${p.active ? '<b style="color:var(--success)">Активний</b>' : '<b style="color:var(--danger)">Зупинено</b>'}` : "Сезон ще жодного разу не запускали."}</div>
+      </div>
+      <div class="card" style="margin-top:10px;">
+        <div class="field-label">Дата старту нового сезону</div>
+        <input class="field" type="date" id="yearlyStartDate">
+        <div class="sub" style="margin:6px 0 10px;">Кінець сезону — рівно через рік від обраної дати. Якщо вже є дані попереднього сезону — вони архівуються автоматично, нічого не губиться.</div>
+        <button class="btn sm" onclick="submitYearlyStart()">🚀 Запустити новий сезон</button>
+        ${p && p.active ? `<button class="btn danger sm" style="margin-top:8px;" onclick="submitYearlyStop()">⏹ Зупинити поточний сезон</button>` : ""}
+      </div>
+    `;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
+}
+async function submitYearlyStart(){
+  const val = document.getElementById("yearlyStartDate").value;
+  if (!val) { toast("Оберіть дату", "err"); return; }
+  showConfirmModal("Запустити новий річний сезон з " + val + "? Попередні дані (якщо є) буде заархівовано.", async () => {
+    const r = await api("admin_yearly_set_period", { startDate: val });
+    if (!r.ok) { toast(r.error === "forbidden_not_main_admin" ? "Лише Головний адмін може це робити" : "Помилка", "err"); return; }
+    toast("Сезон запущено!", "ok");
+    loadAdminYearly();
+  }, "Запустити");
+}
+async function submitYearlyStop(){
+  showConfirmModal("Зупинити поточний сезон достроково?", async () => {
+    const r = await api("admin_yearly_stop_period");
+    if (!r.ok) { toast("Помилка", "err"); return; }
+    toast("Сезон зупинено", "ok");
+    loadAdminYearly();
+  }, "Зупинити");
+}
 async function loadAdminAdmins(){
   const wrap = document.getElementById("adminBody");
   if (!DASH.isMainAdmin) {
