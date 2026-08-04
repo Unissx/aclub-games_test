@@ -887,6 +887,7 @@ function renderShop(){
     <div class="h1">🏪 Магазин</div>
     <div class="tabs2" style="flex-wrap:wrap; gap:4px;">
       <div class="t2" style="flex:1 1 30%;" data-sub="abank">🎁 áBank</div>
+      <div class="t2" style="flex:1 1 30%;" data-sub="merch">📦 Мерч</div>
       <div class="t2" style="flex:1 1 30%;" data-sub="chests">📦 Кейси</div>
       <div class="t2" style="flex:1 1 30%;" data-sub="vip">👑 VIP</div>
       <div class="t2" style="flex:1 1 30%;" data-sub="runner">🏃 Runner</div>
@@ -900,6 +901,7 @@ function renderShop(){
     el.addEventListener("click", () => { SHOP_SUB = el.getAttribute("data-sub"); renderShop(); });
   });
   if (SHOP_SUB === "abank") loadShopAbank();
+  else if (SHOP_SUB === "merch") loadShopMerch();
   else if (SHOP_SUB === "chests") loadShopChests();
   else if (SHOP_SUB === "vip") loadShopVip();
   else if (SHOP_SUB === "runner") loadUpgrades("runner");
@@ -907,6 +909,25 @@ function renderShop(){
   else loadMyItems("shopBody");
 }
 function goToShopVip(){ SHOP_SUB = "vip"; nav("shop"); }
+
+async function loadShopMerch(){
+  const wrap = document.getElementById("shopBody");
+  try {
+    const r = await api("shop_list");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    const merchItems = r.items.filter(it => it.type === "merch");
+    if (!merchItems.length) { wrap.innerHTML = emptyBlock("📦","Мерчу поки немає","Слідкуй за оновленнями!"); return; }
+    wrap.innerHTML = `<div class="list">` + merchItems.map(it => `
+      <div class="card">
+        <div class="row between"><div style="font-weight:700; font-size:13.5px;">📦 ${esc(it.name)}</div>
+        <div class="mono" style="color:var(--brass-bright); font-weight:700;">${it.price} 💰</div></div>
+        <div class="sub" style="margin:6px 0 10px;">${esc(it.desc)}</div>
+        <button class="btn sm" ${r.balance < it.price ? 'disabled' : ''} onclick="buyShopItem('${it.id}', ${it.price})">
+          ${r.balance < it.price ? 'Недостатньо á-coin' : 'Придбати'}
+        </button>
+      </div>`).join("") + `</div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
 
 // ── VIP-тикети (покупка) — сама активація лишається в «Інвентарі» ──
 async function loadShopVip(){
@@ -952,7 +973,8 @@ async function loadShopAbank(){
 function paintShopAbank(r){
   const wrap = document.getElementById("shopBody");
   if (!wrap) return;
-  wrap.innerHTML = `<div class="list">` + r.items.map(it => `
+  const items = r.items.filter(it => it.type !== "merch"); // мерч тепер в окремій вкладці "📦 Мерч"
+  wrap.innerHTML = `<div class="list">` + items.map(it => `
     <div class="card">
       <div class="row between"><div style="font-weight:700; font-size:13.5px;">${it.type==='merch'?'📦':'🎁'} ${esc(it.name)}</div>
       <div class="mono" style="color:var(--brass-bright); font-weight:700;">${it.price} 💰</div></div>
