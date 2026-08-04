@@ -3034,8 +3034,19 @@ async function predSaveConfig(){
 async function predImportMatches(){
   const daysAhead = document.getElementById("predDaysAhead").value;
   const r = await api("admin_pred_import", { daysAhead });
-  if (!r.ok) { toast(r.error === "not_configured" ? "Спочатку налаштуйте API-ключ і ID ліги" : "Помилка API", "err"); return; }
-  toast(`Додано матчів: ${r.added} з ${r.total}`, "ok");
+  if (!r.ok) {
+    const msg = { not_configured: "Спочатку налаштуйте API-ключ", no_leagues_enabled: "Спочатку обери хоча б одну лігу вище" }[r.error] || "Помилка API";
+    toast(msg, "err"); return;
+  }
+  if (r.errors && r.errors.length) {
+    showModal(`<div class="mh">⚠️ Імпорт із застереженнями</div>
+      <div class="sub" style="margin-bottom:10px;">Додано матчів: ${r.added} з ${r.total} знайдених.</div>
+      <div class="list">${r.errors.map(e => `<div class="item"><div class="txt"><div class="t" style="color:var(--danger); font-size:12.5px;">${esc(e)}</div></div></div>`).join("")}</div>`);
+  } else if (r.total === 0) {
+    toast("Матчів не знайдено — перевір сезон і чи є найближчі ігри в обраних лігах", "err");
+  } else {
+    toast(`Додано матчів: ${r.added} з ${r.total}`, "ok");
+  }
   loadAdminPred();
 }
 async function predSyncResults(){
