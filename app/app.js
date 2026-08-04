@@ -3038,15 +3038,15 @@ async function predImportMatches(){
     const msg = { not_configured: "Спочатку налаштуйте API-ключ", no_leagues_enabled: "Спочатку обери хоча б одну лігу вище" }[r.error] || "Помилка API";
     toast(msg, "err"); return;
   }
-  if (r.errors && r.errors.length) {
-    showModal(`<div class="mh">⚠️ Імпорт із застереженнями</div>
-      <div class="sub" style="margin-bottom:10px;">Додано матчів: ${r.added} з ${r.total} знайдених.</div>
-      <div class="list">${r.errors.map(e => `<div class="item"><div class="txt"><div class="t" style="color:var(--danger); font-size:12.5px;">${esc(e)}</div></div></div>`).join("")}</div>`);
-  } else if (r.total === 0) {
-    toast("Матчів не знайдено — перевір сезон і чи є найближчі ігри в обраних лігах", "err");
-  } else {
-    toast(`Додано матчів: ${r.added} з ${r.total}`, "ok");
-  }
+  showModal(`<div class="mh">📥 Результат імпорту</div>
+    <div class="sub" style="margin-bottom:10px;">Додано нових: ${r.added} · Сезон запиту: ${r.season} · Період: наступні ${r.daysAhead} дн.</div>
+    <div class="list">${(r.perLeague||[]).map(l => `
+      <div class="item">
+        <div class="ic">${l.apiError ? '❌' : (l.found>0?'✅':'⬜')}</div>
+        <div class="txt"><div class="t">${esc(l.name)}</div>
+          <div class="s">${l.apiError ? esc(l.apiError) : `ID ліги: ${l.leagueId} · знайдено матчів: ${l.found}`}</div></div>
+      </div>`).join("")}</div>
+    ${(r.perLeague||[]).every(l => l.found===0 && !l.apiError) ? `<div class="sub" style="margin-top:10px; color:var(--danger);">Усі ліги відповіли 0 матчів без помилок API — найімовірніше невірний рік сезону (для сезону 2026/27 вкажи 2026, для 2025/26 — 2025) або в обраний період немає ігор.</div>` : ""}`);
   loadAdminPred();
 }
 async function predSyncResults(){
