@@ -2940,13 +2940,11 @@ async function loadAdminPred(){
     wrap.innerHTML = `
       ${isMain ? `
       <div class="card">
-        <div style="font-weight:800; font-size:14px;">⚽ Налаштування API-Football</div>
-        <div class="sub" style="margin:6px 0 10px;">Безкоштовний ключ: <a href="https://dashboard.api-football.com" target="_blank" style="color:var(--accent);">dashboard.api-football.com</a> (100 запитів/добу). ${cfg.hasKey ? '✅ Ключ вже збережено.' : '⚠️ Ключ ще не встановлено.'}</div>
-        <div class="field-label">API-ключ (лишіть порожнім, щоб не змінювати)</div>
+        <div style="font-weight:800; font-size:14px;">⚽ Налаштування football-data.org</div>
+        <div class="sub" style="margin:6px 0 10px;">Безкоштовний токен назавжди: <a href="https://www.football-data.org/client/register" target="_blank" style="color:var(--accent);">football-data.org/client/register</a> (10 запитів/хв, охоплює поточний сезон). ${cfg.hasKey ? '✅ Токен вже збережено.' : '⚠️ Токен ще не встановлено.'}</div>
+        <div class="field-label">API-токен (лишіть порожнім, щоб не змінювати)</div>
         <input class="field" id="predApiKey" placeholder="••••••••••••">
-        <div class="field-label" style="margin-top:8px;">Сезон (рік)</div>
-        <input class="field" id="predSeason" value="${esc(cfg.season||String(new Date().getFullYear()))}">
-        <button class="btn sm" style="margin-top:10px;" onclick="predSaveConfig()">💾 Зберегти ключ і сезон</button>
+        <button class="btn sm" style="margin-top:10px;" onclick="predSaveConfig()">💾 Зберегти токен</button>
       </div>
       <div class="card" style="margin-top:10px;">
         <div style="font-weight:800; font-size:14px;">🌍 Ліги для прогнозів</div>
@@ -2979,17 +2977,29 @@ async function loadAdminPred(){
       </div>
 
       <div class="card" style="margin-top:10px;">
+        <div style="font-weight:800; font-size:14px;">🇺🇦 УПЛ — вручну</div>
+        <div class="sub" style="margin:6px 0 10px;">Автоматичного безкоштовного джерела з поточним сезоном УПЛ немає — додай матч і пізніше сам внеси рахунок після завершення. Бали нараховуються так само автоматично.</div>
+        <div class="field-label">Домашня команда</div>
+        <input class="field" id="predManualHome" placeholder="напр. Динамо Київ">
+        <div class="field-label" style="margin-top:6px;">Гостьова команда</div>
+        <input class="field" id="predManualAway" placeholder="напр. Шахтар Донецьк">
+        <div class="field-label" style="margin-top:6px;">Дата й час початку</div>
+        <input class="field" type="datetime-local" id="predManualKickoff">
+        <button class="btn sm" style="margin-top:10px;" onclick="predAddManualMatch()">➕ Додати матч УПЛ</button>
+      </div>
+
+      <div class="card" style="margin-top:10px;">
         <div style="font-weight:800; font-size:14px;">🔄 Синхронізація результатів (вручну)</div>
-        <div class="sub" style="margin:6px 0 10px;">Перевіряє завершені матчі та нараховує бали за прогнози. Не потрібно, якщо увімкнено автооновлення вище.</div>
+        <div class="sub" style="margin:6px 0 10px;">Перевіряє завершені автоматичні матчі (не УПЛ) та нараховує бали за прогнози. Не потрібно, якщо увімкнено автооновлення вище.</div>
         <button class="btn secondary sm" onclick="predSyncResults()">🔄 Синхронізувати зараз</button>
       </div>
 
       <div class="h2">Матчі (${matches.length})</div>
       <div class="list">${matches.length ? matches.map(m => `
-        <div class="item">
-          <div class="ic">${m.status==='Завершено'?'✅':'⏳'}</div>
+        <div class="item" ${m.isManual && m.status==='Очікує' ? `style="cursor:pointer" onclick="predSetManualResultPrompt('${m.matchId}','${esc(m.home).replace(/'/g,"&#39;")}','${esc(m.away).replace(/'/g,"&#39;")}')"` : ''}>
+          <div class="ic">${m.status==='Завершено'?'✅':(m.isManual?'✏️':'⏳')}</div>
           <div class="txt"><div class="t">${esc(m.home)} ${m.status==='Завершено'?`${m.realHome}:${m.realAway}`:''} ${esc(m.away)}</div>
-          <div class="s">${esc(m.league)} · ${new Date(m.kickoff).toLocaleString("uk-UA")}</div></div>
+          <div class="s">${esc(m.league)} · ${new Date(m.kickoff).toLocaleString("uk-UA")}${m.isManual&&m.status==='Очікує'?' · натисни, щоб внести рахунок':''}</div></div>
           <div class="right badge ${m.status==='Завершено'?'ok':''}">${esc(m.status)}</div>
         </div>`).join("") : emptyBlock("⚽","Матчів ще немає","")}</div>
     `;
@@ -3023,10 +3033,36 @@ async function predToggleAutoTrigger(enable){
   toast(enable ? "Автооновлення увімкнено" : "Автооновлення вимкнено", "ok");
   loadAdminPred();
 }
+async function predAddManualMatch(){
+  const homeTeam = document.getElementById("predManualHome").value.trim();
+  const awayTeam = document.getElementById("predManualAway").value.trim();
+  const kickoffLocal = document.getElementById("predManualKickoff").value;
+  if (!homeTeam || !awayTeam || !kickoffLocal) { toast("Заповни всі поля", "err"); return; }
+  const kickoff = new Date(kickoffLocal).toISOString();
+  const r = await api("admin_pred_add_manual", { homeTeam, awayTeam, kickoff });
+  if (!r.ok) { toast(r.error === "forbidden" ? "Немає прав" : "Помилка", "err"); return; }
+  toast("Матч УПЛ додано", "ok");
+  document.getElementById("predManualHome").value = "";
+  document.getElementById("predManualAway").value = "";
+  document.getElementById("predManualKickoff").value = "";
+  loadAdminPred();
+}
+function predSetManualResultPrompt(matchId, home, away){
+  const homeScore = prompt(`Рахунок ${home}:`);
+  if (homeScore === null) return;
+  const awayScore = prompt(`Рахунок ${away}:`);
+  if (awayScore === null) return;
+  predSetManualResult(matchId, homeScore, awayScore);
+}
+async function predSetManualResult(matchId, home, away){
+  const r = await api("admin_pred_set_manual_result", { matchId, home, away });
+  if (!r.ok) { toast(r.error === "bad_score" ? "Невірний рахунок" : "Помилка", "err"); return; }
+  toast("Рахунок внесено, бали нараховано", "ok");
+  loadAdminPred();
+}
 async function predSaveConfig(){
   const apiKey = document.getElementById("predApiKey").value.trim();
-  const season = document.getElementById("predSeason").value.trim();
-  const r = await api("admin_pred_set_config", { apiKey, season });
+  const r = await api("admin_pred_set_config", { apiKey });
   if (!r.ok) { toast(r.error === "forbidden_not_main_admin" ? "Лише Головний адмін" : "Помилка", "err"); return; }
   toast("Налаштування збережено", "ok");
   loadAdminPred();
@@ -3039,14 +3075,14 @@ async function predImportMatches(){
     toast(msg, "err"); return;
   }
   showModal(`<div class="mh">📥 Результат імпорту</div>
-    <div class="sub" style="margin-bottom:10px;">Додано нових: ${r.added} · Сезон запиту: ${r.season} · Період: наступні ${r.daysAhead} дн.</div>
+    <div class="sub" style="margin-bottom:10px;">Додано нових: ${r.added} · Період: наступні ${r.daysAhead} дн.</div>
     <div class="list">${(r.perLeague||[]).map(l => `
       <div class="item">
         <div class="ic">${l.apiError ? '❌' : (l.found>0?'✅':'⬜')}</div>
         <div class="txt"><div class="t">${esc(l.name)}</div>
-          <div class="s">${l.apiError ? esc(l.apiError) : `ID ліги: ${l.leagueId} · знайдено матчів: ${l.found}`}</div></div>
+          <div class="s">${l.apiError ? esc(l.apiError) : `Знайдено матчів: ${l.found}`}</div></div>
       </div>`).join("")}</div>
-    ${(r.perLeague||[]).every(l => l.found===0 && !l.apiError) ? `<div class="sub" style="margin-top:10px; color:var(--danger);">Усі ліги відповіли 0 матчів без помилок API — найімовірніше невірний рік сезону (для сезону 2026/27 вкажи 2026, для 2025/26 — 2025) або в обраний період немає ігор.</div>` : ""}`);
+    ${(r.perLeague||[]).every(l => l.found===0 && !l.apiError) ? `<div class="sub" style="margin-top:10px; color:var(--danger);">Усі ліги відповіли 0 матчів без помилок API — найімовірніше в обраний період просто немає запланованих ігор (міжнародна пауза/офсезон). Спробуй збільшити кількість днів вище.</div>` : ""}`);
   loadAdminPred();
 }
 async function predSyncResults(){
