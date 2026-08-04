@@ -2358,7 +2358,7 @@ function renderPredictions(){
   screen.innerHTML = `
     ${backToProfileBtn()}
     <div class="h1">⚽ Ліга прогнозистів</div>
-    <div class="sub" style="margin:-8px 2px 12px;">Прогнозуй рахунки матчів безкоштовно — бали за вгадані результати, приз найкращим наприкінці сезону.</div>
+    <div class="sub" style="margin:-8px 2px 12px;">Безкоштовно: постав прогноз на перемогу (+1 бал) або точний рахунок (+3 бали) — один прогноз на матч, змінити вже не можна. Прийом закривається за годину до старту.</div>
     <div class="tabs2">
       <div class="t2 ${PRED_SUB==='matches'?'active':''}" data-pt="matches">⚽ Матчі</div>
       <div class="t2 ${PRED_SUB==='my'?'active':''}" data-pt="my">📋 Мої прогнози</div>
@@ -2383,42 +2383,85 @@ async function loadPredMatches(){
     const r = await api("predictions_get_matches");
     if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
     if (!r.matches.length) { wrap.innerHTML = emptyBlock("⚽","Немає відкритих матчів","Матчі з'являються автоматично — зазирни пізніше."); return; }
-    wrap.innerHTML = r.matches.map(m => `
-      <div class="card" style="margin-bottom:10px; background:linear-gradient(155deg, var(--panel3), rgba(10,14,28,.95)); overflow:hidden; padding:0;">
-        <div style="padding:8px 14px; background:rgba(255,255,255,.04); font-size:11px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; opacity:.65;">${esc(m.league)} · ${_predDateFmt(m.kickoff)}</div>
-        <div style="padding:14px;">
-          <div class="row" style="align-items:center; justify-content:center; gap:14px;">
-            <div style="flex:1; text-align:center;">
-              ${m.homeLogo ? `<img src="${esc(m.homeLogo)}" style="width:42px; height:42px; object-fit:contain; display:block; margin:0 auto 6px;">` : `<div style="width:42px; height:42px; margin:0 auto 6px; border-radius:50%; background:var(--panel3); display:flex; align-items:center; justify-content:center; font-size:18px;">⚽</div>`}
-              <div style="font-weight:800; font-size:12.5px; line-height:1.25;">${esc(m.home)}</div>
-            </div>
-            <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-              <input type="number" min="0" max="30" class="field" id="pm_h_${m.matchId}" value="${m.myPrediction?m.myPrediction.home:''}" placeholder="-" style="width:44px; height:44px; text-align:center; font-size:17px; font-weight:800; padding:0;">
-            </div>
-            <div style="font-weight:900; font-size:13px; opacity:.4;">:</div>
-            <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-              <input type="number" min="0" max="30" class="field" id="pm_a_${m.matchId}" value="${m.myPrediction?m.myPrediction.away:''}" placeholder="-" style="width:44px; height:44px; text-align:center; font-size:17px; font-weight:800; padding:0;">
-            </div>
-            <div style="flex:1; text-align:center;">
-              ${m.awayLogo ? `<img src="${esc(m.awayLogo)}" style="width:42px; height:42px; object-fit:contain; display:block; margin:0 auto 6px;">` : `<div style="width:42px; height:42px; margin:0 auto 6px; border-radius:50%; background:var(--panel3); display:flex; align-items:center; justify-content:center; font-size:18px;">⚽</div>`}
-              <div style="font-weight:800; font-size:12.5px; line-height:1.25;">${esc(m.away)}</div>
-            </div>
+    wrap.innerHTML = r.matches.map(m => {
+      const teamsHtml = `
+        <div class="row" style="align-items:center; justify-content:center; gap:14px; margin-bottom:12px;">
+          <div style="flex:1; text-align:center;">
+            ${m.homeLogo ? `<img src="${esc(m.homeLogo)}" style="width:42px; height:42px; object-fit:contain; display:block; margin:0 auto 6px;">` : `<div style="width:42px; height:42px; margin:0 auto 6px; border-radius:50%; background:var(--panel3); display:flex; align-items:center; justify-content:center; font-size:18px;">⚽</div>`}
+            <div style="font-weight:800; font-size:12.5px; line-height:1.25;">${esc(m.home)}</div>
           </div>
-          <button class="btn sm" style="margin-top:14px;" onclick="savePrediction('${m.matchId}')">${m.myPrediction?'✏️ Оновити прогноз':'💾 Зберегти прогноз'}</button>
+          <div style="font-weight:900; font-size:13px; opacity:.4;">VS</div>
+          <div style="flex:1; text-align:center;">
+            ${m.awayLogo ? `<img src="${esc(m.awayLogo)}" style="width:42px; height:42px; object-fit:contain; display:block; margin:0 auto 6px;">` : `<div style="width:42px; height:42px; margin:0 auto 6px; border-radius:50%; background:var(--panel3); display:flex; align-items:center; justify-content:center; font-size:18px;">⚽</div>`}
+            <div style="font-weight:800; font-size:12.5px; line-height:1.25;">${esc(m.away)}</div>
+          </div>
+        </div>`;
+
+      let bodyHtml;
+      if (m.myPrediction) {
+        // Прогноз вже зроблено — змінити не можна, показуємо що саме поставлено.
+        const p = m.myPrediction;
+        const label = p.type === "outcome"
+          ? `🏆 Перемога: ${p.home==='HOME'?esc(m.home):(p.home==='AWAY'?esc(m.away):'Нічия')}`
+          : `🎯 Рахунок: ${p.home}:${p.away}`;
+        bodyHtml = `<div class="card" style="background:rgba(0,230,118,.08); border-color:var(--success); text-align:center; padding:10px;">
+          <div style="font-weight:700; font-size:13px;">✅ Прогноз зроблено</div>
+          <div class="sub" style="margin-top:4px;">${label}</div>
+          <div class="sub" style="margin-top:2px; opacity:.6;">Змінити вже не можна</div>
+        </div>`;
+      } else {
+        bodyHtml = `
+        <div class="tabs2" style="margin-bottom:10px;" id="pmode_${m.matchId}">
+          <div class="t2 active" data-mode="outcome" onclick="predSwitchMode('${m.matchId}','outcome')">🏆 Перемога (+1)</div>
+          <div class="t2" data-mode="score" onclick="predSwitchMode('${m.matchId}','score')">🎯 Рахунок (+3)</div>
         </div>
-      </div>
-    `).join("");
+        <div id="pmode_outcome_${m.matchId}">
+          <div class="row" style="gap:6px;">
+            <button class="btn secondary sm" style="flex:1;" onclick="predSetOutcome('${m.matchId}','HOME')" id="po_HOME_${m.matchId}">${esc(m.home)}</button>
+            <button class="btn secondary sm" style="flex:1;" onclick="predSetOutcome('${m.matchId}','DRAW')" id="po_DRAW_${m.matchId}">Нічия</button>
+            <button class="btn secondary sm" style="flex:1;" onclick="predSetOutcome('${m.matchId}','AWAY')" id="po_AWAY_${m.matchId}">${esc(m.away)}</button>
+          </div>
+        </div>
+        <div id="pmode_score_${m.matchId}" style="display:none;">
+          <div class="row" style="align-items:center; justify-content:center; gap:10px;">
+            <input type="number" min="0" max="30" class="field" id="pm_h_${m.matchId}" placeholder="-" style="width:50px; height:44px; text-align:center; font-size:17px; font-weight:800; padding:0;">
+            <div style="font-weight:900; opacity:.4;">:</div>
+            <input type="number" min="0" max="30" class="field" id="pm_a_${m.matchId}" placeholder="-" style="width:50px; height:44px; text-align:center; font-size:17px; font-weight:800; padding:0;">
+          </div>
+          <button class="btn sm" style="margin-top:10px;" onclick="savePredictionScore('${m.matchId}')">💾 Поставити прогноз</button>
+        </div>`;
+      }
+
+      return `<div class="card" style="margin-bottom:10px; background:linear-gradient(155deg, var(--panel3), rgba(10,14,28,.95)); overflow:hidden; padding:0;">
+        <div style="padding:8px 14px; background:rgba(255,255,255,.04); font-size:11px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; opacity:.65;">${esc(m.league)} · ${_predDateFmt(m.kickoff)}</div>
+        <div style="padding:14px;">${teamsHtml}${bodyHtml}</div>
+      </div>`;
+    }).join("");
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
 }
-async function savePrediction(matchId){
+function predSwitchMode(matchId, mode){
+  document.querySelectorAll(`#pmode_${matchId} .t2`).forEach(el => el.classList.toggle("active", el.getAttribute("data-mode")===mode));
+  document.getElementById(`pmode_outcome_${matchId}`).style.display = mode==="outcome" ? "" : "none";
+  document.getElementById(`pmode_score_${matchId}`).style.display = mode==="score" ? "" : "none";
+}
+async function predSetOutcome(matchId, outcome){
+  try {
+    const r = await api("predictions_submit", { matchId, predType: "outcome", home: outcome });
+    if (!r.ok) toast(r.error === "match_locked" ? "Прийом прогнозів на цей матч закрито" : (r.error === "already_predicted" ? "Прогноз уже зроблено" : "Помилка"), "err");
+    else toast("Прогноз зроблено!", "ok");
+  } catch(e) { toast("Помилка з'єднання", "err"); }
+  loadPredMatches();
+}
+async function savePredictionScore(matchId){
   const home = document.getElementById("pm_h_"+matchId).value;
   const away = document.getElementById("pm_a_"+matchId).value;
   if (home === "" || away === "") { toast("Введіть рахунок обох команд", "err"); return; }
   try {
-    const r = await api("predictions_submit", { matchId, home, away });
-    if (!r.ok) toast(r.error === "match_started" ? "Матч уже почався — прогноз не приймається" : "Помилка", "err");
+    const r = await api("predictions_submit", { matchId, predType: "score", home, away });
+    if (!r.ok) toast(r.error === "match_locked" ? "Прийом прогнозів на цей матч закрито" : (r.error === "already_predicted" ? "Прогноз уже зроблено" : "Помилка"), "err");
     else toast("Прогноз збережено!", "ok");
   } catch(e) { toast("Помилка з'єднання", "err"); }
+  loadPredMatches();
 }
 async function loadPredMy(){
   const wrap = document.getElementById("predBody");
@@ -2430,10 +2473,13 @@ async function loadPredMy(){
     wrap.innerHTML = `<div class="list">` + r.predictions.map(p => {
       const resolved = p.status === "Завершено";
       const ptsLabel = resolved ? (p.points === null ? "—" : `+${p.points} б.`) : "очікує";
+      const myLabel = p.predType === "outcome"
+        ? `🏆 ${p.predOutcome==='HOME'?esc(p.home):(p.predOutcome==='AWAY'?esc(p.away):'Нічия')}`
+        : `🎯 ${p.predHome}:${p.predAway}`;
       return `<div class="item">
-        <div class="ic">${p.homeLogo?`<img src="${esc(p.homeLogo)}" style="width:22px; height:22px; object-fit:contain;">`:(resolved ? (p.points===3?'🎯':(p.points===1?'✅':'❌')) : '⏳')}</div>
+        <div class="ic">${p.homeLogo?`<img src="${esc(p.homeLogo)}" style="width:22px; height:22px; object-fit:contain;">`:(resolved ? (p.points===3?'🎯':(p.points>0?'✅':'❌')) : '⏳')}</div>
         <div class="txt"><div class="t">${esc(p.home)} ${resolved?`${p.realHome}:${p.realAway}`:''} ${esc(p.away)}</div>
-        <div class="s">Твій прогноз: ${p.predHome}:${p.predAway} · ${_predDateFmt(p.kickoff)}</div></div>
+        <div class="s">Твій прогноз: ${myLabel} · ${_predDateFmt(p.kickoff)}</div></div>
         <div class="right badge ${resolved && p.points>0 ?'ok':''}">${ptsLabel}</div>
       </div>`;
     }).join("") + `</div>`;
