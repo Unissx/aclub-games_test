@@ -951,15 +951,50 @@ async function loadShopVip(){
 // ── Кейси (покупка — потрапляє у слот в «Інвентарі») ──
 async function loadShopChests(){
   const wrap = document.getElementById("shopBody");
-  if (!wrap) return; // не на вкладці Магазину (наприклад, кейс купили з модалки в Інвентарі) — нічого оновлювати
+  if (!wrap) return; // не на вкладці Магазину — нічого оновлювати
   try {
-    const r = await apiRaw("get_inventory");
+    const r = await apiRaw("get_inventory"); // тягне і каталог (назви/описи), і CHESTS_STATE.balance
     if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
     CHESTS_STATE = r;
-    wrap.innerHTML = `<div class="sub" style="margin:-2px 2px 10px;">Кейс відкривається одразу після покупки.</div>
-      <div class="list" id="buyChestList">${buyChestListHtml()}</div>`;
-    wrap.querySelectorAll("[data-buy-chest]").forEach(el => el.addEventListener("click", () => openBuyChestSheet(el.getAttribute("data-buy-chest"))));
+    if (!CHEST_SLOTS_STATE.length) await loadInventoryData();
+    wrap.innerHTML = ownedChestsListHtml();
+    wrap.querySelectorAll("[data-owned-chest]").forEach(el => el.addEventListener("click", () => openOwnedChestGroup(el.getAttribute("data-owned-chest"))));
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+// Кейси більше не купуються тут напряму — їх можна лише виграти в іграх
+// (у майбутньому — придбати на торговому майданчику). Ця вкладка показує,
+// скільки НАЯВНИХ кейсів кожного типу вже є, і дозволяє відкрити (за
+// поточним переліком призів) або розібрати на осколки.
+function ownedChestsListHtml(){
+  const owned = (CHEST_SLOTS_STATE || []).filter(s => s.kind === "paid");
+  const byId = {};
+  owned.forEach(s => { byId[s.chestId] = (byId[s.chestId] || 0) + 1; });
+  const catalog = (CHESTS_STATE && CHESTS_STATE.chests) || [];
+  if (!catalog.length) return emptyBlock("🧧","Немає даних","");
+  return `<div class="sub" style="margin:-2px 2px 10px;">Кейси випадають з ігор (Runner, Ребус, Щасливчик, Вгадай слово, Слова по колу). Тут можна відкрити наявні або розібрати на осколки.</div>
+    <div class="list">` + catalog.map(c => {
+      const count = byId[c.id] || 0;
+      return `<div class="item" data-owned-chest="${c.id}" style="cursor:${count>0?'pointer':'default'}; opacity:${count>0?1:.5};">
+        <div style="flex:none;">${chestArtSvg(c.id, 34)}</div>
+        <div class="txt"><div class="t">${esc(c.name)}</div><div class="s">${esc(c.desc)}</div></div>
+        <div class="right badge ${count>0?'ok':''}">${count > 0 ? ('×'+count) : 'Немає'}</div>
+      </div>`;
+    }).join("") + `</div>`;
+}
+// Показує список конкретних екземплярів обраного типу кейса (якщо їх
+// декілька) — клік по будь-якому відкриває звичну модалку слота
+// (Відкрити / Розібрати), яка вже реалізована для «Кейси-слоти».
+function openOwnedChestGroup(chestId){
+  const rows = (CHEST_SLOTS_STATE || []).filter(s => s.kind === "paid" && s.chestId === chestId);
+  if (!rows.length) return;
+  if (rows.length === 1) { openChestSlotModal(rows[0].row); return; }
+  const c = (CHESTS_STATE.chests || []).find(x => x.id === chestId);
+  showModal(`<div class="mh" style="text-align:center;">${esc(c?c.name:chestId)} · ×${rows.length}</div>
+    <div class="list">${rows.map((s,i) => `
+      <div class="item" style="cursor:pointer" onclick="closeModal(); openChestSlotModal(${s.row})">
+        <div class="ic">🧧</div><div class="txt"><div class="t">Екземпляр ${i+1}</div><div class="s">${esc(s.status)}</div></div>
+        <div class="right">→</div>
+      </div>`).join("")}</div>`);
 }
 
 async function loadShopAbank(){
@@ -1605,39 +1640,74 @@ function chestArtSvg(chestId, size, animated){
 
 // Повна сценка відкриття кейсу для модалки: кришка прочиняється,
 // спалах + пара іскор, і з невеликою затримкою — сам приз "виринає".
+// ── Намальовані іконки призів (SVG, не емодзі) — щоб було зрозуміло, що
+// саме випало, з першого погляду, а не здогадуватись за абстрактним emoji. ──
+function _prizeIconSvg(type, rarity){
+  if (type === "coins") return `<svg viewBox="0 0 40 40" width="30" height="30">
+    <circle cx="20" cy="21" r="15" fill="#F2A93B"/><circle cx="20" cy="21" r="15" fill="none" stroke="#9C6A12" stroke-width="2"/>
+    <ellipse cx="15" cy="16" rx="5" ry="3" fill="#FFE7A8" opacity=".6"/>
+    <text x="20" y="27" font-size="17" font-weight="900" fill="#7A4E0A" text-anchor="middle" font-family="Georgia,serif">á</text>
+  </svg>`;
+  if (type === "shard") return `<svg viewBox="0 0 40 40" width="30" height="30">
+    <polygon points="20,3 33,16 26,37 14,37 7,16" fill="#B15EF0"/>
+    <polygon points="20,3 33,16 20,19" fill="#E0BBFF"/>
+    <polygon points="7,16 20,19 14,37" fill="#8B3FD4"/>
+  </svg>`;
+  if (type === "vipHours") return `<svg viewBox="0 0 40 40" width="30" height="30">
+    <path d="M5,15 L11,24 L20,8 L29,24 L35,15 L31,32 L9,32 Z" fill="#F2C879"/>
+    <circle cx="5" cy="13" r="3.2" fill="#F2C879"/><circle cx="20" cy="6" r="3.2" fill="#F2C879"/><circle cx="35" cy="13" r="3.2" fill="#F2C879"/>
+    <rect x="9" y="32" width="22" height="3" fill="#C99A3E"/>
+  </svg>`;
+  if (type === "item") {
+    const rc = { Rare:"#4E8FE0", Epic:"#B15EF0", Legendary:"#F2A93B" }[rarity] || "#3FE0A0";
+    return `<svg viewBox="0 0 40 40" width="30" height="30">
+      <rect x="6" y="16" width="28" height="18" rx="2" fill="${rc}"/>
+      <rect x="6" y="16" width="28" height="5" fill="#000" opacity=".18"/>
+      <rect x="17" y="9" width="6" height="25" fill="#fff" opacity=".35"/>
+      <path d="M6,16 Q13,5 20,12 Q27,5 34,16 Z" fill="${rc}"/>
+    </svg>`;
+  }
+  return `<svg viewBox="0 0 40 40" width="30" height="30"><rect x="6" y="14" width="28" height="20" rx="3" fill="#3FE0A0"/></svg>`;
+}
 function _rewardVisual(text){
   const t = String(text||"");
-  if (/осколк/i.test(t))      return { icon:"🔮", color:"#8B7CF6" };
-  if (/VIP|год\.\s*VIP/i.test(t)) return { icon:"👑", color:"#F2C879" };
-  if (/á-coin|💰/i.test(t))   return { icon:"💰", color:"#3FE0A0" };
-  if (/скін|предмет|косметик/i.test(t)) return { icon:"🎨", color:"#3FE0A0" };
-  return { icon:"🎁", color:"#3FE0A0" };
+  if (/осколк/i.test(t))      return { icon:_prizeIconSvg("shard"), color:"#8B7CF6" };
+  if (/VIP|год\.\s*VIP/i.test(t)) return { icon:_prizeIconSvg("vipHours"), color:"#F2C879" };
+  if (/á-coin|💰/i.test(t))   return { icon:_prizeIconSvg("coins"), color:"#3FE0A0" };
+  if (/скін|предмет|косметик/i.test(t)) return { icon:_prizeIconSvg("item"), color:"#3FE0A0" };
+  return { icon:_prizeIconSvg("coins"), color:"#3FE0A0" };
 }
 // Іконка/колір "картки" карусельки з drop-об'єкта напряму (надійніше за
 // розбір тексту — знаємо точний тип призу, а не вгадуємо за словами).
 function _dropVisual(drop){
-  if (!drop) return { icon:"🎁", color:"#3FE0A0" };
-  if (drop.type === "shard") return { icon:"🔮", color:"#8B7CF6" };
-  if (drop.type === "vipHours") return { icon:"👑", color:"#F2C879" };
-  if (drop.type === "coins") return { icon:"💰", color:"#3FE0A0" };
+  if (!drop) return { icon:_prizeIconSvg("coins"), color:"#3FE0A0" };
+  if (drop.type === "shard") return { icon:_prizeIconSvg("shard"), color:"#8B7CF6" };
+  if (drop.type === "vipHours") return { icon:_prizeIconSvg("vipHours"), color:"#F2C879" };
+  if (drop.type === "coins") return { icon:_prizeIconSvg("coins"), color:"#3FE0A0" };
   if (drop.type === "item") {
     const rc = { Rare:"#4E8FE0", Epic:"#B15EF0", Legendary:"#F2A93B" }[drop.rarity] || "#3FE0A0";
-    return { icon:"🎨", color:rc };
+    return { icon:_prizeIconSvg("item", drop.rarity), color:rc };
   }
-  return { icon:"🎁", color:"#3FE0A0" };
+  return { icon:_prizeIconSvg("coins"), color:"#3FE0A0" };
 }
-const CAROUSEL_FILLER_ICONS = ["🪙","🔮","👑","🎁","💎","🍀","⭐","🎨"];
-const CAROUSEL_FILLER_COLORS = ["#4E8FE0","#B15EF0","#F2A93B","#3FE0A0","#8B7CF6","#F2C879"];
-function chestCarouselHtml(drop){
+const PRIZE_TYPE_COLORS = { coins:"#F2A93B", shard:"#B15EF0", vipHours:"#F2C879", item:"#3FE0A0" };
+function chestCarouselHtml(drop, possibleTypes){
   const win = _dropVisual(drop);
+  // Комірки-заповнювачі показують ЛИШЕ ті типи призів, які реально може
+  // дати цей конкретний кейс (а не довільний набір decorative-іконок) —
+  // якщо типи невідомі (старий виклик без possibleTypes), лишаємо повний
+  // набір як безпечний фолбек.
+  const types = (possibleTypes && possibleTypes.length) ? possibleTypes : ["coins","shard","vipHours","item"];
   const total = 24, winIndex = 18;
   let cards = "";
   for (let i=0;i<total;i++){
     if (i === winIndex) {
       cards += `<div class="carousel-card win" id="carouselWinCard" style="--rc:${win.color};">${win.icon}</div>`;
     } else {
-      const icon = CAROUSEL_FILLER_ICONS[Math.floor(Math.random()*CAROUSEL_FILLER_ICONS.length)];
-      const color = CAROUSEL_FILLER_COLORS[Math.floor(Math.random()*CAROUSEL_FILLER_COLORS.length)];
+      const type = types[Math.floor(Math.random()*types.length)];
+      const rarity = type === "item" ? ["Rare","Epic","Legendary"][Math.floor(Math.random()*3)] : null;
+      const icon = _prizeIconSvg(type, rarity);
+      const color = type === "item" ? ({Rare:"#4E8FE0",Epic:"#B15EF0",Legendary:"#F2A93B"}[rarity]) : PRIZE_TYPE_COLORS[type];
       cards += `<div class="carousel-card tinted" style="--rc:${color};">${icon}</div>`;
     }
   }
@@ -1668,12 +1738,12 @@ function startCarouselAnim(){
     }, 4550);
   }));
 }
-function chestOpenSceneHtml(chestId, chestName, resultText, drop){
+function chestOpenSceneHtml(chestId, chestName, resultText, drop, possibleTypes){
   const rv = _rewardVisual(resultText);
   return `
     <div class="mh" style="text-align:center;">🎁 ${esc(chestName)}</div>
     <div class="sub" style="text-align:center; margin-bottom:2px;">Відкриваємо...</div>
-    ${chestCarouselHtml(drop)}
+    ${chestCarouselHtml(drop, possibleTypes)}
     <div class="mh reward-pop" style="text-align:center; animation-delay:4.8s;">🎉 Вітаємо!</div>
     <div class="reward-card reward-pop" style="--rc:${rv.color}; animation-delay:4.8s;">
       <div class="reward-card-icon">${rv.icon}</div>
@@ -1779,7 +1849,7 @@ async function craftChest(recipeId){
     try {
       const r = await apiRaw("craft_chest", { recipeId });
       if (!r.ok) { toast(r.error === "insufficient_shards" ? "Недостатньо осколків" : "Помилка", "err"); return; }
-      showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText, r.drop));
+      showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText, r.drop, r.possibleTypes));
       startCarouselAnim();
       await refreshDashboard();
       if (TAB === "craft") renderCraft();
@@ -1791,7 +1861,7 @@ async function craftPaidChest(chestId){
     try {
       const r = await apiRaw("craft_paid_chest", { chestId });
       if (!r.ok) { toast(r.error === "insufficient_shards" ? "Недостатньо осколків" : "Помилка", "err"); return; }
-      showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText, r.drop));
+      showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText, r.drop, r.possibleTypes));
       startCarouselAnim();
       await refreshDashboard();
       if (TAB === "craft") renderCraft();
@@ -1874,7 +1944,7 @@ function paintInventory(){
     </div>
 
     <div class="h2">📦 Кейси-слоти <span class="hint">${CHEST_SLOTS_STATE.length}/${CHEST_SLOTS_MAX_CLIENT}</span></div>
-    <button class="btn secondary sm" style="margin-bottom:10px;" onclick="openPaidChestsModal()">🧧 Кейси — платні (відкрити зараз)</button>
+    <button class="btn secondary sm" style="margin-bottom:10px;" onclick="openPaidChestsModal()">🧧 Кейси</button>
     <div id="chestSlotsGrid">${slotsSectionHtml()}</div>
 
     <div class="h2">Заряди</div>
@@ -1905,11 +1975,10 @@ function openMyItemsModal(){
 // Магазині), відкриття кейса й нарахування призу відбувається одразу, без
 // слотів (це стосується лише безкоштовних кейсів з ігор).
 function openPaidChestsModal(){
-  showModal(`<div class="mh">🧧 Кейси — платні</div>
-    <div class="sub" style="margin:-2px 2px 10px;">Кейс відкривається одразу після покупки, за поточну вартість.</div>
-    <div class="list" id="buyChestListModal">${buyChestListHtml()}</div>`);
-  document.querySelectorAll("#buyChestListModal [data-buy-chest]").forEach(el =>
-    el.addEventListener("click", () => openBuyChestSheet(el.getAttribute("data-buy-chest"))));
+  showModal(`<div class="mh">🧧 Кейси</div>
+    <div id="ownedChestsModalWrap">${ownedChestsListHtml()}</div>`);
+  document.querySelectorAll("#ownedChestsModalWrap [data-owned-chest]").forEach(el =>
+    el.addEventListener("click", () => openOwnedChestGroup(el.getAttribute("data-owned-chest"))));
 }
 
 // ── Мої скіни: спочатку обираємо гру, потім бачимо скіни саме з неї ──
@@ -2146,50 +2215,9 @@ async function chestSlotOpen(row){
   try {
     const r = await api("chest_slot_open", { row });
     if (!r.ok) { closeModal(); toast(r.error === "not_ready" ? "Ще не готово" : "Помилка", "err"); return; }
-    showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText, r.drop));
+    showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText, r.drop, r.possibleTypes));
     startCarouselAnim();
     await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
-  } catch(e) { closeModal(); toast("Помилка: " + (e && e.message || e), "err"); console.error(e); }
-}
-
-// ── Покупка кейсу — платні кейси відкриваються МИТТЄВО (не через
-// слоти — слоти лише для безкоштовних кейсів з ігор) ──
-function buyChestListHtml(){
-  const r = CHESTS_STATE;
-  if (!r) return "";
-  return (r.chests||[]).map(c => {
-    const locked = r.balance < c.cost;
-    return `<div class="item" data-buy-chest="${c.id}" style="cursor:pointer">
-      <div style="flex:none;">${chestArtSvg(c.id, 34)}</div>
-      <div class="txt"><div class="t">${esc(c.name)}</div><div class="s">${esc(c.desc)}</div></div>
-      <div class="right mono" style="color:${locked?'var(--text-faint)':'var(--brass-bright)'}; font-weight:700;">${c.cost} 💰</div>
-    </div>`;
-  }).join("");
-}
-function openBuyChestSheet(chestId){
-  const c = CHESTS_STATE.chests.find(x => x.id === chestId);
-  if (!c) return;
-  const locked = CHESTS_STATE.balance < c.cost;
-  showModal(`
-    <div style="display:flex; justify-content:center; margin-bottom:8px;">${chestArtSvg(c.id, 84)}</div>
-    <div class="mh" style="text-align:center;">${esc(c.name)}</div>
-    <div class="sub" style="margin-bottom:10px; text-align:center;">${esc(c.desc)}</div>
-    <div class="list" style="margin-bottom:14px;">${c.drops.map(d => `
-      <div class="item"><div class="ic mono" style="font-size:12px;">${d.chance}%</div><div class="txt"><div class="t">${esc(dropLabel(d))}</div></div></div>
-    `).join("")}</div>
-    <button class="btn" ${locked?'disabled':''} onclick="buyChest('${c.id}')">${locked?'Недостатньо á-coin':('🎁 Відкрити зараз — '+c.cost+' 💰')}</button>
-  `);
-}
-async function buyChest(chestId){
-  closeModal();
-  showModal(`<div class="mh" style="text-align:center;">🎁 Купуємо...</div><div style="display:flex; justify-content:center; padding:20px 0;"><div class="spin"></div></div>`);
-  try {
-    const r = await apiRaw("chest_open", { chestId });
-    if (!r.ok) { closeModal(); toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
-    showModal(chestOpenSceneHtml(r.chest.id, r.chest.name, r.resultText, r.drop));
-    startCarouselAnim();
-    await refreshDashboard();
-    await loadShopChests(); // no-op, якщо ми не на вкладці Магазину (наприклад, купили з Інвентаря)
   } catch(e) { closeModal(); toast("Помилка: " + (e && e.message || e), "err"); console.error(e); }
 }
 
@@ -2297,7 +2325,7 @@ async function claimVipDaily(kind, btn){
         toast(msg, "err"); return;
       }
       const fallbackName = kind === "silver" ? "🥈 Срібна скриня" : "«Авангард»";
-      showModal(chestOpenSceneHtml(r.chestId || kind, r.chestName || fallbackName, r.resultText, r.drop));
+      showModal(chestOpenSceneHtml(r.chestId || kind, r.chestName || fallbackName, r.resultText, r.drop, r.possibleTypes));
       startCarouselAnim();
       await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
     } catch(e) { toast("Помилка з'єднання", "err"); }
