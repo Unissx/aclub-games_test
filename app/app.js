@@ -614,6 +614,43 @@ window.addEventListener("message", (e) => {
 
 // Підтягуємо рівні апгрейдів (максимум, якщо VIP активний) і передаємо
 // їх у query-параметрах, які Runner читає сам при старті.
+let RUNNER_LB_SUB = "weekly";
+function openRunnerLeaderboard(){
+  showModal(`
+    <div class="mh" style="text-align:center;">🏆 Топ гравців Runner</div>
+    <div class="tabs2" id="runnerLbTabs">
+      <div class="t2 ${RUNNER_LB_SUB==='weekly'?'active':''}" data-rlb="weekly">📅 Тиждень</div>
+      <div class="t2 ${RUNNER_LB_SUB==='alltime'?'active':''}" data-rlb="alltime">⭐ За весь час</div>
+    </div>
+    <div id="runnerLbBody">${loadingBlock()}</div>
+  `);
+  document.querySelectorAll("#runnerLbTabs [data-rlb]").forEach(el => {
+    el.addEventListener("click", () => { RUNNER_LB_SUB = el.getAttribute("data-rlb"); openRunnerLeaderboard(); });
+  });
+  loadRunnerLeaderboard();
+}
+async function loadRunnerLeaderboard(){
+  const wrap = document.getElementById("runnerLbBody");
+  if (!wrap) return;
+  try {
+    const r = await api(RUNNER_LB_SUB === "weekly" ? "runner_leaderboard_weekly" : "runner_leaderboard_alltime");
+    if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
+    const medals = ["🥇","🥈","🥉"];
+    wrap.innerHTML = (r.top.length ? `<div class="list">` + r.top.map(u => `
+      <div class="item" style="${u.userId===USER_ID?'border-color:var(--success);':''}">
+        <div class="ic">${medals[u.place-1] || ("#"+u.place)}</div>
+        <div class="txt"><div class="t">${esc(u.name)}${u.userId===USER_ID?' (ви)':''}</div></div>
+        <div class="right badge">${fmt(u.score)} 🏃</div>
+      </div>`).join("") + `</div>` : emptyBlock("🏃","Ще немає результатів","Зіграй першим — потрап у топ!")) +
+      (r.me && r.me.place > 10 ? `
+        <div class="h2">Ваше місце</div>
+        <div class="item"><div class="ic">#${r.me.place}</div>
+          <div class="txt"><div class="t">${esc(r.me.name)} (ви)</div></div>
+          <div class="right badge">${fmt(r.me.score)} 🏃</div>
+        </div>` : "") +
+      `<div class="sub" style="margin-top:10px; text-align:center;">${RUNNER_LB_SUB==='weekly' ? 'Найкращий забіг цього тижня. ' : 'Найкращий забіг за весь час. '}Учасників: ${r.totalParticipants}</div>`;
+  } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
+}
 async function playRunner(){
   let params = { bird:0, shield:0, magnet:0, uspeed:0, ulives:0, equippedCharacter:null, equippedBird:null, equippedObstacles:null, equippedWeather:null, equippedBoss:null };
   try {
@@ -675,7 +712,10 @@ function renderGames(){
     <div class="game-card">
       <div class="gt">🏃 áClub Runner</div>
       <div class="gd">Біжи через перешкоди, збирай яблука, потрапляй у топ тижневого турніру.</div>
-      <button class="btn" onclick="playRunner()">🎮 Грати${vipActive ? ' — VIP (Максимальний рівень)' : ''}</button>
+      <div class="btn-row">
+        <button class="btn" style="flex:1;" onclick="playRunner()">🎮 Грати${vipActive ? ' — VIP' : ''}</button>
+        <button class="btn secondary" style="flex:1;" onclick="openRunnerLeaderboard()">🏆 Топ гравців</button>
+      </div>
     </div>
 
     <div class="game-card">
