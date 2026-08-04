@@ -133,7 +133,12 @@ function renderNav(){
 }
 
 function nav(tab){
-  if (TAB === "chat" && tab !== "chat") stopChatPolling();
+  if (TAB === "chat" && tab !== "chat") {
+    stopChatPolling();
+    stopChatViewportWatch();
+    const navbar = document.getElementById("navbar");
+    if (navbar) navbar.style.display = "";
+  }
   TAB = tab;
   renderNav();
   render();
@@ -141,6 +146,27 @@ function nav(tab){
 
 let BOOT_WATCHDOG = null;
 
+// ── Клавіатура на мобільних (особливо iOS Safari в Telegram) інколи не
+// стискає layout-viewport, а фіксовані елементи (навбар) лишаються
+// поверх клавіатури й перекривають контент. Visual Viewport API дає
+// РЕАЛЬНУ видиму висоту незалежно від цих особливостей — надійніше, ніж
+// покладатись лише на focus/blur конкретного поля. ──
+let _fullViewportH = window.innerHeight;
+function _setupKeyboardAwareLayout(){
+  if (!window.visualViewport) return;
+  window.visualViewport.addEventListener("resize", () => {
+    const vh = window.visualViewport.height;
+    const keyboardOpen = (_fullViewportH - vh) > 150; // клавіатура точно займає більше за 150px
+    const navbar = document.getElementById("navbar");
+    if (navbar) navbar.style.display = keyboardOpen ? "none" : "";
+    // Якщо зараз відкритий чат — розтягуємо список повідомлень у звільнений простір.
+    const chatMessages = document.getElementById("chatMessages");
+    if (chatMessages) {
+      chatMessages.style.maxHeight = keyboardOpen ? Math.max(120, vh - 150) + "px" : "56vh";
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  });
+}
 async function boot(){
   if (!USER_ID) {
     document.getElementById("screen").innerHTML = emptyBlock("🔒","Немає доступу","Відкрийте застосунок кнопкою в боті — так ми дізнаємось, хто ви.");
@@ -2516,6 +2542,7 @@ let CHAT_REPLY_TO = null;   // {id, name, text} — повідомлення, н
 let CHAT_EDITING_ID = null; // id повідомлення, яке зараз редагується
 let CHAT_MUTED_UNTIL = null;
 
+let CHAT_VV_LISTENER = null;
 function renderChat(){
   const screen = document.getElementById("screen");
   screen.innerHTML = `
@@ -2532,6 +2559,45 @@ function renderChat(){
   CHAT_EDITING_ID = null;
   loadChat();
   startChatPolling();
+
+  // На iOS focus/blur ненадійні для визначення відкритої клавіатури —
+  // Visual Viewport API натомість показує РЕАЛЬНУ видиму висоту екрана,
+  // тому саме на нього орієнтуємось. Коли клавіатура з'їдає простір —
+  // ховаємо навбар і розтягуємо список повідомлень у звільнений простір
+  // замість того щоб лишати порожню зону.
+  const messages = document.getElementById("chatMessages");
+  const navbar = document.getElementById("navbar");
+  const fullHeight = window.innerHeight;
+  function applyViewport(){
+    if (!document.getElementById("chatMessages")) { stopChatViewportWatch(); return; } // вкладку покинули
+    const vv = window.visualViewport;
+    const visH = vv ? vv.height : window.innerHeight;
+    const keyboardOpen = (fullHeight - visH) > 120; // поріг у px, щоб не спрацьовувало на дрібні зміни адресного рядка
+    if (navbar) navbar.style.display = keyboardOpen ? "none" : "";
+    // Висота списку повідомлень = видима висота мінус те, що вище нього
+    // (шапка) і нижче (банер муту/відповіді + поле вводу) — рахуємо
+    // динамічно, а не фіксованим відсотком, щоб чат реально "з'їдав"
+    // простір, звільнений від навбару.
+    const rect = messages.getBoundingClientRect();
+    const belowH = document.getElementById("chatReplyBar").offsetHeight
+      + document.getElementById("chatMuteBanner").offsetHeight
+      + 60; // приблизна висота рядка з полем вводу + відступи
+    const avail = visH - rect.top - belowH;
+    messages.style.maxHeight = Math.max(160, avail) + "px";
+  }
+  if (window.visualViewport) {
+    CHAT_VV_LISTENER = applyViewport;
+    window.visualViewport.addEventListener("resize", CHAT_VV_LISTENER);
+    window.visualViewport.addEventListener("scroll", CHAT_VV_LISTENER);
+  }
+  applyViewport();
+}
+function stopChatViewportWatch(){
+  if (CHAT_VV_LISTENER && window.visualViewport) {
+    window.visualViewport.removeEventListener("resize", CHAT_VV_LISTENER);
+    window.visualViewport.removeEventListener("scroll", CHAT_VV_LISTENER);
+  }
+  CHAT_VV_LISTENER = null;
 }
 function startChatPolling(){
   stopChatPolling();
@@ -3253,4 +3319,5 @@ async function adminAction(action, payload, okMsg){
 // ============================================================
 // СТАРТ
 // ============================================================
+_setupKeyboardAwareLayout();
 boot();
