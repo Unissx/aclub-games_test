@@ -164,6 +164,11 @@ function nav(tab){
   TAB = tab;
   renderNav();
   render();
+  // Легке фонове оновлення шапки (баланс/осколки/VIP) при кожному переході
+  // між вкладками — щоб зміни, зроблені деінде (покупка, VIP, прогноз),
+  // завжди були видно одразу, а не тільки після ручного перезаходу.
+  // Не блокує рендер вкладки — просто підтягує свіжі дані у фоні.
+  refreshDashboard().catch(() => {});
 }
 
 let BOOT_WATCHDOG = null;
@@ -817,6 +822,7 @@ async function rollLucky(guess){
       <div class="mh" style="text-align:center; font-size:14px;">${r.isWin ? '🎉 Перемога!' : '😅 Не цього разу'}</div>
       <div class="sub" style="text-align:center; font-size:13px; margin-bottom:4px;">Випало число: <b style="color:var(--brass-bright); font-size:16px;">${r.diceVal}</b> (ви обрали ${guess})</div>
       <div class="sub" style="text-align:center;">${r.isWin ? `Нараховано <b style="color:var(--success);">+${r.reward} á-coin</b>` : "Спробуйте ще раз, якщо є спроби."}</div>
+      ${r.chestWon ? `<div class="sub" style="text-align:center; margin-top:4px; color:var(--legendary);">🎁 Бонус: кейс «${esc(r.chestWon.chestName)}» — дивись в «Інвентарі»!</div>` : ""}
       <div class="sub" style="text-align:center; margin-top:4px;">Спроб залишилось сьогодні: <b>${r.attemptsLeft}</b></div>
     </div>`;
   await refreshDashboard();
@@ -1798,9 +1804,9 @@ function paintInventory(){
     <div class="h2">🎁 Щоденні VIP-бонуси</div>
     <div class="list">
       <div class="item"><div class="ic">🥈</div><div class="txt"><div class="t">Безкоштовний Silver Chest</div><div class="s">Раз на добу, відкривається одразу</div></div>
-        <button class="btn sm" style="width:auto; padding:8px 12px;" ${(!vip.active||vip.dailySilverClaimed)?'disabled':''} onclick="claimVipDaily('silver')">${vip.dailySilverClaimed?'Отримано':'Забрати'}</button></div>
+        <button class="btn sm" style="width:auto; padding:8px 12px;" ${(!vip.active||vip.dailySilverClaimed)?'disabled':''} onclick="claimVipDaily('silver',this)">${vip.dailySilverClaimed?'Отримано':'Забрати'}</button></div>
       <div class="item"><div class="ic">💰</div><div class="txt"><div class="t">Безкоштовний «Авангард»</div><div class="s">Раз на добу, відкривається одразу</div></div>
-        <button class="btn sm" style="width:auto; padding:8px 12px;" ${(!vip.active||vip.dailyAvangardClaimed)?'disabled':''} onclick="claimVipDaily('avangard')">${vip.dailyAvangardClaimed?'Отримано':'Забрати'}</button></div>
+        <button class="btn sm" style="width:auto; padding:8px 12px;" ${(!vip.active||vip.dailyAvangardClaimed)?'disabled':''} onclick="claimVipDaily('avangard',this)">${vip.dailyAvangardClaimed?'Отримано':'Забрати'}</button></div>
       <div class="item"><div class="ic">⚡️</div><div class="txt"><div class="t">Миттєве розблокування</div><div class="s">1 раз на добу, для кейсу що розблоковується</div></div>
         <div class="badge ${vip.dailyInstantUnlockClaimed?'ok':''}">${vip.dailyInstantUnlockClaimed?'Використано':(vip.active?'Доступно':'—')}</div></div>
     </div>
@@ -2220,19 +2226,20 @@ async function activateVipTicket(row){
     } catch(e) { toast("Помилка з'єднання", "err"); }
   }, "Активувати");
 }
-async function claimVipDaily(kind){
-  toast("Обробляємо...", "ok");
-  try {
-    const r = await api(kind === "silver" ? "vip_daily_silver" : "vip_daily_avangard");
-    if (!r.ok) {
-      const msg = r.error === "already_claimed" ? "Вже отримано сьогодні" : (r.error === "vip_required" ? "Потрібен активний VIP" : "Помилка");
-      toast(msg, "err"); return;
-    }
-    const fallbackName = kind === "silver" ? "🥈 Срібна скриня" : "«Авангард»";
-    showModal(chestOpenSceneHtml(r.chestId || kind, r.chestName || fallbackName, r.resultText, r.drop));
-    startCarouselAnim();
-    await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
-  } catch(e) { toast("Помилка з'єднання", "err"); }
+async function claimVipDaily(kind, btn){
+  await withBtnLoading(btn, async () => {
+    try {
+      const r = await api(kind === "silver" ? "vip_daily_silver" : "vip_daily_avangard");
+      if (!r.ok) {
+        const msg = r.error === "already_claimed" ? "Вже отримано сьогодні" : (r.error === "vip_required" ? "Потрібен активний VIP" : "Помилка");
+        toast(msg, "err"); return;
+      }
+      const fallbackName = kind === "silver" ? "🥈 Срібна скриня" : "«Авангард»";
+      showModal(chestOpenSceneHtml(r.chestId || kind, r.chestName || fallbackName, r.resultText, r.drop));
+      startCarouselAnim();
+      await Promise.all([refreshDashboard(), loadInventoryData()]); paintInventory();
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+  });
 }
 async function claimVipInstantUnlock(row){
   try {
