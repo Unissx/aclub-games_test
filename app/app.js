@@ -39,6 +39,33 @@ async function apiRaw(type, payload){
 
 function fmt(n){ return (n ?? 0).toLocaleString("uk-UA"); }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ── Індикатор завантаження на кнопках дій (покупка, ставка тощо) ──
+// GAS-бекенд іноді відповідає із затримкою 2-5 сек (LockService, робота
+// з таблицями, зовнішні API) — без візуального індикатора це виглядає
+// як "зависло". Ця функція тимчасово показує спінер замість тексту
+// кнопки на час виконання дії, і повертає як було, якщо кнопка ще жива
+// (не була замінена перемальовуванням екрану).
+(function _injectSpinnerCss(){
+  const style = document.createElement("style");
+  style.textContent = `@keyframes _btnspin{to{transform:rotate(360deg);}}
+    .btn-spinner{display:inline-block; width:14px; height:14px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:_btnspin .7s linear infinite; vertical-align:-2px;}`;
+  document.head.appendChild(style);
+})();
+async function withBtnLoading(btn, fn){
+  if (!btn) return fn();
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="btn-spinner"></span>`;
+  try {
+    return await fn();
+  } finally {
+    if (document.body.contains(btn)) {
+      btn.innerHTML = original;
+      btn.disabled = false;
+    }
+  }
+}
 // ПІБ зберігається як "Прізвище Ім'я По-батькові" — для привітання показуємо
 // лише ім'я (друге слово), а не все ПІБ повністю. Скрізь, де ім'я
 // використовується для звірки/пошуку записів (замовлення, ефекти тощо),
@@ -928,20 +955,21 @@ function paintUpgrades(kind, r){
       <div class="sub" style="margin:6px 0;">${esc(upg.desc)}</div>
       <div class="progress" style="margin-bottom:8px;"><div style="width:${(vipActive?maxLevel:cur)/maxLevel*100}%"></div></div>
       <div class="sub" style="margin:0 0 10px;">Зараз (куплено): ${esc(effect)}${!maxed?` · Далі: ${esc(upg.effects[cur])} — ${price} 💰`:''}</div>
-      <button class="btn sm" ${maxed || r.balance < price ? 'disabled' : ''} onclick="buyUpgrade('${kind}','${key}')">
+      <button class="btn sm" ${maxed || r.balance < price ? 'disabled' : ''} onclick="buyUpgrade('${kind}','${key}',this)">
         ${maxed ? '✅ Максимум' : (r.balance < price ? 'Недостатньо á-coin' : `Купити рів. ${cur+1} — ${price} 💰`)}
       </button>
     </div>`;
   }).join("") + `</div>`;
 }
-async function buyUpgrade(kind, key){
-  toast("Обробляємо...", "ok");
-  try {
-    const r = await api(kind === "runner" ? "upgrades_runner_buy" : "upgrades_wordle_buy", { key });
-    if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
-    toast("Апгрейд придбано!", "ok");
-    await refreshDashboard(); loadUpgrades(kind);
-  } catch(e) { toast("Помилка з'єднання", "err"); }
+async function buyUpgrade(kind, key, btn){
+  await withBtnLoading(btn, async () => {
+    try {
+      const r = await api(kind === "runner" ? "upgrades_runner_buy" : "upgrades_wordle_buy", { key });
+      if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
+      toast("Апгрейд придбано!", "ok");
+      await refreshDashboard(); loadUpgrades(kind);
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+  });
 }
 
 // ============================================================
@@ -2167,6 +2195,7 @@ async function buyVipTicket(ticketId){
   const t = VIP_TICKET_DEFS[ticketId];
   if (!t) { toast("Помилка: невідомий тикет", "err"); return; }
   showConfirmModal(`Придбати VIP-тикет «${t.label}» за ${t.price} á-coin?`, async () => {
+    toast("Обробляємо...", "ok");
     try {
       const r = await api("vip_buy_ticket", { ticketId });
       if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : "Помилка", "err"); return; }
@@ -2192,6 +2221,7 @@ async function activateVipTicket(row){
   }, "Активувати");
 }
 async function claimVipDaily(kind){
+  toast("Обробляємо...", "ok");
   try {
     const r = await api(kind === "silver" ? "vip_daily_silver" : "vip_daily_avangard");
     if (!r.ok) {
@@ -2418,9 +2448,9 @@ async function loadPredMatches(){
         </div>
         <div id="pmode_outcome_${m.matchId}">
           <div class="row" style="gap:6px;">
-            <button class="btn secondary sm" style="flex:1;" onclick="predSetOutcome('${m.matchId}','HOME')" id="po_HOME_${m.matchId}">${esc(m.home)}</button>
-            <button class="btn secondary sm" style="flex:1;" onclick="predSetOutcome('${m.matchId}','DRAW')" id="po_DRAW_${m.matchId}">Нічия</button>
-            <button class="btn secondary sm" style="flex:1;" onclick="predSetOutcome('${m.matchId}','AWAY')" id="po_AWAY_${m.matchId}">${esc(m.away)}</button>
+            <button class="btn secondary sm" style="flex:1;" onclick="predSetOutcome('${m.matchId}','HOME',this)" id="po_HOME_${m.matchId}">${esc(m.home)}</button>
+            <button class="btn secondary sm" style="flex:1;" onclick="predSetOutcome('${m.matchId}','DRAW',this)" id="po_DRAW_${m.matchId}">Нічия</button>
+            <button class="btn secondary sm" style="flex:1;" onclick="predSetOutcome('${m.matchId}','AWAY',this)" id="po_AWAY_${m.matchId}">${esc(m.away)}</button>
           </div>
         </div>
         <div id="pmode_score_${m.matchId}" style="display:none;">
@@ -2429,7 +2459,7 @@ async function loadPredMatches(){
             <div style="font-weight:900; opacity:.4;">:</div>
             <input type="number" min="0" max="30" class="field" id="pm_a_${m.matchId}" placeholder="-" style="width:50px; height:44px; text-align:center; font-size:17px; font-weight:800; padding:0;">
           </div>
-          <button class="btn sm" style="margin-top:10px;" onclick="savePredictionScore('${m.matchId}')">💾 Поставити прогноз</button>
+          <button class="btn sm" style="margin-top:10px;" onclick="savePredictionScore('${m.matchId}',this)">💾 Поставити прогноз</button>
         </div>`;
       }
 
@@ -2445,24 +2475,28 @@ function predSwitchMode(matchId, mode){
   document.getElementById(`pmode_outcome_${matchId}`).style.display = mode==="outcome" ? "" : "none";
   document.getElementById(`pmode_score_${matchId}`).style.display = mode==="score" ? "" : "none";
 }
-async function predSetOutcome(matchId, outcome){
-  try {
-    const r = await api("predictions_submit", { matchId, predType: "outcome", home: outcome });
-    if (!r.ok) toast(r.error === "match_locked" ? "Прийом прогнозів на цей матч закрито" : (r.error === "already_predicted" ? "Прогноз уже зроблено" : "Помилка"), "err");
-    else toast("Прогноз зроблено!", "ok");
-  } catch(e) { toast("Помилка з'єднання", "err"); }
-  loadPredMatches();
+async function predSetOutcome(matchId, outcome, btn){
+  await withBtnLoading(btn, async () => {
+    try {
+      const r = await api("predictions_submit", { matchId, predType: "outcome", home: outcome });
+      if (!r.ok) toast(r.error === "match_locked" ? "Прийом прогнозів на цей матч закрито" : (r.error === "already_predicted" ? "Прогноз уже зроблено" : "Помилка"), "err");
+      else toast("Прогноз зроблено!", "ok");
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+    loadPredMatches();
+  });
 }
-async function savePredictionScore(matchId){
+async function savePredictionScore(matchId, btn){
   const home = document.getElementById("pm_h_"+matchId).value;
   const away = document.getElementById("pm_a_"+matchId).value;
   if (home === "" || away === "") { toast("Введіть рахунок обох команд", "err"); return; }
-  try {
-    const r = await api("predictions_submit", { matchId, predType: "score", home, away });
-    if (!r.ok) toast(r.error === "match_locked" ? "Прийом прогнозів на цей матч закрито" : (r.error === "already_predicted" ? "Прогноз уже зроблено" : "Помилка"), "err");
-    else toast("Прогноз збережено!", "ok");
-  } catch(e) { toast("Помилка з'єднання", "err"); }
-  loadPredMatches();
+  await withBtnLoading(btn, async () => {
+    try {
+      const r = await api("predictions_submit", { matchId, predType: "score", home, away });
+      if (!r.ok) toast(r.error === "match_locked" ? "Прийом прогнозів на цей матч закрито" : (r.error === "already_predicted" ? "Прогноз уже зроблено" : "Помилка"), "err");
+      else toast("Прогноз збережено!", "ok");
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+    loadPredMatches();
+  });
 }
 async function loadPredMy(){
   const wrap = document.getElementById("predBody");
