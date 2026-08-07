@@ -479,7 +479,13 @@ async function loadMyItems(containerId){
       </div>`;
     }).join("") + `</div><button class="btn secondary" style="margin-top:12px;" onclick="openMyMerchModal()">📦 Мій мерч — історія</button>`;
     wrap.querySelectorAll("[data-item-row]").forEach(el => {
-      el.addEventListener("click", () => openItemDetail(parseInt(el.getAttribute("data-item-row")), el.getAttribute("data-merch")==="1", r.items.find(x=>x.row==el.getAttribute("data-item-row"))));
+      const isMerchEl = el.getAttribute("data-merch")==="1";
+      const rowNum = parseInt(el.getAttribute("data-item-row"));
+      // ВАЖЛИВО: шукаємо за row І isMerch РАЗОМ — звичайні товари й мерч
+      // читаються з різних діапазонів колонок одного аркуша, тож номери
+      // рядків можуть збігатися між ними. Пошук лише за row міг підхопити
+      // не той об'єкт (напр. крафт-скін замість мерчу з тим самим row).
+      el.addEventListener("click", () => openItemDetail(rowNum, isMerchEl, r.items.find(x => x.row == rowNum && !!x.isMerch === isMerchEl)));
     });
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
 }
