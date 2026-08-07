@@ -3387,8 +3387,8 @@ async function loadAdminMerch(){
   try {
     const r = await api("admin_merch_list", ADMIN_MERCH_SUB === "progress" ? { inProgress:true } : { onlyNew:true });
     const tabsHtml = `<div class="tabs2" id="merchSubTabs">
-      <div class="t2 ${ADMIN_MERCH_SUB==='new'?'active':''}" data-msub="new">🆕 Нові</div>
-      <div class="t2 ${ADMIN_MERCH_SUB==='progress'?'active':''}" data-msub="progress">🚚 В роботі</div>
+      <div class="t2 ${ADMIN_MERCH_SUB==='new'?'active':''}" data-msub="new" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='new'; loadAdminMerch();">🆕 Нові</div>
+      <div class="t2 ${ADMIN_MERCH_SUB==='progress'?'active':''}" data-msub="progress" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='progress'; loadAdminMerch();">🚚 В роботі</div>
     </div>`;
     if (!r.ok || !r.orders.length) {
       wrap.innerHTML = tabsHtml + emptyBlock("✅", ADMIN_MERCH_SUB==='progress' ? "Немає замовлень в роботі" : "Нових замовлень немає", "");
@@ -3404,9 +3404,6 @@ async function loadAdminMerch(){
           </div>
         </div>`).join("") + `</div>`;
     }
-    document.querySelectorAll("#merchSubTabs [data-msub]").forEach(el => {
-      el.addEventListener("click", () => { ADMIN_MERCH_SUB = el.getAttribute("data-msub"); loadAdminMerch(); });
-    });
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
 }
 function adminMerchCancelConfirm(row){
