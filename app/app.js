@@ -52,6 +52,21 @@ function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({'&':'&am
     .btn-spinner{display:inline-block; width:14px; height:14px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:_btnspin .7s linear infinite; vertical-align:-2px;}`;
   document.head.appendChild(style);
 })();
+// Блокує ВСІ кнопки/поля картки матчу (не лише ту, по якій клікнули) на
+// час запиту — інакше можна встигнути натиснути другий варіант (напр.
+// "Нічия" одразу після "Перемога") поки перший запит ще в польоті, і
+// сервер отримає два запити майже одночасно (racecondition: спрацює
+// випадковий чи взагалі впаде помилкою при повторній спробі).
+async function withMatchCardLoading(matchId, fn){
+  const card = document.getElementById("predCard_"+matchId);
+  const controls = card ? Array.from(card.querySelectorAll("button, input")) : [];
+  controls.forEach(el => el.disabled = true);
+  try {
+    return await fn();
+  } finally {
+    if (document.body.contains(card)) controls.forEach(el => el.disabled = false);
+  }
+}
 async function withBtnLoading(btn, fn){
   if (!btn) return fn();
   const original = btn.innerHTML;
@@ -2562,7 +2577,7 @@ async function loadPredMatches(){
 
       return `<div class="card" style="margin-bottom:10px; background:linear-gradient(155deg, var(--panel3), rgba(10,14,28,.95)); overflow:hidden; padding:0;">
         <div style="padding:8px 14px; background:rgba(255,255,255,.04); font-size:11px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; opacity:.65;">${esc(m.league)} · ${_predDateFmt(m.kickoff)}</div>
-        <div style="padding:14px;">${teamsHtml}${bodyHtml}</div>
+        <div style="padding:14px;" id="predCard_${m.matchId}">${teamsHtml}${bodyHtml}</div>
       </div>`;
     }).join("");
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
@@ -2573,27 +2588,27 @@ function predSwitchMode(matchId, mode){
   document.getElementById(`pmode_score_${matchId}`).style.display = mode==="score" ? "" : "none";
 }
 async function predSetOutcome(matchId, outcome, btn){
-  await withBtnLoading(btn, async () => {
+  await withMatchCardLoading(matchId, () => withBtnLoading(btn, async () => {
     try {
       const r = await api("predictions_submit", { matchId, predType: "outcome", home: outcome });
       if (!r.ok) toast(r.error === "match_locked" ? "Прийом прогнозів на цей матч закрито" : (r.error === "already_predicted" ? "Прогноз уже зроблено" : "Помилка"), "err");
       else toast("Прогноз зроблено!", "ok");
     } catch(e) { toast("Помилка з'єднання", "err"); }
     loadPredMatches();
-  });
+  }));
 }
 async function savePredictionScore(matchId, btn){
   const home = document.getElementById("pm_h_"+matchId).value;
   const away = document.getElementById("pm_a_"+matchId).value;
   if (home === "" || away === "") { toast("Введіть рахунок обох команд", "err"); return; }
-  await withBtnLoading(btn, async () => {
+  await withMatchCardLoading(matchId, () => withBtnLoading(btn, async () => {
     try {
       const r = await api("predictions_submit", { matchId, predType: "score", home, away });
       if (!r.ok) toast(r.error === "match_locked" ? "Прийом прогнозів на цей матч закрито" : (r.error === "already_predicted" ? "Прогноз уже зроблено" : "Помилка"), "err");
       else toast("Прогноз збережено!", "ok");
     } catch(e) { toast("Помилка з'єднання", "err"); }
     loadPredMatches();
-  });
+  }));
 }
 async function loadPredMy(){
   const wrap = document.getElementById("predBody");
