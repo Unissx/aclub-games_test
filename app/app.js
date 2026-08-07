@@ -346,7 +346,11 @@ function renderProfile(){
       <div class="sub" style="margin:8px 0 10px;">Максимальна прокачка в іграх, пріоритет у підтримці, щоденні безкоштовні кейси та інші привілеї.</div>
       <div class="btn-row">
         <button class="btn secondary sm" style="flex:1;" onclick="showVipDetailsModal()">ℹ️ Детальніше</button>
-        ${vip.active ? "" : `<button class="btn sm" style="flex:1;" onclick="goToShopVip()">🛍 Придбати VIP</button>`}
+        ${vip.active ? "" : (
+          (vip.ticketsCount > 0)
+            ? `<button class="btn sm" style="flex:1;" onclick="openVipManageModal()">🎟 Активувати VIP (${vip.ticketsCount})</button>`
+            : `<button class="btn sm" style="flex:1;" onclick="goToShopVip()">🛍 Придбати VIP</button>`
+        )}
       </div>
     </div>
 
@@ -978,52 +982,63 @@ async function loadShopVip(){
 }
 
 // ── Кейси (покупка — потрапляє у слот в «Інвентарі») ──
+let PAID_CHESTS_STATE = [];
 async function loadShopChests(){
   const wrap = document.getElementById("shopBody");
   if (!wrap) return; // не на вкладці Магазину — нічого оновлювати
   try {
-    const r = await apiRaw("get_inventory"); // тягне і каталог (назви/описи), і CHESTS_STATE.balance
+    const r = await api("paid_chest_inventory_get");
     if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
-    CHESTS_STATE = r;
-    if (!CHEST_SLOTS_STATE.length) await loadInventoryData();
+    PAID_CHESTS_STATE = r.chests;
     wrap.innerHTML = ownedChestsListHtml();
-    wrap.querySelectorAll("[data-owned-chest]").forEach(el => el.addEventListener("click", () => openOwnedChestGroup(el.getAttribute("data-owned-chest"))));
+    bindOwnedChestClicks("#shopBody");
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
 }
 // Кейси більше не купуються тут напряму — їх можна лише виграти в іграх
-// (у майбутньому — придбати на торговому майданчику). Ця вкладка показує,
-// скільки НАЯВНИХ кейсів кожного типу вже є, і дозволяє відкрити (за
-// поточним переліком призів) або розібрати на осколки.
+// (у майбутньому — придбати на торговому майданчику), або отримати від
+// адміна безкоштовно. Ця вкладка показує, скільки НАЯВНИХ кейсів кожного
+// типу вже є (окремо — виграно / видано адміном), і дозволяє відкрити.
+// Ця інвентарна ПОВНІСТЮ окрема від 4-слотової системи "сундуків" — сюди
+// не діє ліміт слотів, кейси тут ніколи не "згорають".
 function ownedChestsListHtml(){
-  const owned = (CHEST_SLOTS_STATE || []).filter(s => s.kind === "paid");
-  const byId = {};
-  owned.forEach(s => { byId[s.chestId] = (byId[s.chestId] || 0) + 1; });
-  const catalog = (CHESTS_STATE && CHESTS_STATE.chests) || [];
-  if (!catalog.length) return emptyBlock("🧧","Немає даних","");
-  return `<div class="sub" style="margin:-2px 2px 10px;">Кейси випадають з ігор (Runner, Ребус, Щасливчик, Вгадай слово, Слова по колу). Тут можна відкрити наявні або розібрати на осколки.</div>
-    <div class="list">` + catalog.map(c => {
-      const count = byId[c.id] || 0;
-      return `<div class="item" data-owned-chest="${c.id}" style="cursor:${count>0?'pointer':'default'}; opacity:${count>0?1:.5};">
+  if (!PAID_CHESTS_STATE.length) return emptyBlock("🧧","Немає даних","");
+  return `<div class="sub" style="margin:-2px 2px 10px;">Кейси випадають з ігор (Runner, Ребус, Щасливчик, Вгадай слово, Слова по колу) або видаються адміном. Тут можна їх відкрити.</div>
+    <div class="list">` + PAID_CHESTS_STATE.map(c => {
+      const hasFree = c.granted > 0;
+      const rightLabel = c.total > 0
+        ? (hasFree ? `🎁 ×${c.granted}${c.won>0?` + ${c.won}`:''}` : `×${c.won}`)
+        : 'Немає';
+      return `<div class="item" ${c.total>0?`data-owned-chest="${c.id}" style="cursor:pointer;"`:'style="opacity:.5;"'}>
         <div style="flex:none;">${chestArtSvg(c.id, 34)}</div>
-        <div class="txt"><div class="t">${esc(c.name)}</div><div class="s">${esc(c.desc)}</div></div>
-        <div class="right badge ${count>0?'ok':''}">${count > 0 ? ('×'+count) : 'Немає'}</div>
+        <div class="txt"><div class="t">${esc(c.name)}</div><div class="s">${esc(c.desc)} · відкриття: ${c.cost} 💰${hasFree?' (безкоштовно є)':''}</div></div>
+        <div class="right badge ${c.total>0?'ok':''}">${rightLabel}</div>
       </div>`;
     }).join("") + `</div>`;
 }
-// Показує список конкретних екземплярів обраного типу кейса (якщо їх
-// декілька) — клік по будь-якому відкриває звичну модалку слота
-// (Відкрити / Розібрати), яка вже реалізована для «Кейси-слоти».
-function openOwnedChestGroup(chestId){
-  const rows = (CHEST_SLOTS_STATE || []).filter(s => s.kind === "paid" && s.chestId === chestId);
-  if (!rows.length) return;
-  if (rows.length === 1) { openChestSlotModal(rows[0].row); return; }
-  const c = (CHESTS_STATE.chests || []).find(x => x.id === chestId);
-  showModal(`<div class="mh" style="text-align:center;">${esc(c?c.name:chestId)} · ×${rows.length}</div>
-    <div class="list">${rows.map((s,i) => `
-      <div class="item" style="cursor:pointer" onclick="closeModal(); openChestSlotModal(${s.row})">
-        <div class="ic">🧧</div><div class="txt"><div class="t">Екземпляр ${i+1}</div><div class="s">${esc(s.status)}</div></div>
-        <div class="right">→</div>
-      </div>`).join("")}</div>`);
+function bindOwnedChestClicks(containerSelector){
+  document.querySelectorAll(`${containerSelector} [data-owned-chest]`).forEach(el =>
+    el.addEventListener("click", () => openPaidChestConfirm(el.getAttribute("data-owned-chest"))));
+}
+// Підтвердження відкриття: якщо є безкоштовні (видані адміном) — саме
+// вони спишуться ПЕРШИМИ автоматично, оплата за виграний лише якщо
+// безкоштовних вже немає.
+function openPaidChestConfirm(chestId){
+  const c = PAID_CHESTS_STATE.find(x => x.id === chestId);
+  if (!c || c.total <= 0) return;
+  const willBeFree = c.granted > 0;
+  const msg = willBeFree
+    ? `Відкрити «${c.name}»? Це безкоштовний кейс від адміна.`
+    : `Відкрити «${c.name}» за ${c.cost} á-coin?`;
+  showConfirmModal(msg, async () => {
+    try {
+      const r = await api("paid_chest_open", { chestId });
+      if (!r.ok) { toast(r.error === "insufficient_funds" ? "Недостатньо á-coin" : (r.error === "none_owned" ? "Кейсів цього типу вже немає" : "Помилка"), "err"); return; }
+      showModal(chestOpenSceneHtml(r.chestId, r.chestName, r.resultText, r.drop, r.possibleTypes));
+      startCarouselAnim();
+      await refreshDashboard();
+      await loadShopChests();
+    } catch(e) { toast("Помилка з'єднання", "err"); }
+  }, "Відкрити");
 }
 
 async function loadShopAbank(){
@@ -1781,8 +1796,13 @@ function chestOpenSceneHtml(chestId, chestName, resultText, drop, possibleTypes)
   `;
 }
 
-function openVipManageModal(){
+async function openVipManageModal(){
   const vip = (DASH && DASH.vip) || { active:false, until:null };
+  showModal(`<div class="mh">👑 VIP-статус</div>${loadingBlock()}`);
+  try {
+    const t = await api("vip_my_tickets");
+    if (t.ok) VIP_TICKETS_STATE = t.tickets;
+  } catch(e) {}
   showModal(`
     <div class="mh">👑 VIP-статус</div>
     <div class="row between" style="margin-bottom:8px;">
@@ -2003,11 +2023,15 @@ function openMyItemsModal(){
 // ── Кнопка "🧧 Кейси — платні" — каталог платних кейсів (той самий, що в
 // Магазині), відкриття кейса й нарахування призу відбувається одразу, без
 // слотів (це стосується лише безкоштовних кейсів з ігор).
-function openPaidChestsModal(){
+async function openPaidChestsModal(){
+  showModal(`<div class="mh">🧧 Кейси</div><div id="ownedChestsModalWrap">${loadingBlock()}</div>`);
+  try {
+    const r = await api("paid_chest_inventory_get");
+    if (r.ok) PAID_CHESTS_STATE = r.chests;
+  } catch(e) {}
   showModal(`<div class="mh">🧧 Кейси</div>
     <div id="ownedChestsModalWrap">${ownedChestsListHtml()}</div>`);
-  document.querySelectorAll("#ownedChestsModalWrap [data-owned-chest]").forEach(el =>
-    el.addEventListener("click", () => openOwnedChestGroup(el.getAttribute("data-owned-chest"))));
+  bindOwnedChestClicks("#ownedChestsModalWrap");
 }
 
 // ── Мої скіни: спочатку обираємо гру, потім бачимо скіни саме з неї ──
