@@ -3205,7 +3205,7 @@ async function loadAdminPred(){
           <div style="font-weight:800; font-size:14px;">🔁 Автоматичне оновлення</div>
           <div class="badge ${trigStatus.active?'ok':''}">${trigStatus.active?'Увімкнено':'Вимкнено'}</div>
         </div>
-        <div class="sub" style="margin:6px 0 10px;">Кожні 6 годин система сама підтягує нові матчі та синхронізує результати — не треба тиснути кнопки нижче вручну.</div>
+        <div class="sub" style="margin:6px 0 10px;">Кожні 2 години система сама підтягує нові матчі та синхронізує результати — не треба тиснути кнопки нижче вручну.</div>
         <button class="btn ${trigStatus.active?'secondary':''} sm" onclick="predToggleAutoTrigger(${!trigStatus.active})">${trigStatus.active?'⏹ Вимкнути':'▶️ Увімкнути автооновлення'}</button>
       </div>` : ""}
 
