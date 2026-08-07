@@ -3381,27 +3381,43 @@ async function adminTicketClose(row){
   if (r.ok) { toast("Закрито", "ok"); closeModal(); loadAdminSupport(); } else toast("Помилка", "err");
 }
 
+let ADMIN_MERCH_SUB = "new";
 async function loadAdminMerch(){
   const wrap = document.getElementById("adminBody");
   try {
-    const r = await api("admin_merch_list", { onlyNew:true });
-    if (!r.ok || !r.orders.length) { wrap.innerHTML = emptyBlock("✅","Нових замовлень немає",""); return; }
-    wrap.innerHTML = `<div class="list">` + r.orders.map(m => `
-      <div class="card">
-        <div style="font-weight:700; font-size:13px;">${esc(m.name)}</div>
-        <div class="sub" style="margin:4px 0;">🎁 ${esc(m.item)}<br>👥 ${esc(m.recipient||m.name)} · ${esc(m.city)} відд.${esc(m.branch)} · 📱 ${esc(m.phone)}</div>
-        <div class="btn-row">
-          <button class="btn secondary sm" onclick="adminMerchAct('accept', ${m.row})">✅ Прийнято</button>
-          <button class="btn secondary sm" onclick="adminMerchAct('sent', ${m.row})">📬 Відправлено</button>
-          <button class="btn danger sm" onclick="adminMerchAct('cancel', ${m.row})">❌</button>
-        </div>
-      </div>`).join("") + `</div>`;
+    const r = await api("admin_merch_list", ADMIN_MERCH_SUB === "progress" ? { inProgress:true } : { onlyNew:true });
+    const tabsHtml = `<div class="tabs2" id="merchSubTabs">
+      <div class="t2 ${ADMIN_MERCH_SUB==='new'?'active':''}" data-msub="new">🆕 Нові</div>
+      <div class="t2 ${ADMIN_MERCH_SUB==='progress'?'active':''}" data-msub="progress">🚚 В роботі</div>
+    </div>`;
+    if (!r.ok || !r.orders.length) {
+      wrap.innerHTML = tabsHtml + emptyBlock("✅", ADMIN_MERCH_SUB==='progress' ? "Немає замовлень в роботі" : "Нових замовлень немає", "");
+    } else {
+      wrap.innerHTML = tabsHtml + `<div class="list">` + r.orders.map(m => `
+        <div class="card">
+          <div style="font-weight:700; font-size:13px;">${esc(m.name)}</div>
+          <div class="sub" style="margin:4px 0;">🎁 ${esc(m.item)}<br>👥 ${esc(m.recipient||m.name)} · ${esc(m.city)} відд.${esc(m.branch)} · 📱 ${esc(m.phone)}</div>
+          <div class="btn-row">
+            ${ADMIN_MERCH_SUB==='new' ? `<button class="btn secondary sm" onclick="adminMerchAct('accept', ${m.row})">✅ Прийняти в роботу</button>` : ''}
+            <button class="btn secondary sm" onclick="adminMerchAct('sent', ${m.row})">📬 Відправлено</button>
+            <button class="btn secondary sm" style="flex:0 0 auto; width:auto; padding:8px 12px; opacity:.7;" onclick="adminMerchCancelConfirm(${m.row})">✕</button>
+          </div>
+        </div>`).join("") + `</div>`;
+    }
+    document.querySelectorAll("#merchSubTabs [data-msub]").forEach(el => {
+      el.addEventListener("click", () => { ADMIN_MERCH_SUB = el.getAttribute("data-msub"); loadAdminMerch(); });
+    });
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
+}
+function adminMerchCancelConfirm(row){
+  showConfirmModal("Скасувати це замовлення мерчу? Кошти повернуться на баланс співробітника.", async () => {
+    await adminMerchAct("cancel", row);
+  }, "Скасувати замовлення");
 }
 async function adminMerchAct(kind, row){
   const action = { accept:"admin_merch_accept", sent:"admin_merch_sent", cancel:"admin_merch_cancel" }[kind];
   const r = await api(action, { row });
-  if (r.ok) { toast("Готово", "ok"); loadAdminMerch(); } else toast("Помилка", "err");
+  if (r.ok) { toast(kind==="accept" ? "Прийнято в роботу" : "Готово", "ok"); loadAdminMerch(); } else toast("Помилка", "err");
 }
 
 async function adminAction(action, payload, okMsg){
