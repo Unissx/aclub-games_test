@@ -3425,7 +3425,7 @@ async function loadAdminMerch(){
       <div class="t2 ${ADMIN_MERCH_SUB==='new'?'active':''}" data-msub="new" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='new'; loadAdminMerch();">🆕 Нові</div>
       <div class="t2 ${ADMIN_MERCH_SUB==='progress'?'active':''}" data-msub="progress" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='progress'; loadAdminMerch();">🚚 В роботі</div>
       <div class="t2 ${ADMIN_MERCH_SUB==='history'?'active':''}" data-msub="history" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='history'; loadAdminMerch();">📋 Історія</div>
-      <div class="t2" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='recipients'; loadAdminMerch();">👥 Отримувачі</div>
+      <div class="t2" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='recipients'; loadAdminMerch();">🔔 Сповіщення</div>
     </div>`;
     if (!r.ok || !r.orders.length) {
       const emptyMsg = ADMIN_MERCH_SUB==='progress' ? "Немає замовлень в роботі" : (ADMIN_MERCH_SUB==='history' ? "Історія поки порожня" : "Нових замовлень немає");
@@ -3456,7 +3456,7 @@ const merchTabsHtmlForRecipients = `<div class="tabs2" id="merchSubTabs">
   <div class="t2" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='new'; loadAdminMerch();">🆕 Нові</div>
   <div class="t2" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='progress'; loadAdminMerch();">🚚 В роботі</div>
   <div class="t2" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='history'; loadAdminMerch();">📋 Історія</div>
-  <div class="t2 active" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='recipients'; loadAdminMerch();">👥 Отримувачі</div>
+  <div class="t2 active" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='recipients'; loadAdminMerch();">🔔 Сповіщення</div>
 </div>`;
 async function loadAdminMerchRecipients(wrap){
   try {
@@ -3475,7 +3475,7 @@ async function loadAdminMerchRecipients(wrap){
         <div class="item">
           <div class="ic">👤</div><div class="txt"><div class="t">${esc(a.name || "—")}</div><div class="s">TgID: ${esc(a.tgId)}</div></div>
           <button class="btn secondary sm" style="flex:0 0 auto; width:auto; padding:8px 12px; opacity:.7;" onclick="removeMerchAdminRecipient('${a.tgId}')">✕</button>
-        </div>`).join("") : emptyBlock("👥","Отримувачів ще немає","Додай хоча б одного, інакше сповіщення нікуди не прийдуть")}</div>
+        </div>`).join("") : emptyBlock("👥","Сповіщення ще нікому не додано","Додай хоча б одного, інакше сповіщення нікуди не прийдуть")}</div>
     `;
   } catch(e) { wrap.innerHTML = merchTabsHtmlForRecipients + emptyBlock("⚠️","Помилка з'єднання",""); }
 }
@@ -3483,7 +3483,13 @@ async function addMerchAdminRecipient(){
   const val = document.getElementById("merchAdminLdap").value.trim();
   if (!val) { toast("Введи LDAP або Telegram ID", "err"); return; }
   const r = await api("admin_merch_admins_add", { tgId: val });
-  if (!r.ok) { toast(r.error === "user_not_found" ? "Користувача не знайдено" : "Помилка", "err"); return; }
+  if (!r.ok) {
+    const msg = r.error === "user_not_found" ? "Користувача не знайдено"
+      : r.error === "forbidden" ? "Немає прав"
+      : `Помилка: ${r.error || ""} ${r.detail || ""}`.trim();
+    showModal(`<div class="mh">⚠️ Помилка додавання</div><div class="sub">${esc(msg)}</div>`);
+    return;
+  }
   toast("Додано", "ok");
   loadAdminMerch();
 }
