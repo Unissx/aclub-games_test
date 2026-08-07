@@ -2656,16 +2656,17 @@ async function loadPredMy(){
     if (!r.ok) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); return; }
     if (!r.predictions.length) { wrap.innerHTML = emptyBlock("📋","Прогнозів ще немає","Зроби перший прогноз у вкладці «Матчі»!"); return; }
     wrap.innerHTML = `<div class="list">` + r.predictions.map(p => {
-      const resolved = p.status === "Завершено";
-      const ptsLabel = resolved ? (p.points === null ? "—" : `+${p.points} б.`) : "очікує";
+      const resolved = p.liveStatus === "finished";
+      const statusLabels = { not_started: "ще не почався", live: "🔴 йде зараз", finished: null };
+      const ptsLabel = resolved ? (p.points === null ? "—" : `+${p.points} б.`) : statusLabels[p.liveStatus];
       const myLabel = p.predType === "outcome"
         ? `🏆 ${p.predOutcome==='HOME'?esc(p.home):(p.predOutcome==='AWAY'?esc(p.away):'Нічия')}`
         : `🎯 ${p.predHome}:${p.predAway}`;
       return `<div class="item">
-        <div class="ic">${p.homeLogo?`<img src="${esc(p.homeLogo)}" style="width:22px; height:22px; object-fit:contain;">`:(resolved ? (p.points===3?'🎯':(p.points>0?'✅':'❌')) : '⏳')}</div>
+        <div class="ic">${p.homeLogo?`<img src="${esc(p.homeLogo)}" style="width:22px; height:22px; object-fit:contain;">`:(resolved ? (p.points===3?'🎯':(p.points>0?'✅':'❌')) : (p.liveStatus==='live'?'🔴':'⏳'))}</div>
         <div class="txt"><div class="t">${esc(p.home)} ${resolved?`${p.realHome}:${p.realAway}`:''} ${esc(p.away)}</div>
         <div class="s">Твій прогноз: ${myLabel} · ${_predDateFmt(p.kickoff)}</div></div>
-        <div class="right badge ${resolved && p.points>0 ?'ok':''}">${ptsLabel}</div>
+        <div class="right badge ${resolved && p.points>0 ?'ok':(p.liveStatus==='live'?'new':'')}">${ptsLabel}</div>
       </div>`;
     }).join("") + `</div>`;
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка з'єднання",""); }
