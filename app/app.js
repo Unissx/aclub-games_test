@@ -567,6 +567,7 @@ async function cancelItem(row){
       if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
       toast("Покупку скасовано, кошти повернено", "ok");
       await refreshDashboard();
+      openMyItemsModal();
     } catch(e) { toast("Помилка з'єднання", "err"); }
   }, "Скасувати покупку");
 }
@@ -593,7 +594,12 @@ async function submitMerchForm(row){
     const r = await api("merch_submit", p);
     if (!r.ok) { toast(r.error || "Помилка", "err"); return; }
     toast("Замовлення оформлено! 🎉", "ok");
-    closeModal();
+    // Модалки в застосунку заміняють одна одну (не стекуються) — тому
+    // просте closeModal() поверне на Профіль зі старим станом. Замість
+    // цього одразу відкриваємо свіжий список "Товари aShop", щоб новий
+    // статус ("Дані вказано, очікує") було видно негайно, без повторного
+    // заходу.
+    openMyItemsModal();
   } catch(e) { toast("Помилка з'єднання", "err"); }
 }
 
