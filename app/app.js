@@ -3418,12 +3418,14 @@ let ADMIN_MERCH_SUB = "new";
 async function loadAdminMerch(){
   const wrap = document.getElementById("adminBody");
   try {
+    if (ADMIN_MERCH_SUB === "recipients") { await loadAdminMerchRecipients(wrap); return; }
     const filterParam = ADMIN_MERCH_SUB === "progress" ? { inProgress:true } : (ADMIN_MERCH_SUB === "history" ? { history:true } : { onlyNew:true });
     const r = await api("admin_merch_list", filterParam);
     const tabsHtml = `<div class="tabs2" id="merchSubTabs">
       <div class="t2 ${ADMIN_MERCH_SUB==='new'?'active':''}" data-msub="new" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='new'; loadAdminMerch();">🆕 Нові</div>
       <div class="t2 ${ADMIN_MERCH_SUB==='progress'?'active':''}" data-msub="progress" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='progress'; loadAdminMerch();">🚚 В роботі</div>
       <div class="t2 ${ADMIN_MERCH_SUB==='history'?'active':''}" data-msub="history" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='history'; loadAdminMerch();">📋 Історія</div>
+      <div class="t2" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='recipients'; loadAdminMerch();">👥 Отримувачі</div>
     </div>`;
     if (!r.ok || !r.orders.length) {
       const emptyMsg = ADMIN_MERCH_SUB==='progress' ? "Немає замовлень в роботі" : (ADMIN_MERCH_SUB==='history' ? "Історія поки порожня" : "Нових замовлень немає");
@@ -3449,6 +3451,47 @@ async function loadAdminMerch(){
         </div>`).join("") + `</div>`;
     }
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
+}
+const merchTabsHtmlForRecipients = `<div class="tabs2" id="merchSubTabs">
+  <div class="t2" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='new'; loadAdminMerch();">🆕 Нові</div>
+  <div class="t2" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='progress'; loadAdminMerch();">🚚 В роботі</div>
+  <div class="t2" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='history'; loadAdminMerch();">📋 Історія</div>
+  <div class="t2 active" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='recipients'; loadAdminMerch();">👥 Отримувачі</div>
+</div>`;
+async function loadAdminMerchRecipients(wrap){
+  try {
+    const r = await api("admin_merch_admins_list");
+    if (!r.ok) { wrap.innerHTML = merchTabsHtmlForRecipients + emptyBlock("⚠️","Помилка",""); return; }
+    wrap.innerHTML = merchTabsHtmlForRecipients + `
+      <div class="sub" style="margin:10px 2px;">Ці люди отримуватимуть сповіщення в Telegram про кожне нове замовлення мерчу — незалежно від того, чи є вони адміном застосунку.</div>
+      <div class="card" style="margin-bottom:10px;">
+        <div class="field-label">LDAP співробітника (або Telegram ID напряму)</div>
+        <div class="row" style="gap:6px;">
+          <input class="field" id="merchAdminLdap" style="flex:1;" placeholder="напр. rlv або 123456789">
+          <button class="btn secondary sm" style="width:auto;" onclick="addMerchAdminRecipient()">➕ Додати</button>
+        </div>
+      </div>
+      <div class="list">${r.admins.length ? r.admins.map(a => `
+        <div class="item">
+          <div class="ic">👤</div><div class="txt"><div class="t">${esc(a.name || "—")}</div><div class="s">TgID: ${esc(a.tgId)}</div></div>
+          <button class="btn secondary sm" style="flex:0 0 auto; width:auto; padding:8px 12px; opacity:.7;" onclick="removeMerchAdminRecipient('${a.tgId}')">✕</button>
+        </div>`).join("") : emptyBlock("👥","Отримувачів ще немає","Додай хоча б одного, інакше сповіщення нікуди не прийдуть")}</div>
+    `;
+  } catch(e) { wrap.innerHTML = merchTabsHtmlForRecipients + emptyBlock("⚠️","Помилка з'єднання",""); }
+}
+async function addMerchAdminRecipient(){
+  const val = document.getElementById("merchAdminLdap").value.trim();
+  if (!val) { toast("Введи LDAP або Telegram ID", "err"); return; }
+  const r = await api("admin_merch_admins_add", { tgId: val });
+  if (!r.ok) { toast(r.error === "user_not_found" ? "Користувача не знайдено" : "Помилка", "err"); return; }
+  toast("Додано", "ok");
+  loadAdminMerch();
+}
+async function removeMerchAdminRecipient(tgId){
+  const r = await api("admin_merch_admins_remove", { tgId });
+  if (!r.ok) { toast("Помилка", "err"); return; }
+  toast("Видалено", "ok");
+  loadAdminMerch();
 }
 function adminMerchCancelConfirm(row){
   showConfirmModal("Скасувати це замовлення мерчу? Кошти повернуться на баланс співробітника.", async () => {
