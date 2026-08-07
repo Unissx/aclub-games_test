@@ -213,6 +213,14 @@ async function boot(){
     renderNav();
     return;
   }
+  // Диплінк з бота (напр. кнопка "Нові замовлення мерчу" одразу відкриває
+  // потрібний розділ адмінки, а не головну).
+  const qs = new URLSearchParams(location.search);
+  if (qs.get("deeplink") === "merch") {
+    TAB = "admin"; ADMIN_SUB = "merch";
+    if (qs.get("msub") === "progress") ADMIN_MERCH_SUB = "progress";
+    else if (qs.get("msub") === "history") ADMIN_MERCH_SUB = "history";
+  }
   renderNav();
   render();
 }
@@ -3385,13 +3393,24 @@ let ADMIN_MERCH_SUB = "new";
 async function loadAdminMerch(){
   const wrap = document.getElementById("adminBody");
   try {
-    const r = await api("admin_merch_list", ADMIN_MERCH_SUB === "progress" ? { inProgress:true } : { onlyNew:true });
+    const filterParam = ADMIN_MERCH_SUB === "progress" ? { inProgress:true } : (ADMIN_MERCH_SUB === "history" ? { history:true } : { onlyNew:true });
+    const r = await api("admin_merch_list", filterParam);
     const tabsHtml = `<div class="tabs2" id="merchSubTabs">
       <div class="t2 ${ADMIN_MERCH_SUB==='new'?'active':''}" data-msub="new" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='new'; loadAdminMerch();">🆕 Нові</div>
       <div class="t2 ${ADMIN_MERCH_SUB==='progress'?'active':''}" data-msub="progress" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='progress'; loadAdminMerch();">🚚 В роботі</div>
+      <div class="t2 ${ADMIN_MERCH_SUB==='history'?'active':''}" data-msub="history" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='history'; loadAdminMerch();">📋 Історія</div>
     </div>`;
     if (!r.ok || !r.orders.length) {
-      wrap.innerHTML = tabsHtml + emptyBlock("✅", ADMIN_MERCH_SUB==='progress' ? "Немає замовлень в роботі" : "Нових замовлень немає", "");
+      const emptyMsg = ADMIN_MERCH_SUB==='progress' ? "Немає замовлень в роботі" : (ADMIN_MERCH_SUB==='history' ? "Історія поки порожня" : "Нових замовлень немає");
+      wrap.innerHTML = tabsHtml + emptyBlock("✅", emptyMsg, "");
+    } else if (ADMIN_MERCH_SUB === "history") {
+      wrap.innerHTML = tabsHtml + `<div class="list">` + r.orders.map(m => `
+        <div class="item">
+          <div class="ic">${m.status==='Відправлено'?'📬':'❌'}</div>
+          <div class="txt"><div class="t">${esc(m.name)} — ${esc(m.item)}</div>
+          <div class="s">${esc(m.recipient||m.name)} · ${esc(m.city)} відд.${esc(m.branch)}</div></div>
+          <div class="right badge ${m.status==='Відправлено'?'ok':''}">${esc(m.status==='Відправлено'?'Відправлено':'Скасовано')}</div>
+        </div>`).join("") + `</div>`;
     } else {
       wrap.innerHTML = tabsHtml + `<div class="list">` + r.orders.map(m => `
         <div class="card">
