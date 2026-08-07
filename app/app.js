@@ -3421,11 +3421,11 @@ async function loadAdminMerch(){
     if (ADMIN_MERCH_SUB === "recipients") { await loadAdminMerchRecipients(wrap); return; }
     const filterParam = ADMIN_MERCH_SUB === "progress" ? { inProgress:true } : (ADMIN_MERCH_SUB === "history" ? { history:true } : { onlyNew:true });
     const r = await api("admin_merch_list", filterParam);
-    const tabsHtml = `<div class="tabs2" id="merchSubTabs">
-      <div class="t2 ${ADMIN_MERCH_SUB==='new'?'active':''}" data-msub="new" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='new'; loadAdminMerch();">🆕 Нові</div>
-      <div class="t2 ${ADMIN_MERCH_SUB==='progress'?'active':''}" data-msub="progress" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='progress'; loadAdminMerch();">🚚 В роботі</div>
-      <div class="t2 ${ADMIN_MERCH_SUB==='history'?'active':''}" data-msub="history" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='history'; loadAdminMerch();">📋 Історія</div>
-      <div class="t2" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='recipients'; loadAdminMerch();">🔔 Сповіщення</div>
+    const tabsHtml = `<div class="tabs2" id="merchSubTabs" style="flex-wrap:wrap; row-gap:6px;">
+      <div class="t2 ${ADMIN_MERCH_SUB==='new'?'active':''}" data-msub="new" style="cursor:pointer; user-select:none; flex:1 1 45%; text-align:center;" onclick="ADMIN_MERCH_SUB='new'; loadAdminMerch();">🆕 Нові</div>
+      <div class="t2 ${ADMIN_MERCH_SUB==='progress'?'active':''}" data-msub="progress" style="cursor:pointer; user-select:none; flex:1 1 45%; text-align:center;" onclick="ADMIN_MERCH_SUB='progress'; loadAdminMerch();">🚚 В роботі</div>
+      <div class="t2 ${ADMIN_MERCH_SUB==='history'?'active':''}" data-msub="history" style="cursor:pointer; user-select:none; flex:1 1 45%; text-align:center;" onclick="ADMIN_MERCH_SUB='history'; loadAdminMerch();">📋 Історія</div>
+      <div class="t2" style="cursor:pointer; user-select:none; flex:1 1 45%; text-align:center;" onclick="ADMIN_MERCH_SUB='recipients'; loadAdminMerch();">🔔 Сповіщення</div>
     </div>`;
     if (!r.ok || !r.orders.length) {
       const emptyMsg = ADMIN_MERCH_SUB==='progress' ? "Немає замовлень в роботі" : (ADMIN_MERCH_SUB==='history' ? "Історія поки порожня" : "Нових замовлень немає");
@@ -3452,11 +3452,11 @@ async function loadAdminMerch(){
     }
   } catch(e) { wrap.innerHTML = emptyBlock("⚠️","Помилка",""); }
 }
-const merchTabsHtmlForRecipients = `<div class="tabs2" id="merchSubTabs">
-  <div class="t2" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='new'; loadAdminMerch();">🆕 Нові</div>
-  <div class="t2" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='progress'; loadAdminMerch();">🚚 В роботі</div>
-  <div class="t2" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='history'; loadAdminMerch();">📋 Історія</div>
-  <div class="t2 active" style="cursor:pointer; user-select:none;" onclick="ADMIN_MERCH_SUB='recipients'; loadAdminMerch();">🔔 Сповіщення</div>
+const merchTabsHtmlForRecipients = `<div class="tabs2" id="merchSubTabs" style="flex-wrap:wrap; row-gap:6px;">
+  <div class="t2" style="cursor:pointer; user-select:none; flex:1 1 45%; text-align:center;" onclick="ADMIN_MERCH_SUB='new'; loadAdminMerch();">🆕 Нові</div>
+  <div class="t2" style="cursor:pointer; user-select:none; flex:1 1 45%; text-align:center;" onclick="ADMIN_MERCH_SUB='progress'; loadAdminMerch();">🚚 В роботі</div>
+  <div class="t2" style="cursor:pointer; user-select:none; flex:1 1 45%; text-align:center;" onclick="ADMIN_MERCH_SUB='history'; loadAdminMerch();">📋 Історія</div>
+  <div class="t2 active" style="cursor:pointer; user-select:none; flex:1 1 45%; text-align:center;" onclick="ADMIN_MERCH_SUB='recipients'; loadAdminMerch();">🔔 Сповіщення</div>
 </div>`;
 async function loadAdminMerchRecipients(wrap){
   try {
