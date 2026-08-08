@@ -1,7 +1,7 @@
 // ============================================================
 // КОНФІГ
 // ============================================================
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzH8qt2_fUmnrLEw0Z56fsyMEH-D3uOgBSeTxwzUMCDTFDDoNBAowLTZqEGwSFo26ie9A/exec";
+const WEBAPP_URL = "https://aclubbackend-production.up.railway.app/webhook";
 const GAME_SECRET = "aclub2026runnertest";
 const RUNNER_URL = "https://unissx.github.io/aclub-games_test/runner/?v=10";
 const WORDLE_URL = "https://unissx.github.io/aclub-games_test/wordle/?v=13";
@@ -174,16 +174,21 @@ function renderNav(){
   document.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", () => nav(b.getAttribute("data-nav"))));
 }
 
+let _lastNavRefresh = 0;
 function nav(tab){
   if (TAB === "chat" && tab !== "chat") stopChatPolling();
   TAB = tab;
   renderNav();
   render();
-  // Легке фонове оновлення шапки (баланс/осколки/VIP) при кожному переході
-  // між вкладками — щоб зміни, зроблені деінде (покупка, VIP, прогноз),
-  // завжди були видно одразу, а не тільки після ручного перезаходу.
-  // Не блокує рендер вкладки — просто підтягує свіжі дані у фоні.
-  refreshDashboard().catch(() => {});
+  // Легке фонове оновлення шапки (баланс/осколки/VIP) при переході між
+  // вкладками — але НЕ частіше ніж раз на 15 сек, інакше кожен клік по
+  // навбару додає зайвий запит до Google Таблиць (а їх і так уже багато
+  // з новими фічами) — це й було однією з причин загального сповільнення.
+  const now = Date.now();
+  if (now - _lastNavRefresh > 15000) {
+    _lastNavRefresh = now;
+    refreshDashboard().catch(() => {});
+  }
 }
 
 let BOOT_WATCHDOG = null;
